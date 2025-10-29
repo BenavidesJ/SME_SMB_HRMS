@@ -1,11 +1,11 @@
 import { Heading } from "@chakra-ui/react";
 
-function App() {
+function UIdocs() {
   return (
     <Heading as="h1" size="6xl">
-      Hello world!
+      Documentacion de Componentes
     </Heading>
   );
 }
 
-export default App;
+export default UIdocs;
