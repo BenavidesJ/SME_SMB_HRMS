@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "",
+    "dev": "node --watch --env-file=.env main.js"
+  },
+  "keywords": [],
+  "author": "Jose D Benavides",
+  "license": "UNLICENSED",
+  "description": "Trabajo Final de Graduacion - RRHH core platform",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.4",
+    "nodemailer": "^7.0.6",
+    "otp-generator": "^4.0.1",
+    "sequelize": "^6.37.7"
+  }
+}
