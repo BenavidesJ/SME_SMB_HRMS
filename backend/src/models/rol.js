@@ -6,5 +6,6 @@ export const Rol = sequelize.define("rol", {
   nombre: { type: DataTypes.STRING(60), allowNull: false, unique: true },
 }, {
   tableName: "rol",
+  schema: "tfg_dev",
   timestamps: false,
 });

@@ -5,7 +5,8 @@ export const HTTP_CODES = {
             BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             FORBIDDEN: 403,
-            NOT_FOUND: 404
+            NOT_FOUND: 404,
+            TOO_MANY_REQ: 429,
         },
         SERVER: {
             INTERNAL_ERROR: 500,
@@ -28,10 +29,10 @@ export const HTTP_CODES = {
 
 /* Error messages */
 export const CAMPOS_OBLIGATORIOS = (campos) => `El campo ${campos} es obligatorio`;
+export const TOO_MANY_REQUESTS = "Exceso de solicitudes. Intente nuevamente mas tarde";
 
 /* Validation Helpers */
 export const validPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@#!\.]).+$/;
-
 
 /* Email */
 export const otpEmailSubject = "Verificación de Cuenta - Departamento de Recursos Humanos BioAlquimia";
