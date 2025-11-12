@@ -1,10 +1,11 @@
 import { useGetDeviceType } from "../../../hooks";
+import DesktopNav from "./DesktopNav";
+import MobileNav from "./MobileNav";
 
 
 export const AppNavigation = () => {
-  const userDevice = useGetDeviceType();
-  console.log(userDevice);
-  return (
-    <div>DesktopNavigation</div>
-  )
+  const { deviceType } = useGetDeviceType();
+
+  if (deviceType !== "desktop") return <MobileNav />
+  return <DesktopNav />
 }
