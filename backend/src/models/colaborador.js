@@ -42,7 +42,6 @@ export const Colaborador = sequelize.define(
   },
   {
     tableName: "colaborador",
-    schema: "tfg_dev",
     timestamps: false,
     indexes: [{ unique: true, fields: ["identificacion"] }],
   }

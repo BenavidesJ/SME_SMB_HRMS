@@ -12,9 +12,7 @@ const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 const app = express();
 
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
-
 app.use(
   cors({
     credentials: true,

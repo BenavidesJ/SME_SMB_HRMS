@@ -1,8 +1,5 @@
-import bcrypt from "bcrypt";
-import dayjs from "dayjs";
 import { HTTP_CODES } from "../../common/strings.js";
-import { Colaborador, Usuario } from "../../models/index.js";
-import { sendEmail } from "../../services/mail.js";
+import { crearColaborador } from "./handlers/crearColaborador.js";
 
 export const crearEmpleado = async (req, res, next) => {
   const {
@@ -15,8 +12,10 @@ export const crearEmpleado = async (req, res, next) => {
     fecha_nacimiento,
     correo_electronico,
     fecha_ingreso,
+    rol
   } = req.body;
   try {
+
     const requiredFields = [
       "nombre",
       "primer_apellido",
@@ -26,7 +25,8 @@ export const crearEmpleado = async (req, res, next) => {
       "identificacion",
       "fecha_nacimiento",
       "correo_electronico",
-      "fecha_ingreso"
+      "fecha_ingreso",
+      "rol"
     ];
 
     for (const field of requiredFields) {
@@ -35,7 +35,7 @@ export const crearEmpleado = async (req, res, next) => {
       }
     }
 
-    const employee = await Colaborador.create({
+    const { id, username, rol_asignado } = await crearColaborador({
       nombre,
       primer_apellido,
       segundo_apellido,
@@ -45,38 +45,18 @@ export const crearEmpleado = async (req, res, next) => {
       fecha_nacimiento,
       correo_electronico,
       fecha_ingreso,
-    });
-
-    if (!employee) throw new Error("El colaborador no se pudo crear");
-
-    const username = `${employee.nombre.slice(0, 1)}${employee.primer_apellido}${employee.identificacion.slice(-4)}`;
-    const temporalPass = "pAssword123*"
-    const contrasena_hash = await bcrypt.hash(temporalPass, 10);
-
-    await Usuario.create({
-      username,
-      contrasena_hash,
-      activo: 1,
-      req_cambio_pass: 1,
-      ultimo_cambio_pass: dayjs("9999-12-31").format("YYYY-MM-DD HH:mm:ss"),
-      ultimo_acceso_en: dayjs("9999-12-31").format("YYYY-MM-DD HH:mm:ss"),
-      id_colaborador: employee.id_colaborador
+      rol
     })
 
-    await sendEmail({
-      recipient: correo_electronico,
-      subject: "Bienvenido a BioAlquimia!",
-      message: `Hola ${nombre} ${primer_apellido} ${segundo_apellido}! Bienvenido a BioAlquimia. 
-      Tu usuario para ingresar al sistema es username: ${username} password: ${temporalPass}.
-      Por favor una vez al ingresar cambia tu password
-      `
-    })
-
-    return res.status(HTTP_CODES.SUCCESS.OK).json({
+    return res.status(HTTP_CODES.SUCCESS.CREATED).json({
       success: true,
-      status_code: HTTP_CODES.SUCCESS.OK,
+      status_code: HTTP_CODES.SUCCESS.CREATED,
       message: "Empleado y usuario creados correctamente",
-      data: {}
+      data: {
+        id,
+        username,
+        rol_asignado,
+      }
     });
   } catch (error) {
     next(error);

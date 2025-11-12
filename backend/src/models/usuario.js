@@ -50,7 +50,6 @@ export const Usuario = sequelize.define(
   },
   {
     tableName: "usuario",
-    schema: "tfg_dev",
     timestamps: false,
     indexes: [{ unique: true, fields: ["username"] }],
   }

@@ -21,7 +21,8 @@ export const autenticarUsuario = async ({ username, password }) => {
         through: { attributes: [] }
       },
       {
-        model: Colaborador
+        model: Colaborador,
+        as: "colaborador"
       }
     ]
   });

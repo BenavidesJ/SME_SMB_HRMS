@@ -17,7 +17,6 @@ export const UsuarioRol = sequelize.define(
   },
   {
     tableName: "usuario_rol",
-    schema: "tfg_dev",
     timestamps: false,
   }
 );
