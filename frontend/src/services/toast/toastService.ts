@@ -1,4 +1,4 @@
-import { toaster } from '@/components/ui/toaster';
+import { toaster } from '../../components/ui/toaster';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -11,7 +11,7 @@ export const showToast = (
     title,
     description,
     type: variant,
-    duration: 4000,
+    duration: 2500,
     closable: true,
   });
 };

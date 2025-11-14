@@ -1,6 +1,7 @@
 import { Badge, Field, Input, NumberInput } from '@chakra-ui/react';
 import { forwardRef } from 'react';
 import { PasswordInput } from '../../ui/password-input';
+import { useFormContext, type RegisterOptions } from 'react-hook-form';
 
 type FieldType = 'text' | 'password' | 'email' | 'number';
 
@@ -11,35 +12,37 @@ interface FieldProps {
   */
   fieldType: FieldType;
   /*
- El label del campo input.
- */
-  label: React.ReactNode | string;
+  El label del campo input.
+  */
+  label?: string;
   /*
-El placeholder del campo input.
-*/
-  placeholder: string;
+  El nombre del campo input.
+  */
+  name: string;
   /*
-El texto de instrucciones o ayuda del campo input.
-*/
+  El placeholder del campo input.
+  */
+  placeholder?: string;
+  /*
+  El texto de instrucciones o ayuda del campo input.
+  */
   helperText?: React.ReactNode | string;
   /*
-El mensaje de error del campo input.
-*/
-  errorText?: React.ReactNode | string;
-  /*
-Indica si el campo es requerido.
-*/
+  Indica si el campo es requerido.
+  */
   required?: boolean;
+  /*
+  Reglas de validacion.
+  */
+  rules?: RegisterOptions;
 }
 
-type InputProps = Pick<FieldProps, 'placeholder' | 'required'>;
-
-const TextField = ({ placeholder, required }: InputProps) => {
-  return <Input placeholder={placeholder} required={required} />;
+const TextField = ({ ...props }: Omit<FieldProps, "fieldType">) => {
+  return <Input {...props} />;
 };
 
-const PasswordField = ({ placeholder, required }: InputProps) => {
-  return <PasswordInput placeholder={placeholder} required={required} />;
+const PasswordField = ({ ...props }: Omit<FieldProps, "fieldType">) => {
+  return <PasswordInput {...props} />;
 };
 
 const NumberField = () => {
@@ -56,22 +59,25 @@ const NumberField = () => {
 
 export const InputField = forwardRef<HTMLDivElement, FieldProps>(
   function InputField(props, ref) {
-    const { fieldType, label, helperText, required, placeholder } = props;
+    const { name, fieldType, label, helperText, required, placeholder, rules } = props;
+    const {
+      register,
+      formState: { errors },
+    } = useFormContext();
 
-    const typeMap: Record<
-      FieldType,
-      React.FC<{ placeholder: string; required?: boolean }>
-    > = {
+    const error = errors[name]?.message as string | undefined;
+    const isInvalid = Boolean(error);
+
+    const Component = {
       text: TextField,
-      password: PasswordField,
       email: TextField,
+      password: PasswordField,
       number: NumberField,
-    };
+    }[fieldType];
 
-    const Component = typeMap[fieldType] ?? TextField;
 
     return (
-      <Field.Root minW="300px" ref={ref}>
+      <Field.Root minW="300px" ref={ref} required={required} invalid={isInvalid}>
         <Field.Label>
           {label}
           {required ? (
@@ -86,9 +92,10 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(
             />
           )}
         </Field.Label>
-        <Component placeholder={placeholder} required={required} />
-        <Field.HelperText>{helperText}</Field.HelperText>
+        <Component label={label} placeholder={placeholder} required={required} {...register(name, { required, ...rules })} />
+        {error ? <Field.ErrorText>{error}</Field.ErrorText> : <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>}
       </Field.Root>
     );
   }
 );
+
