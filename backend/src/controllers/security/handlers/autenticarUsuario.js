@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { genJWT } from "../../../common/genJWT.js";
 import { Usuario, Rol, Colaborador } from "../../../models/index.js";
+
 /**
  * Autenticar Usuario
  * 
@@ -39,13 +40,11 @@ export const autenticarUsuario = async ({ username, password }) => {
   }
   const payload = {
     id: user.id_usuario,
-    rol: user.roles.map(r => r.nombre),
+    roles: user.roles.map(r => r.nombre),
   };
   const access_token = genJWT(payload);
 
   return {
-    // id: user.id_usuario,
     access_token,
-    // rol: user.roles,
   };
 };

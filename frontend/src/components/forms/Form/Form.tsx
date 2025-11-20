@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useForm, FormProvider, type FieldValues, type DefaultValues, type SubmitHandler } from "react-hook-form";
 
 
-interface FormProps {
+interface FormProps<T extends FieldValues> {
   /*
    * Los inputs del formulario.
    */
@@ -10,15 +10,15 @@ interface FormProps {
   /*
    * El método para enviar datos al servidor.
    */
-  readonly onSubmit: SubmitHandler<FieldValues>
+  readonly onSubmit: SubmitHandler<T>
   /*
    * Los valores por defecto.
    */
-  readonly defaultValues?: DefaultValues<FieldValues>
+  readonly defaultValues?: DefaultValues<T>
 }
 
-export function Form({ children, onSubmit, defaultValues }: FormProps) {
-  const methods = useForm({ defaultValues });
+export function Form<T extends FieldValues>({ children, onSubmit, defaultValues }: FormProps<T>) {
+  const methods = useForm<T>({ defaultValues });
 
   return (
     <FormProvider {...methods}>

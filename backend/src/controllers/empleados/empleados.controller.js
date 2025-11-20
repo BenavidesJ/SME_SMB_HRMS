@@ -1,5 +1,6 @@
 import { HTTP_CODES } from "../../common/strings.js";
 import { crearColaborador } from "./handlers/crearColaborador.js";
+import { obtenerColaboradorPorIdUsuario } from "./handlers/obtenerColaborador.js";
 
 export const crearEmpleado = async (req, res, next) => {
   const {
@@ -57,6 +58,25 @@ export const crearEmpleado = async (req, res, next) => {
         username,
         rol_asignado,
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerColaboradorPorUserId = async (req, res, next) => {
+  const {
+    id
+  } = req.params;
+  try {
+
+    const data = await obtenerColaboradorPorIdUsuario({id})
+
+    return res.status(HTTP_CODES.SUCCESS.CREATED).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.CREATED,
+      message: "Consulta exitosa",
+      data,
     });
   } catch (error) {
     next(error);
