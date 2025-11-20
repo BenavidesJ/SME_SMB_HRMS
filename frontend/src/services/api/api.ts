@@ -10,24 +10,13 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const storedData = localStorage.getItem('user');
-    if (storedData) {
-      try {
-        const { data } = JSON.parse(storedData);
-        const accessToken = data?.access_token;
-        if (accessToken) {
-          config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-      } catch (error) {
-        console.error('Error al decodificar los datos de autenticación', error);
-      }
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(

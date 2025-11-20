@@ -24,7 +24,7 @@ export const DesktopNav = () => {
   return (
     <Flex
       as="aside"
-      h="100%"
+      height="100vh"
       w={collapsed ? "80px" : "260px"}
       flexShrink={0}
       bg="white"
@@ -41,6 +41,7 @@ export const DesktopNav = () => {
           variant="ghost"
           size="md"
           onClick={handleCollapseBar}
+          _hover={{ bg: "#84ed6c79" }}
         >
           {collapsed ? <GoSidebarCollapse /> : <GoSidebarExpand />}
         </IconButton>

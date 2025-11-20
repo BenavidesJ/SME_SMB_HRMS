@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { FiHome, FiUsers, FiSettings } from "react-icons/fi";
+import { FiHome, FiUsers, FiSettings, FiCode } from "react-icons/fi";
 import { PiMoney } from "react-icons/pi";
 
 /*
@@ -25,6 +25,11 @@ export interface NavItem {
     Items anidados.
   */
   children?: NavItem[];
+
+  /*
+    Array de roles que pueden acceder esa ruta.
+  */
+  roles?: string[];
 }
 
 export const NAV_MAIN: NavItem[] = [
@@ -37,4 +42,5 @@ export const NAV_MAIN: NavItem[] = [
 export const NAV_SETTINGS: NavItem[] = [
   { label: "Notification", icon: <FiUsers />, path: "/settings/notifications" },
   { label: "Settings", icon: <FiSettings />, path: "/settings" },
+  { label: "Documentacion UI", icon: <FiCode />, path: "/ui-docs", roles: ["SUPER_ADMIN"] },
 ];

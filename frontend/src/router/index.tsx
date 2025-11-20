@@ -1,14 +1,28 @@
 import { createBrowserRouter } from "react-router";
-import App from "../App";
 import UIdocs from "../pages/UIdocs";
+import LoginPage from "../pages/LoginPage";
+import { PrivateRoute } from "./PrivateRoute";
+import { PublicRoute } from "./PublicRoute";
+import Main from "../pages/Main";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <App />,
+    element: <PublicRoute />,
+    children: [
+      { path: "/login", element: <LoginPage /> },
+    ]
   },
   {
-    path: "/ui-docs",
-    element: <UIdocs />,
-  },
+    element: <PrivateRoute />,
+    children: [
+      {
+        path: "/",
+        element: <Main />
+      },
+      {
+        path: "/ui-docs",
+        element: <UIdocs />
+      }
+    ]
+  }
 ]);

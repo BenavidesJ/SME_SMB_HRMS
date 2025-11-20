@@ -1,4 +1,4 @@
-import { Button, Heading, Stack } from '@chakra-ui/react';
+import { Button, Stack } from '@chakra-ui/react';
 import { Form, InputField } from '../components/forms';
 import { Layout } from '../layouts';
 import { login } from '../services/api/auth';
@@ -8,11 +8,8 @@ function UIdocs() {
 
   const onSubmit = async (data: any) => { await login(data) }
   return (
-    <Layout>
-      <Stack px="10">
-        <Heading as="h1" size="2xl">
-          Documentacion de Componentes
-        </Heading>
+    <Layout pageTitle="Documentación de Componentes">
+      <Stack>
         <Form onSubmit={onSubmit}>
           <InputField
             fieldType="text"
