@@ -7,4 +7,5 @@ export const Rol = sequelize.define("rol", {
 }, {
   tableName: "rol",
   timestamps: false,
+  indexes: [{ unique: true, fields: ["nombre"] }],
 });

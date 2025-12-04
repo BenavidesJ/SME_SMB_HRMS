@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
 export const Usuario = sequelize.define(
-  "Usuario",
+  "usuario",
   {
     id_usuario: {
       type: DataTypes.INTEGER,
@@ -23,19 +23,24 @@ export const Usuario = sequelize.define(
       allowNull: false,
       defaultValue: true,
     },
+    requiere_cambio_contrasena: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
     ultimo_acceso_en: {
       type: DataTypes.DATE,
       allowNull: false,
     },
-    creado_en: {
+    fecha_creacion: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
-    actualizado_en: {
+    fecha_actualizacion: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
     id_colaborador: {
       type: DataTypes.INTEGER,
@@ -51,6 +56,9 @@ export const Usuario = sequelize.define(
   {
     tableName: "usuario",
     timestamps: false,
-    indexes: [{ unique: true, fields: ["username"] }],
+    indexes: [
+      { unique: true, fields: ["username"] },
+      { fields: ["id_colaborador"] },
+    ],
   }
 );

@@ -29,6 +29,16 @@ export const Colaborador = sequelize.define(
       validate: { isEmail: true },
     },
     fecha_ingreso: { type: DataTypes.DATEONLY, allowNull: false },
+    fecha_creacion: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+    },
+    fecha_actualizacion: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+    },
     estado: {
       type: DataTypes.ENUM("ACTIVO", "SUSPENDIDO", "DESVINCULADO"),
       allowNull: false,

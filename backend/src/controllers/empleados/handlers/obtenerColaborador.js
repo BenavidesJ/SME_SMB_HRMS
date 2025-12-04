@@ -12,10 +12,21 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
       {
         model: Colaborador,
         as: "colaborador",
+        attributes: [
+          "id_colaborador",
+          "nombre",
+          "primer_apellido",
+          "segundo_apellido",
+          "correo_electronico",
+          "nacionalidad",
+          "identificacion",
+          "genero",
+          "fecha_ingreso",
+          "fecha_nacimiento"
+        ],
       },
       {
         model: Rol,
-        as: "roles",
         attributes: ["nombre"],
         through: { attributes: [] },
       },
@@ -23,6 +34,12 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
   });
 
   if (!user) throw new Error(`El colaborador con id de usuario: ${id} no existe`);
+
+  if (!user.colaborador) {
+    throw new Error(
+      `El usuario con id ${id} no tiene un colaborador asociado.`
+    );
+  }
 
   const employee = user.colaborador;
 
@@ -42,7 +59,7 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
         id_usuario: user.id_usuario,
         username: user.username,
         activo: user.activo,
-        roles: user.roles?.map((r) => r.nombre) || [],
+        roles: user.rols?.map((r) => r.nombre) || [],
       }
       : {},
   };
