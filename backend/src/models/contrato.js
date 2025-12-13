@@ -37,8 +37,8 @@ export const Contrato = sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
-    ciclo_pago: {
-      type: DataTypes.ENUM("SEMANAL", "QUINCENAL", "MENSUAL"),
+    id_ciclo_pago: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     estado: {

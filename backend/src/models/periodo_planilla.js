@@ -21,8 +21,8 @@ export const PeriodoPlanilla = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
-    ciclo: {
-      type: DataTypes.ENUM("SEMANAL", "QUINCENAL", "MENSUAL"),
+    id_ciclo_pago: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     estado: {

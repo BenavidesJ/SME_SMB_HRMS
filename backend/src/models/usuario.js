@@ -25,7 +25,7 @@ export const Usuario = sequelize.define(
     },
     ultimo_acceso_en: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     id_colaborador: {
       type: DataTypes.INTEGER,

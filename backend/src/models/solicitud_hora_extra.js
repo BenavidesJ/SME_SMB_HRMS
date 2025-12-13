@@ -30,9 +30,8 @@ export const SolicitudHoraExtra = sequelize.define(
       allowNull: false,
     },
     estado: {
-      type: DataTypes.ENUM("PENDIENTE", "APROBADA", "RECHAZADA"),
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: "PENDIENTE",
     },
     aprobado_por: {
       type: DataTypes.INTEGER,

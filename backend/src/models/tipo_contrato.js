@@ -7,6 +7,7 @@ export const TipoContrato = sequelize.define(
     id_tipo_contrato: {
       type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
     },
     tipo_contrato: {
       type: DataTypes.STRING(25),
