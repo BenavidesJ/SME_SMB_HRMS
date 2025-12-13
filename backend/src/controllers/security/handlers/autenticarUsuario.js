@@ -19,7 +19,7 @@ export const autenticarUsuario = async ({ username, password }) => {
       "id_usuario",
       "username",
       "contrasena_hash",
-      "requiere_cambio_contraseña",
+      "requiere_cambio_contrasena",
       "ultimo_acceso_en",
       "id_colaborador",
       "estado",
@@ -35,11 +35,17 @@ export const autenticarUsuario = async ({ username, password }) => {
         as: "colaborador",
         attributes: ["id_colaborador", "nombre", "primer_apellido"]
       },
+      {
+        model: Estado,
+        as: "estadoUsuario",
+        attributes: ["estado"]
+      }
     ]
   });
 
   if (!user) throw new Error("Credenciales incorrectas, por favor verifique e ingrese de nuevo sus datos.");
-  if (user.estado !== 1) throw new Error("El usuario está inactivo. Contacte al administrador.");
+
+  if (String(user.estadoUsuario.estado).toLowerCase() !== "activo") throw new Error("El usuario está inactivo. Contacte al administrador.");
 
   const isPasswordValid = await bcrypt.compare(password, user.contrasena_hash);
 

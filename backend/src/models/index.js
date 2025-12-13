@@ -70,35 +70,35 @@ import { Telefono } from "./telefono.js";
 Genero.hasMany(Colaborador, { foreignKey: "id_genero" });
 Colaborador.belongsTo(Genero, { foreignKey: "id_genero" });
 
-EstadoCivil.hasMany(Colaborador, { foreignKey: "estado_civil" });
-Colaborador.belongsTo(EstadoCivil, { foreignKey: "estado_civil" });
+EstadoCivil.hasMany(Colaborador, { foreignKey: "estado_civil", as: "colaboradores", });
+Colaborador.belongsTo(EstadoCivil, { foreignKey: "estado_civil", as: "estadoCivil" });
 
-Estado.hasMany(Colaborador, { foreignKey: "estado" });
-Colaborador.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(Colaborador, { foreignKey: "estado", as: "colaboradoresEstado" });
+Colaborador.belongsTo(Estado, { foreignKey: "estado", as: "estadoColaborador" });
 
-Estado.hasMany(Direccion, { foreignKey: "estado" });
-Direccion.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(Direccion, { foreignKey: "estado", as: "direcciones" });
+Direccion.belongsTo(Estado, { foreignKey: "estado", as: "estadoDireccion" });
 
-Estado.hasMany(Usuario, { foreignKey: "estado" });
-Usuario.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(Usuario, { foreignKey: "estado", as: "usuarios" });
+Usuario.belongsTo(Estado, { foreignKey: "estado", as: "estadoUsuario" });
 
-Estado.hasMany(Puesto, { foreignKey: "estado" });
-Puesto.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(Puesto, { foreignKey: "estado", as: "puestos" });
+Puesto.belongsTo(Estado, { foreignKey: "estado", as: "estadoPuesto" });
 
-Estado.hasMany(Contrato, { foreignKey: "estado" });
-Contrato.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(Contrato, { foreignKey: "estado", as: "contratos" });
+Contrato.belongsTo(Estado, { foreignKey: "estado", as: "estadoContrato" });
 
-Estado.hasMany(PeriodoPlanilla, { foreignKey: "estado" });
-PeriodoPlanilla.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(PeriodoPlanilla, { foreignKey: "estado", as: "periodosPlanilla" });
+PeriodoPlanilla.belongsTo(Estado, { foreignKey: "estado", as: "estadoPeriodo" });
 
-Estado.hasMany(SolicitudHoraExtra, { foreignKey: "estado" });
-SolicitudHoraExtra.belongsTo(Estado, { foreignKey: "estado" });
+Estado.hasMany(SolicitudHoraExtra, { foreignKey: "estado", as: "solicitudesHorasExtra" });
+SolicitudHoraExtra.belongsTo(Estado, { foreignKey: "estado", as: "estadoSolicitudHoraExtra" });
 
-Estado.hasMany(SolicitudVacaciones, { foreignKey: "estado_solicitud" });
-SolicitudVacaciones.belongsTo(Estado, { foreignKey: "estado_solicitud" });
+Estado.hasMany(SolicitudVacaciones, { foreignKey: "estado_solicitud", as: "solicitudesVacaciones" });
+SolicitudVacaciones.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudVacaciones" });
 
-Estado.hasMany(SolicitudPermisosLicencias, { foreignKey: "estado_solicitud" });
-SolicitudPermisosLicencias.belongsTo(Estado, { foreignKey: "estado_solicitud" });
+Estado.hasMany(SolicitudPermisosLicencias, { foreignKey: "estado_solicitud", as: "solicitudesPermisos" });
+SolicitudPermisosLicencias.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudPermisos" });
 
 // ---------- ORGANIZACIÓN ----------
 Departamento.hasMany(Puesto, { foreignKey: "id_departamento" });
@@ -210,8 +210,8 @@ SolicitudHoraExtra.belongsTo(Colaborador, {
   as: "aprobador",
 });
 
-TipoSolicitud.hasMany(SolicitudPermisosLicencias, { foreignKey: "tipo_solicitud" });
-SolicitudPermisosLicencias.belongsTo(TipoSolicitud, { foreignKey: "tipo_solicitud" });
+TipoSolicitud.hasMany(SolicitudPermisosLicencias, { foreignKey: "tipo_solicitud", as: "solicitudes" });
+SolicitudPermisosLicencias.belongsTo(TipoSolicitud, { foreignKey: "tipo_solicitud", as: "tiposSolicitud" });
 
 Colaborador.hasMany(SolicitudVacaciones, { foreignKey: "id_colaborador" });
 SolicitudVacaciones.belongsTo(Colaborador, { foreignKey: "id_colaborador" });

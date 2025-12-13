@@ -4,6 +4,7 @@ const { DB_NAME, DB_PASSW, DB_USER, DB_HOST } = process.env;
 
 export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSW, {
   host: DB_HOST,
+  timezone: "-06:00",
   dialect: 'mysql',
   logging: false,
 });

@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { sendEmail } from "../../../services/mail.js";
-import { Usuario, Rol, Colaborador, sequelize, Genero } from "../../../models/index.js";
+import { Usuario, Rol, Colaborador, sequelize, Genero, EstadoCivil } from "../../../models/index.js";
 import { plantillaEmailBienvenida } from "../../../common/htmlLayouts/plantillaEmailBienvenida.js";
 import { generateTempPassword } from "../../../common/genTempPassword.js";
 import { generateUsername } from "../../../common/genUsername.js";
@@ -42,43 +42,54 @@ export const crearColaborador = async (
   const tx = await sequelize.transaction();
 
   try {
-    console.log(identificacion)
-    const userExists = await Colaborador.findOne({
+    const exists = await Colaborador.findOne({
       where: { identificacion },
       transaction: tx
     })
 
-    if (userExists) throw new Error(`Ya existe un colaborador con el número de identificación: ${identificacion}`)
+    if (exists) throw new Error(`Ya existe un colaborador con el número de identificación: ${identificacion}`)
 
-    const newEmployeeGender = String(genero).toUpperCase();
-    const gender = await Genero.findOne({
-      where: { genero: newEmployeeGender },
-      transaction: tx
-    });
-    const maritalStatus = String(estado_civil).toUpperCase();
+    const genderValue = genero?.trim().toUpperCase();
+    const maritalStatusValue = estado_civil?.trim().toUpperCase();
+    const roleValue = rol?.trim().toUpperCase();
+
+    const [gender, maritalStatus, foundRole] = await Promise.all([
+      Genero.findOne({
+        where: { genero: genderValue },
+        transaction: tx
+      }),
+      EstadoCivil.findOne({ where: { estado_civil: maritalStatusValue }, transaction: tx }),
+      Rol.findOne({
+        where: { nombre: roleValue },
+        transaction: tx
+      })
+    ])
+
+    if (!gender) {
+      throw new Error(`El género '${genero}' no existe.`);
+    }
+
+    if (!maritalStatus) {
+      throw new Error(`El estado civil '${estado_civil}' no existe.`);
+    }
+
+    if (!foundRole) {
+      throw new Error(`El rol '${rol}' no existe.`);
+    }
 
     const employee = await Colaborador.create({
       nombre,
       primer_apellido,
       segundo_apellido,
-      genero: gender,
+      id_genero: gender.id_genero,
       identificacion,
       fecha_nacimiento,
       correo_electronico,
       fecha_ingreso,
       cantidad_hijos,
-      estado_civil: maritalStatus,
+      estado_civil: maritalStatus.id_estado_civil,
       estado: 1
     }, { transaction: tx });
-
-    const foundRole = await Rol.findOne({
-      where: { nombre: String(rol).toUpperCase() },
-      transaction: tx
-    });
-
-    if (!foundRole) {
-      throw new Error(`El rol: '${rol}' no existe.`);
-    }
 
     const username = generateUsername(nombre, primer_apellido, identificacion);
     const temporalPass = generateTempPassword(12);
@@ -95,13 +106,13 @@ export const crearColaborador = async (
 
     await user.addRol(foundRole, { transaction: tx });
 
+    await tx.commit();
+
     await sendEmail({
       recipient: correo_electronico,
       subject: "Bienvenido a BioAlquimia!",
       message: plantillaEmailBienvenida({ nombre, primer_apellido, segundo_apellido, username, temporalPass })
     })
-
-    await tx.commit();
 
     return {
       id: employee.id_colaborador,
@@ -110,5 +121,6 @@ export const crearColaborador = async (
     };
   } catch (error) {
     await tx.rollback();
+    throw error;
   }
 };
