@@ -6,11 +6,11 @@ export const EvaluacionRubro = sequelize.define(
   {
     id_evaluacion: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      primaryKey: true,
     },
     id_rubro_evaluacion: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      primaryKey: true,
     },
   },
   {
@@ -18,3 +18,4 @@ export const EvaluacionRubro = sequelize.define(
     timestamps: false,
   }
 );
+
