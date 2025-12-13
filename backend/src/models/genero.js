@@ -1,21 +1,21 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
-export const Provincia = sequelize.define(
-  "provincia",
+export const Genero = sequelize.define(
+  "genero",
   {
-    id_provincia: {
+    id_genero: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    nombre: {
-      type: DataTypes.STRING(80),
+    genero: {
+      type: DataTypes.STRING(15),
       allowNull: false,
     },
   },
   {
-    tableName: "provincia",
+    tableName: "genero",
     timestamps: false,
   }
 );

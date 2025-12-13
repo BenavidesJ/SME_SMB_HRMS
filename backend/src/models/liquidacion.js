@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
-export const CasoTerminacion = sequelize.define(
-  "caso_terminacion",
+export const Liquidacion = sequelize.define(
+  "liquidacion",
   {
     id_caso_termina: {
       type: DataTypes.INTEGER,
@@ -14,15 +14,10 @@ export const CasoTerminacion = sequelize.define(
       allowNull: false,
     },
     causa: {
-      type: DataTypes.ENUM(
-        "RENUNCIA",
-        "DESPIDO_CON_CAUSA",
-        "DESPIDO_CON_RESPONSABILIDAD",
-        "ACUERDO_MUTUO"
-      ),
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
-    se_otorgo_preaviso: {
+    realizo_preaviso: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
@@ -35,12 +30,7 @@ export const CasoTerminacion = sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
-    dias_vac_pend: {
-      type: DataTypes.DECIMAL(6, 2),
-      allowNull: false,
-      defaultValue: 0.0,
-    },
-    aguinaldo_prop: {
+    aguinaldo_proporcional: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0.0,
@@ -60,12 +50,7 @@ export const CasoTerminacion = sequelize.define(
       allowNull: false,
       defaultValue: 0.0,
     },
-    total_liquidacion: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-      defaultValue: 0.0,
-    },
-    aprobado_por: {
+    id_aprobador: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -73,13 +58,13 @@ export const CasoTerminacion = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+    saldo_vacaciones: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
-    tableName: "caso_terminacion",
+    tableName: "liquidacion",
     timestamps: false,
-    indexes: [
-      { fields: ["id_colaborador", "fecha_terminacion"] },
-      { fields: ["aprobado_por"] },
-    ],
   }
 );

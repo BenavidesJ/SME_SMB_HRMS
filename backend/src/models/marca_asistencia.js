@@ -17,12 +17,8 @@ export const MarcaAsistencia = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    fecha_hora: {
+    timestamp: {
       type: DataTypes.DATE,
-      allowNull: false,
-    },
-    origen: {
-      type: DataTypes.ENUM("APP", "WEB", "BIOMETRICO", "MANUAL"),
       allowNull: false,
     },
     ip_dispositivo: {
@@ -32,15 +28,11 @@ export const MarcaAsistencia = sequelize.define(
     observaciones: {
       type: DataTypes.STRING(255),
       allowNull: false,
+      defaultValue: "N/A",
     },
   },
   {
     tableName: "marca_asistencia",
     timestamps: false,
-    indexes: [
-      { fields: ["id_tipo_marca"] },
-      { fields: ["id_colaborador", "fecha_hora"] },
-      { fields: ["id_colaborador", "fecha_hora"] },
-    ],
   }
 );

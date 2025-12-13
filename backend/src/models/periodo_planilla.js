@@ -26,9 +26,8 @@ export const PeriodoPlanilla = sequelize.define(
       allowNull: false,
     },
     estado: {
-      type: DataTypes.ENUM("ABIERTO", "CALCULADO", "APROBADO", "PAGADO"),
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: "ABIERTO",
     },
     descripcion: {
       type: DataTypes.STRING(255),
@@ -39,8 +38,5 @@ export const PeriodoPlanilla = sequelize.define(
   {
     tableName: "periodo_planilla",
     timestamps: false,
-    indexes: [
-      { unique: true, fields: ["fecha_inicio", "fecha_fin"] },
-    ],
   }
 );

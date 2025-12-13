@@ -16,6 +16,5 @@ export const UsuarioRol = sequelize.define(
   {
     tableName: "usuario_rol",
     timestamps: false,
-    indexes: [{ fields: ["id_rol"] }],
   }
 );

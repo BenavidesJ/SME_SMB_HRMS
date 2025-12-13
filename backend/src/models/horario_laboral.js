@@ -36,8 +36,8 @@ export const HorarioLaboral = sequelize.define(
       allowNull: false,
       defaultValue: "SD",
     },
-    activo: {
-      type: DataTypes.BOOLEAN,
+    estado: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     fecha_actualizacion: {
@@ -52,9 +52,5 @@ export const HorarioLaboral = sequelize.define(
   {
     tableName: "horario_laboral",
     timestamps: false,
-    indexes: [
-      { fields: ["id_contrato"] },
-      { fields: ["id_tipo_jornada"] },
-    ],
   }
 );

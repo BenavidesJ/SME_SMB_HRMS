@@ -10,11 +10,11 @@ export const BitacoraAuditoria = sequelize.define(
       autoIncrement: true,
     },
     entidad_afectada: {
-      type: DataTypes.STRING(60),
+      type: DataTypes.STRING(30),
       allowNull: false,
     },
-    accion: {
-      type: DataTypes.STRING(40),
+    evento: {
+      type: DataTypes.STRING(15),
       allowNull: false,
     },
     actor_id: {
@@ -26,27 +26,18 @@ export const BitacoraAuditoria = sequelize.define(
       allowNull: false,
       defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
-    registro_afectado: {
+    id_registro_afectado: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
     },
     ip_origen: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(45),
       allowNull: false,
-    },
-    datos_anteriores: {
-      type: DataTypes.JSON,
-      allowNull: true,
-    },
-    datos_nuevos: {
-      type: DataTypes.JSON,
-      allowNull: true,
     },
   },
   {
     tableName: "bitacora_auditoria",
     timestamps: false,
-    indexes: [{ fields: ["actor_id"] }],
   }
 );

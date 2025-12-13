@@ -9,7 +9,7 @@ export const TipoContrato = sequelize.define(
       primaryKey: true,
     },
     tipo_contrato: {
-      type: DataTypes.STRING(85),
+      type: DataTypes.STRING(25),
       allowNull: false,
     },
   },

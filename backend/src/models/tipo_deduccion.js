@@ -9,37 +9,25 @@ export const TipoDeduccion = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    nombre: {
-      type: DataTypes.STRING(75),
+    nombre_tipo: {
+      type: DataTypes.STRING(45),
       allowNull: false,
     },
-    base_legal: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    es_porcentaje: {
+    es_procentaje: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: false,
     },
     es_monto: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
-    fecha_ultimo_ajuste: {
-      type: DataTypes.DATEONLY,
       allowNull: false,
     },
     es_voluntaria: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: false,
     },
-    activo: {
-      type: DataTypes.BOOLEAN,
+    fecha_ultimo_ajuste: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-      defaultValue: true,
     },
   },
   {

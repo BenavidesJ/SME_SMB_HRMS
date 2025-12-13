@@ -17,11 +17,6 @@ export const Incapacidad = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    numero_ccss: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      defaultValue: null,
-    },
     fecha_inicio: {
       type: DataTypes.DATEONLY,
       allowNull: false,
@@ -47,9 +42,5 @@ export const Incapacidad = sequelize.define(
   {
     tableName: "incapacidad",
     timestamps: false,
-    indexes: [
-      { fields: ["id_tipo_incap"] },
-      { fields: ["id_colaborador", "fecha_inicio"] },
-    ],
   }
 );

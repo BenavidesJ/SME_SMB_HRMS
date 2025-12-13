@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
-export const RegistroAguinaldo = sequelize.define(
-  "registro_aguinaldo",
+export const Aguinaldo = sequelize.define(
+  "aguinaldo",
   {
     id_aguinaldo: {
       type: DataTypes.INTEGER,
@@ -13,7 +13,7 @@ export const RegistroAguinaldo = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    ano: {
+    anio: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -33,17 +33,13 @@ export const RegistroAguinaldo = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
-    aprobado_por: {
+    registrado_por: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
   },
   {
-    tableName: "registro_aguinaldo",
+    tableName: "aguinaldo",
     timestamps: false,
-    indexes: [
-      { unique: true, fields: ["id_colaborador", "ano"] },
-      { fields: ["aprobado_por"] },
-    ],
   }
 );

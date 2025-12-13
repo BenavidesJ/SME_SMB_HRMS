@@ -46,10 +46,5 @@ export const SolicitudHoraExtra = sequelize.define(
   {
     tableName: "solicitud_hora_extra",
     timestamps: false,
-    indexes: [
-      { fields: ["id_tipo_hx"] },
-      { fields: ["id_colaborador", "fecha_trabajo", "estado"] },
-      { fields: ["aprobado_por"] },
-    ],
   }
 );

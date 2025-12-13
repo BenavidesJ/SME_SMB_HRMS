@@ -13,10 +13,6 @@ export const Evaluacion = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    id_ciclo: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     id_evaluador: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -34,24 +30,17 @@ export const Evaluacion = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
-    fecha_creacion: {
-      type: DataTypes.DATE,
+    fecha_inicio: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
-    fecha_actualizacion: {
-      type: DataTypes.DATE,
+    fecha_fin: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
   },
   {
     tableName: "evaluacion",
     timestamps: false,
-    indexes: [
-      { fields: ["id_ciclo"] },
-      { fields: ["id_colaborador", "id_ciclo"] },
-      { fields: ["id_evaluador"] },
-    ],
   }
 );

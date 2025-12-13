@@ -21,11 +21,6 @@ export const Contrato = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
-    fecha_fin: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-      defaultValue: null,
-    },
     id_tipo_contrato: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -46,35 +41,13 @@ export const Contrato = sequelize.define(
       type: DataTypes.ENUM("SEMANAL", "QUINCENAL", "MENSUAL"),
       allowNull: false,
     },
-    fecha_creacion: {
-      type: DataTypes.DATE,
+    estado: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
-    },
-    fecha_actualizacion: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
-    },
-    url_documento: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    activo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
     },
   },
   {
     tableName: "contrato",
     timestamps: false,
-    indexes: [
-      { fields: ["id_puesto"] },
-      { fields: ["id_colaborador", "fecha_inicio"] },
-      { unique: true, fields: ["id_contrato"] },
-      { fields: ["id_tipo_jornada"] },
-      { fields: ["id_tipo_contrato"] },
-    ],
   }
 );

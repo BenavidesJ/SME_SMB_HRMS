@@ -1,21 +1,21 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
-export const Provincia = sequelize.define(
-  "provincia",
+export const CausaLiquidacion = sequelize.define(
+  "causa_liquidacion",
   {
-    id_provincia: {
+    id_causa_liquidacion: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    nombre: {
-      type: DataTypes.STRING(80),
+    causa_liquidacion: {
+      type: DataTypes.STRING(35),
       allowNull: false,
     },
   },
   {
-    tableName: "provincia",
+    tableName: "causa_liquidacion",
     timestamps: false,
   }
 );

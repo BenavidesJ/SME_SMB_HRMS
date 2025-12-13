@@ -21,8 +21,5 @@ export const Canton = sequelize.define(
   {
     tableName: "canton",
     timestamps: false,
-    indexes: [
-      { unique: true, fields: ["id_provincia", "nombre"] },
-    ],
   }
 );

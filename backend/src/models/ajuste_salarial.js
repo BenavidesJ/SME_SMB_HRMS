@@ -30,6 +30,5 @@ export const AjusteSalarial = sequelize.define(
   {
     tableName: "ajuste_salarial",
     timestamps: false,
-    indexes: [{ fields: ["id_contrato", "fecha_vigencia"] }],
   }
 );

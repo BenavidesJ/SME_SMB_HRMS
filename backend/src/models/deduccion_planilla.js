@@ -29,9 +29,5 @@ export const DeduccionPlanilla = sequelize.define(
   {
     tableName: "deduccion_planilla",
     timestamps: false,
-    indexes: [
-      { fields: ["id_detalle"] },
-      { fields: ["id_tipo_deduccion"] },
-    ],
   }
 );

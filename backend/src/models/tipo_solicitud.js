@@ -1,30 +1,31 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.js";
 
-export const Telefono = sequelize.define(
-  "telefono",
+export const TipoSolicitud = sequelize.define(
+  "tipo_solicitud",
   {
-    id_telefono: {
+    id_tipo_solicitud: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    id_colaborador: {
-      type: DataTypes.INTEGER,
+    tipo_solicitud: {
+      type: DataTypes.STRING(15),
       allowNull: false,
     },
-    numero: {
-      type: DataTypes.INTEGER,
+    es_licencia: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
+      defaultValue: false,
     },
-    es_principal: {
+    es_permiso: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
     },
   },
   {
-    tableName: "telefono",
+    tableName: "tipo_solicitud",
     timestamps: false,
   }
 );

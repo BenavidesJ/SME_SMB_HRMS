@@ -16,7 +16,6 @@ export const Puesto = sequelize.define(
     nombre: {
       type: DataTypes.STRING(150),
       allowNull: false,
-      unique: true,
     },
     sal_base_referencia_min: {
       type: DataTypes.DECIMAL(12, 2),
@@ -26,17 +25,13 @@ export const Puesto = sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
-    activo: {
-      type: DataTypes.BOOLEAN,
+    estado: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
   },
   {
     tableName: "puesto",
     timestamps: false,
-    indexes: [
-      { fields: ["id_departamento", "nombre"] },
-      { unique: true, fields: ["nombre"] },
-    ],
   }
 );

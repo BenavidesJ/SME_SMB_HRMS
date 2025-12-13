@@ -21,8 +21,5 @@ export const Distrito = sequelize.define(
   {
     tableName: "distrito",
     timestamps: false,
-    indexes: [
-      { unique: true, fields: ["id_canton", "nombre"] },
-    ],
   }
 );

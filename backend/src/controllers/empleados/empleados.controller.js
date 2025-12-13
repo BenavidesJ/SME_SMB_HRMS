@@ -7,12 +7,13 @@ export const crearEmpleado = async (req, res, next) => {
     nombre,
     primer_apellido,
     segundo_apellido,
-    nacionalidad,
     genero,
     identificacion,
     fecha_nacimiento,
     correo_electronico,
     fecha_ingreso,
+    cantidad_hijos,
+    estado_civil,
     rol
   } = req.body;
   try {
@@ -21,12 +22,13 @@ export const crearEmpleado = async (req, res, next) => {
       "nombre",
       "primer_apellido",
       "segundo_apellido",
-      "nacionalidad",
       "genero",
       "identificacion",
       "fecha_nacimiento",
       "correo_electronico",
       "fecha_ingreso",
+      "cantidad_hijos",
+      "estado_civil",
       "rol"
     ];
 
@@ -40,12 +42,13 @@ export const crearEmpleado = async (req, res, next) => {
       nombre,
       primer_apellido,
       segundo_apellido,
-      nacionalidad,
       genero,
       identificacion,
       fecha_nacimiento,
       correo_electronico,
       fecha_ingreso,
+      cantidad_hijos,
+      estado_civil,
       rol
     })
 
@@ -70,7 +73,7 @@ export const obtenerColaboradorPorUserId = async (req, res, next) => {
   } = req.params;
   try {
 
-    const data = await obtenerColaboradorPorIdUsuario({id})
+    const data = await obtenerColaboradorPorIdUsuario({ id })
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
       success: true,

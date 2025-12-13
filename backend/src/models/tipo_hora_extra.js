@@ -12,7 +12,6 @@ export const TipoHoraExtra = sequelize.define(
     nombre: {
       type: DataTypes.STRING(30),
       allowNull: false,
-      unique: true,
     },
     descripcion: {
       type: DataTypes.STRING(120),
@@ -26,6 +25,5 @@ export const TipoHoraExtra = sequelize.define(
   {
     tableName: "tipo_hora_extra",
     timestamps: false,
-    indexes: [{ unique: true, fields: ["nombre"] }],
   }
 );

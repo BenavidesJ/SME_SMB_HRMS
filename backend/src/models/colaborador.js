@@ -9,50 +9,55 @@ export const Colaborador = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    nombre: { type: DataTypes.STRING(100), allowNull: false },
-    primer_apellido: { type: DataTypes.STRING(150), allowNull: false },
-    segundo_apellido: { type: DataTypes.STRING(150), allowNull: false },
-    nacionalidad: { type: DataTypes.STRING(50), allowNull: false },
-    genero: {
-      type: DataTypes.ENUM("MASCULINO", "FEMENINO", "OTRO"),
+    nombre: {
+      type: DataTypes.STRING(25),
+      allowNull: false,
+    },
+    primer_apellido: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+    },
+    segundo_apellido: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+    },
+    id_genero: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     identificacion: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.INTEGER,
       allowNull: false,
       unique: true,
     },
-    fecha_nacimiento: { type: DataTypes.DATEONLY, allowNull: false },
+    fecha_nacimiento: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
     correo_electronico: {
       type: DataTypes.STRING(150),
       allowNull: false,
-      validate: { isEmail: true },
     },
-    fecha_ingreso: { type: DataTypes.DATEONLY, allowNull: false },
-    fecha_creacion: {
-      type: DataTypes.DATE,
+    fecha_ingreso: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     },
-    fecha_actualizacion: {
-      type: DataTypes.DATE,
+    cantidad_hijos: {
+      type: DataTypes.TINYINT,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      defaultValue: 0,
+    },
+    estado_civil: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     estado: {
-      type: DataTypes.ENUM("ACTIVO", "SUSPENDIDO", "DESVINCULADO"),
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: "ACTIVO",
-    },
-    activo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
     },
   },
   {
     tableName: "colaborador",
     timestamps: false,
-    indexes: [{ unique: true, fields: ["identificacion"] }],
   }
 );

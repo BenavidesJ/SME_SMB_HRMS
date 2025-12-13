@@ -12,16 +12,10 @@ export const TipoMarca = sequelize.define(
     nombre: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      unique: true,
-    },
-    descripcion: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
     },
   },
   {
     tableName: "tipo_marca",
     timestamps: false,
-    indexes: [{ unique: true, fields: ["nombre"] }],
   }
 );

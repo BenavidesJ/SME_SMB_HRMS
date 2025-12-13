@@ -12,7 +12,6 @@ export const TipoIncapacidad = sequelize.define(
     nombre: {
       type: DataTypes.STRING(40),
       allowNull: false,
-      unique: true,
     },
     descripcion: {
       type: DataTypes.STRING(150),
@@ -22,6 +21,5 @@ export const TipoIncapacidad = sequelize.define(
   {
     tableName: "tipo_incapacidad",
     timestamps: false,
-    indexes: [{ unique: true, fields: ["nombre"] }],
   }
 );

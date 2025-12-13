@@ -34,30 +34,14 @@ export const Direccion = sequelize.define(
       allowNull: false,
       defaultValue: true,
     },
-    fecha_creacion: {
-      type: DataTypes.DATE,
+    estado: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
-    },
-    fecha_actualizacion: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
-    },
-    activo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
+      defaultValue: 1,
     },
   },
   {
     tableName: "direccion",
     timestamps: false,
-    indexes: [
-      { fields: ["id_provincia"] },
-      { fields: ["id_canton"] },
-      { fields: ["id_distrito"] },
-      { fields: ["id_colaborador", "es_principal"] },
-    ],
   }
 );

@@ -13,14 +13,6 @@ export const Departamento = sequelize.define(
       type: DataTypes.STRING(150),
       allowNull: false,
     },
-    descripcion: {
-      type: DataTypes.STRING(150),
-      allowNull: false,
-    },
-    activo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-    },
   },
   {
     tableName: "departamento",

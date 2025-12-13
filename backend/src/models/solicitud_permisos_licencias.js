@@ -4,12 +4,24 @@ import { sequelize } from "../config/db.js";
 export const SolicitudPermisosLicencias = sequelize.define(
   "solicitud_permisos_licencias",
   {
-    id_permiso: {
+    id_solicitud: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
     id_colaborador: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    id_aprobador: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    estado_solicitud: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    tipo_solicitud: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -21,46 +33,27 @@ export const SolicitudPermisosLicencias = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+    con_goce_salarial: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+    },
+    observaciones: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    cantidad_horas: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: false,
+      defaultValue: 0.0,
+    },
     cantidad_dias: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
-    },
-    horas_por_dia: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: false,
-    },
-    motivo: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    estado: {
-      type: DataTypes.ENUM("PENDIENTE", "APROBADO", "RECHAZADO", "ANULADO"),
-      allowNull: false,
-      defaultValue: "PENDIENTE",
-    },
-    aprobado_por: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    fecha_aprobacion: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    comentarios: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    es_remunerado: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
+      defaultValue: 0.0,
     },
   },
   {
     tableName: "solicitud_permisos_licencias",
     timestamps: false,
-    indexes: [
-      { fields: ["id_colaborador"] },
-      { fields: ["aprobado_por"] },
-    ],
   }
 );

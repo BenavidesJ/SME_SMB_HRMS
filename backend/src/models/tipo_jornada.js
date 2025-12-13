@@ -10,14 +10,14 @@ export const TipoJornada = sequelize.define(
       autoIncrement: true,
     },
     tipo: {
-      type: DataTypes.STRING(45),
+      type: DataTypes.STRING(25),
       allowNull: false,
     },
     max_horas_diarias: {
       type: DataTypes.DECIMAL(4, 2),
       allowNull: false,
     },
-    max_horas_semana: {
+    max_horas_semanales: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
     },

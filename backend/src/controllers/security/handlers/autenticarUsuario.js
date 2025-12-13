@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { genJWT } from "../../../common/genJWT.js";
-import { Usuario, Rol, Colaborador } from "../../../models/index.js";
+import { Usuario, Rol, Colaborador, Estado } from "../../../models/index.js";
 
 /**
  * Autenticar Usuario
@@ -19,8 +19,10 @@ export const autenticarUsuario = async ({ username, password }) => {
       "id_usuario",
       "username",
       "contrasena_hash",
-      "activo",
-      "requiere_cambio_contrasena"
+      "requiere_cambio_contraseña",
+      "ultimo_acceso_en",
+      "id_colaborador",
+      "estado",
     ],
     include: [
       {
@@ -32,12 +34,12 @@ export const autenticarUsuario = async ({ username, password }) => {
         model: Colaborador,
         as: "colaborador",
         attributes: ["id_colaborador", "nombre", "primer_apellido"]
-      }
+      },
     ]
   });
 
   if (!user) throw new Error("Credenciales incorrectas, por favor verifique e ingrese de nuevo sus datos.");
-  if (!user.activo) throw new Error("El usuario está inactivo. Contacte al administrador.");
+  if (user.estado !== 1) throw new Error("El usuario está inactivo. Contacte al administrador.");
 
   const isPasswordValid = await bcrypt.compare(password, user.contrasena_hash);
 

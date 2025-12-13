@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { sendEmail } from "../../../services/mail.js";
-import { Usuario, Rol, Colaborador, sequelize } from "../../../models/index.js";
+import { Usuario, Rol, Colaborador, sequelize, Genero } from "../../../models/index.js";
 import { plantillaEmailBienvenida } from "../../../common/htmlLayouts/plantillaEmailBienvenida.js";
 import { generateTempPassword } from "../../../common/genTempPassword.js";
 import { generateUsername } from "../../../common/genUsername.js";
@@ -13,12 +13,13 @@ import { generateUsername } from "../../../common/genUsername.js";
  *      nombre, 
  *      primer_apellido,
  *      segundo_apellido,
- *      nacionalidad,
- *      genero,
+ *      id_genero,
  *      identificacion,
  *      fecha_nacimiento,
  *      correo_electronico,
  *      fecha_ingreso,
+ *      cantidad_hijos,
+ *      estado_civil,
  *      rol 
  *  }
  * @returns {Promise<{ colaborador }>}
@@ -28,18 +29,20 @@ export const crearColaborador = async (
     nombre,
     primer_apellido,
     segundo_apellido,
-    nacionalidad,
     genero,
     identificacion,
     fecha_nacimiento,
     correo_electronico,
     fecha_ingreso,
+    cantidad_hijos,
+    estado_civil,
     rol
   }) => {
 
   const tx = await sequelize.transaction();
 
   try {
+    console.log(identificacion)
     const userExists = await Colaborador.findOne({
       where: { identificacion },
       transaction: tx
@@ -47,16 +50,25 @@ export const crearColaborador = async (
 
     if (userExists) throw new Error(`Ya existe un colaborador con el número de identificación: ${identificacion}`)
 
+    const newEmployeeGender = String(genero).toUpperCase();
+    const gender = await Genero.findOne({
+      where: { genero: newEmployeeGender },
+      transaction: tx
+    });
+    const maritalStatus = String(estado_civil).toUpperCase();
+
     const employee = await Colaborador.create({
       nombre,
       primer_apellido,
       segundo_apellido,
-      nacionalidad,
-      genero,
+      genero: gender,
       identificacion,
       fecha_nacimiento,
       correo_electronico,
       fecha_ingreso,
+      cantidad_hijos,
+      estado_civil: maritalStatus,
+      estado: 1
     }, { transaction: tx });
 
     const foundRole = await Rol.findOne({
@@ -75,10 +87,10 @@ export const crearColaborador = async (
     const user = await Usuario.create({
       username,
       contrasena_hash,
-      activo: true,
       requiere_cambio_contrasena: true,
       ultimo_acceso_en: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-      id_colaborador: employee.id_colaborador
+      id_colaborador: employee.id_colaborador,
+      estado: 1,
     }, { transaction: tx })
 
     await user.addRol(foundRole, { transaction: tx });

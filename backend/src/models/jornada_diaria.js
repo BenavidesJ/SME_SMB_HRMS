@@ -41,8 +41,5 @@ export const JornadaDiaria = sequelize.define(
   {
     tableName: "jornada_diaria",
     timestamps: false,
-    indexes: [
-      { fields: ["id_colaborador", "fecha"] },
-    ],
   }
 );

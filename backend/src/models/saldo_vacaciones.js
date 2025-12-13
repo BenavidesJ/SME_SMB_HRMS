@@ -9,18 +9,6 @@ export const SaldoVacaciones = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    id_colaborador: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    periodo_inicio: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
-    },
-    periodo_fin: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
-    },
     dias_ganados: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
@@ -35,8 +23,5 @@ export const SaldoVacaciones = sequelize.define(
   {
     tableName: "saldo_vacaciones",
     timestamps: false,
-    indexes: [
-      { unique: true, fields: ["id_colaborador", "periodo_inicio"] },
-    ],
   }
 );

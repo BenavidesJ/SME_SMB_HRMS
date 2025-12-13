@@ -16,9 +16,5 @@ export const EvaluacionRubro = sequelize.define(
   {
     tableName: "evaluacion_rubro",
     timestamps: false,
-    indexes: [
-      { fields: ["id_evaluacion"] },
-      { fields: ["id_rubro_evaluacion"] },
-    ],
   }
 );

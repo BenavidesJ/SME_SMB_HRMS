@@ -49,7 +49,7 @@ export const DetallePlanilla = sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
-    registrado_por: {
+    generado_por: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -57,11 +57,5 @@ export const DetallePlanilla = sequelize.define(
   {
     tableName: "detalle_planilla",
     timestamps: false,
-    indexes: [
-      { fields: ["id_colaborador"] },
-      { fields: ["id_periodo", "id_colaborador"] },
-      { fields: ["id_contrato"] },
-      { fields: ["registrado_por"] },
-    ],
   }
 );
