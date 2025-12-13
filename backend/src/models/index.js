@@ -76,6 +76,9 @@ Colaborador.belongsTo(EstadoCivil, { foreignKey: "estado_civil" });
 Estado.hasMany(Colaborador, { foreignKey: "estado" });
 Colaborador.belongsTo(Estado, { foreignKey: "estado" });
 
+Estado.hasMany(Direccion, { foreignKey: "estado" });
+Direccion.belongsTo(Estado, { foreignKey: "estado" });
+
 Estado.hasMany(Usuario, { foreignKey: "estado" });
 Usuario.belongsTo(Estado, { foreignKey: "estado" });
 
@@ -129,8 +132,8 @@ DetallePlanilla.belongsTo(PeriodoPlanilla, { foreignKey: "id_periodo" });
 Contrato.hasMany(DetallePlanilla, { foreignKey: "id_contrato" });
 DetallePlanilla.belongsTo(Contrato, { foreignKey: "id_contrato" });
 
-Colaborador.hasMany(DetallePlanilla, { foreignKey: "id_colaborador" });
-DetallePlanilla.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
+Colaborador.hasMany(DetallePlanilla, { foreignKey: "generado_por", as: "planillas_generadas" });
+DetallePlanilla.belongsTo(Colaborador, { foreignKey: "generado_por", as: "generador_planilla" });
 
 DetallePlanilla.hasMany(DeduccionPlanilla, { foreignKey: "id_detalle" });
 DeduccionPlanilla.belongsTo(DetallePlanilla, { foreignKey: "id_detalle" });
