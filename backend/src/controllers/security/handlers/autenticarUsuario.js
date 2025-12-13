@@ -55,7 +55,7 @@ export const autenticarUsuario = async ({ username, password }) => {
     );
   }
 
-  await user.update({ ultimo_acceso_en: dayjs().format("DD-MM-YYYY HH:mm:ss") });
+  await user.update({ ultimo_acceso_en: dayjs().format("YYYY-MM-DD HH:mm:ss") });
 
   const payload = {
     id: user.id_usuario,

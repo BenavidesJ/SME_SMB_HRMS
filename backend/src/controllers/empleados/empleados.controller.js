@@ -75,9 +75,9 @@ export const obtenerColaboradorPorUserId = async (req, res, next) => {
 
     const data = await obtenerColaboradorPorIdUsuario({ id })
 
-    return res.status(HTTP_CODES.SUCCESS.ACCEPTED).json({
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
       success: true,
-      status_code: HTTP_CODES.SUCCESS.ACCEPTED,
+      status_code: HTTP_CODES.SUCCESS.OK,
       message: "Consulta exitosa",
       data,
     });

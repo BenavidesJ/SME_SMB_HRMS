@@ -24,7 +24,7 @@ export const authorization = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.dataUsuario;
+    req.user = decoded.data;
     next();
   } catch (error) {
     return res.status(HTTP_CODES.ERROR.CLIENT.UNAUTHORIZED).json({
