@@ -1,4 +1,5 @@
-import { Colaborador, Usuario, Rol } from "../../../models/index.js";
+import dayjs from "dayjs";
+import { Colaborador, Usuario, Rol, Estado, EstadoCivil, Genero } from "../../../models/index.js";
 
 /**
  * Obtiene los datos de un colaborador y su usuario asociado.
@@ -17,18 +18,24 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
           "nombre",
           "primer_apellido",
           "segundo_apellido",
+          "id_genero",
           "correo_electronico",
-          "nacionalidad",
           "identificacion",
-          "genero",
           "fecha_ingreso",
-          "fecha_nacimiento"
+          "fecha_nacimiento",
+          "estado_civil",
+          "estado"
         ],
       },
       {
         model: Rol,
         attributes: ["nombre"],
         through: { attributes: [] },
+      },
+      {
+        model: Estado,
+        as: "estadoUsuario",
+        attributes: ["estado"]
       },
     ],
   });
@@ -42,6 +49,8 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
   }
 
   const employee = user.colaborador;
+  const employeeGender = await Genero.findByPk(employee.id_genero);
+  const employeeMaritalStatus = await EstadoCivil.findByPk(employee.estado_civil);
 
   return {
     id: employee.id_colaborador,
@@ -49,16 +58,18 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
     primer_apellido: employee.primer_apellido,
     segundo_apellido: employee.segundo_apellido,
     correo_electronico: employee.correo_electronico,
-    nacionalidad: employee.nacionalidad,
     identificacion: employee.identificacion,
-    genero: employee.genero,
-    fecha_ingreso: employee.fecha_ingreso,
-    fecha_nacimiento: employee.fecha_nacimiento,
+    genero: employeeGender.genero,
+    fecha_ingreso: dayjs(employee.fecha_ingreso).format("DD-MM-YYYY HH:mm:ss"),
+    fecha_nacimiento: dayjs(employee.fecha_nacimiento).format("DD-MM-YYYY HH:mm:ss"),
+    estado_civil: employeeMaritalStatus.estado_civil,
     usuario: user
       ? {
         id_usuario: user.id_usuario,
         username: user.username,
-        activo: user.activo,
+        activo: user.estado,
+        requiere_cambio_contrasena: user.requiere_cambio_contrasena,
+        ultimo_acceso: dayjs(user.ultimo_acceso_en).format("DD-MM-YYYY HH:mm:ss"),
         roles: user.rols?.map((r) => r.nombre) || [],
       }
       : {},

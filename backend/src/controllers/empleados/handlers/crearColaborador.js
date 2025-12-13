@@ -99,7 +99,7 @@ export const crearColaborador = async (
       username,
       contrasena_hash,
       requiere_cambio_contrasena: true,
-      ultimo_acceso_en: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      ultimo_acceso_en: dayjs().format("DD-MM-YYYY HH:mm:ss"),
       id_colaborador: employee.id_colaborador,
       estado: 1,
     }, { transaction: tx })
