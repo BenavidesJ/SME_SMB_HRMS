@@ -62,8 +62,6 @@ export const resetPasswordOlvidado = async (username) => {
       temporalPass
     };
 
-    console.log(data, userAccount)
-
     await sendEmail({
       recipient: userAccount.colaborador.correo_electronico,
       subject: "Reset de contraseña",

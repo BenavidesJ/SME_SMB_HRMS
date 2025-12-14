@@ -45,7 +45,7 @@ export const resetPassword = async (req, res, next) => {
     return res.status(HTTP_CODES.SUCCESS.OK).json({
       success: true,
       status_code: HTTP_CODES.SUCCESS.OK,
-      message: "Usuario autenticado correctamente",
+      message: "Contraseña actualizada correctamente",
       data: {}
     });
   } catch (error) {

@@ -24,11 +24,11 @@ export const plantillaEmailResetContrasena = ({
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Contraseña Temporal</title>
     </head>
-    <body style="margin:0; padding:0; background-color:#f5f7fa; font-family:Arial, Helvetica, sans-serif; color:#333;">
-      <table align="center" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; margin:auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow:hidden;">
+    <body style="margin:0; padding:0; background-color:#515151; font-family:Arial, Helvetica, sans-serif; color:#DEDEDE;">
+      <table align="center" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; margin:auto; background-color:#E7E7E7; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow:hidden;">
         <tr>
-          <td style="background-color:#0b5d5b; padding:20px 30px; text-align:center;">
-            <h1 style="color:#ffffff; font-size:24px; margin:0;">Contraseña temporal para ingreso al sistema de <span style="color:#cdeac0;">BioAlquimia</span></h1>
+          <td style="background-color:#319E3F; padding:20px 30px; text-align:center;">
+             <h1 style="color:#E7E7E7; font-size:24px; margin:0;">Contraseña temporal para ingreso al sistema de <span style="color:#57E868;">Bio</span><span style="color:#105CC7;">Alquimia</span></h1>
           </td>
         </tr>
 
@@ -40,14 +40,14 @@ export const plantillaEmailResetContrasena = ({
               Ya puedes acceder al sistema con las siguientes credenciales:
             </p>
 
-            <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0; border:1px solid #e2e8f0; border-radius:6px;">
+           <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0; border:1px solid #E7E7E7; border-radius:6px;">
               <tr>
-                <td style="background-color:#f8fafc; padding:12px 16px; font-weight:bold; width:35%;">Usuario</td>
-                <td style="padding:12px 16px; color:#0b5d5b;">${username}</td>
+                <td style="background-color:#C5C5C5; padding:12px 16px; font-weight:bold; width:35%;">Usuario</td>
+                <td style="padding:12px 16px; color:#105CC7;">${username}</td>
               </tr>
               <tr>
-                <td style="background-color:#f8fafc; padding:12px 16px; font-weight:bold;">Contraseña temporal</td>
-                <td style="padding:12px 16px; color:#0b5d5b;">${temporalPass}</td>
+                <td style="background-color:#C5C5C5; padding:12px 16px; font-weight:bold;">Contraseña temporal</td>
+                <td style="padding:12px 16px; color:#105CC7;">${temporalPass}</td>
               </tr>
             </table>
 
@@ -55,14 +55,14 @@ export const plantillaEmailResetContrasena = ({
               Por razones de seguridad, te recomendamos <strong>cambiar tu contraseña al ingresar al sistema</strong>.
             </p>
 
-            <p style="font-size:14px; color:#555;">
+            <p style="font-size:14px; color:#E7E7E7;">
               Si tienes algún problema con el acceso, por favor contacta al departamento de Recursos Humanos.
             </p>
           </td>
         </tr>
 
         <tr>
-          <td style="background-color:#f8fafc; padding:15px 30px; text-align:center; font-size:12px; color:#777;">
+         <td style="background-color:#C5C5C5; padding:15px 30px; text-align:center; font-size:12px; color:#E7E7E7;">
             © ${dayjs().year()} BioAlquimia S.A. — Sistema de Gestión de Recursos Humanos<br/>
             <span style="color:#aaa;">Este es un mensaje automático, por favor no respondas a este correo.</span>
           </td>
