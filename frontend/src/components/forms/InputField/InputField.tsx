@@ -1,4 +1,4 @@
-import { Badge, Field, Input, NumberInput } from '@chakra-ui/react';
+import { Badge, Field, Input, NumberInput, type InputProps } from '@chakra-ui/react';
 import { forwardRef } from 'react';
 import { PasswordInput } from '../../ui/password-input';
 import { useFormContext, type RegisterOptions } from 'react-hook-form';
@@ -6,7 +6,7 @@ import { useFormContext, type RegisterOptions } from 'react-hook-form';
 type FieldType = 'text' | 'password' | 'email' | 'number';
 
 // tipos: Password, Texto, Numeros
-interface FieldProps {
+interface FieldProps extends InputProps {
   /*
   El tipo del campo input. Por defecto text.
   */
@@ -77,7 +77,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(
 
 
     return (
-      <Field.Root minW="300px" ref={ref} required={required} invalid={isInvalid}>
+      <Field.Root minW="300px" ref={ref} required={required} invalid={isInvalid} minH="90px">
         <Field.Label>
           {label}
           {required ? (
@@ -92,7 +92,13 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(
             />
           )}
         </Field.Label>
-        <Component label={label} placeholder={placeholder} required={required} {...register(name, { required, ...rules })} />
+        <Component
+          label={label}
+          placeholder={placeholder}
+          required={required}
+          {...register(name, { required, ...rules })}
+          _focus={{ outlineColor: !isInvalid ? "blue.600" : "red.600" }}
+        />
         {error ? <Field.ErrorText>{error}</Field.ErrorText> : <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>}
       </Field.Root>
     );

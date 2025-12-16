@@ -1,15 +1,18 @@
 import { createBrowserRouter } from "react-router";
-import UIdocs from "../pages/UIdocs";
-import LoginPage from "../pages/LoginPage";
 import { PrivateRoute } from "./PrivateRoute";
 import { PublicRoute } from "./PublicRoute";
+import UIdocs from "../pages/UIdocs";
+import LoginPage from "../pages/LoginPage";
 import Main from "../pages/Main";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import NotFoundPage from "../pages/NotFoundPage";
 
 export const router = createBrowserRouter([
   {
     element: <PublicRoute />,
     children: [
       { path: "/login", element: <LoginPage /> },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
     ]
   },
   {
@@ -24,5 +27,9 @@ export const router = createBrowserRouter([
         element: <UIdocs />
       }
     ]
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />
   }
 ]);

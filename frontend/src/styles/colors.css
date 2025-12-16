@@ -1,0 +1,29 @@
+:root {
+  /* BioAlquimia - Azules */
+  --brand-blue-25:  #C6D6F1;
+  --brand-blue-50: #8CAEE4;
+  --brand-blue-75: #5185D6;
+  --brand-blue-100: #105cc7;
+  /* BioAlquimia - Verdes */
+  --brand-green-25:  #DAFADA;
+  --brand-green-50: #B3F4B7;
+  --brand-green-75: #88EE90;
+  --brand-green-100: #57E868;
+  /* Escala de azules */
+  --dark-blue-100: #14204a;
+  /* Escala de grises */
+  --text:      #161717;
+  --muted:     #515151;
+  --light-gray1-25: #DEDEDE;
+  --light-gray1-50: #BEBEBE;
+  --light-gray1-75: #9D9D9D;
+  --light-gray1-100: #7C7C7C;
+  --light-gray2-25: #E7E7E7;
+  --light-gray2-50: #CFCFCF;
+  --light-gray2-75: #B6B6B6;
+  --light-gray2-100: #9E9E9E;
+  /* Semantic */
+  --color-success:   #319E3F;
+  --color-danger:    #EB4D49;
+  --color-warning:    #EBB249;
+}

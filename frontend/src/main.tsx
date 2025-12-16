@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router';
 import { Toaster } from './components/ui/toaster';
 import { router } from './router';
 import { AuthProvider } from './context/AuthContext';
+import "./styles/colors.css";
 
 document.title = 'BioAlquimia';
 
