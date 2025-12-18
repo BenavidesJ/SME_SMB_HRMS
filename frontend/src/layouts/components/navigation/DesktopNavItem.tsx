@@ -32,10 +32,10 @@ export const DesktopNavItem = ({
             py="2"
             borderRadius="lg"
             cursor="pointer"
-            _hover={{ bg: "#84ed6c79" }}
+            _hover={{ bg: "brand.green.25", color: "brand.blue.100" }}
             onClick={isExpandable ? () => setOpen(!open) : undefined}
           >
-            <Box fontSize="20px" color="gray.600">
+            <Box fontSize="20px" color="gray.600" >
               {icon}
             </Box>
 

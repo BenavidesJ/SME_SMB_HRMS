@@ -1,25 +1,57 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Box,
   Flex,
   List,
   IconButton,
   Text,
+  InputGroup,
+  Input,
 } from "@chakra-ui/react";
 
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
 
 import { DesktopNavItem } from "./DesktopNavItem";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { NAV_MAIN, NAV_SETTINGS } from "./navItems";
+import { FiSearch } from "react-icons/fi";
 
 
 export const DesktopNav = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [modules, setModules] = useState(NAV_MAIN);
+  const debounceRef = useRef<number | null>(null);
 
   const handleCollapseBar = useCallback(() => {
     setCollapsed((state) => !state)
-  }, [collapsed]);
+  }, []);
+
+  const filterModules = (query: string) => {
+    if (!query) {
+      setModules(NAV_MAIN);
+      return;
+    }
+    const q = query.toLowerCase();
+    setModules(
+      NAV_MAIN.filter((item) =>
+        item.label.toLowerCase().includes(q)
+      )
+    );
+  };
+
+  const searchModule = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      debounceRef.current = window.setTimeout(() => {
+        filterModules(value);
+      }, 300);
+    },
+    []
+  );
 
   return (
     <Flex
@@ -36,12 +68,17 @@ export const DesktopNav = () => {
       padding="20px"
     >
       <Flex justifyContent="space-between" alignItems="center" mb="32px">
+        {!collapsed && (
+          <InputGroup flex={1} startElement={<FiSearch />}>
+            <Input placeholder="Buscar módulos" onChange={searchModule} />
+          </InputGroup>
+        )}
         <IconButton
           aria-label="collapse sidebar"
           variant="ghost"
           size="md"
           onClick={handleCollapseBar}
-          _hover={{ bg: "#84ed6c79" }}
+          _hover={{ bg: "brand.green.25" }}
         >
           {collapsed ? <GoSidebarCollapse /> : <GoSidebarExpand />}
         </IconButton>
@@ -52,7 +89,7 @@ export const DesktopNav = () => {
           <Text
             fontSize="md"
             fontWeight="medium"
-            color="gray.500"
+            color="brand.text"
             mb="2"
             letterSpacing="wide"
           >
@@ -61,7 +98,7 @@ export const DesktopNav = () => {
         )}
 
         <List.Root gap="2">
-          {NAV_MAIN.map((item) => (
+          {modules.map((item) => (
             <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
           ))}
         </List.Root>
@@ -72,7 +109,7 @@ export const DesktopNav = () => {
           <Text
             fontSize="md"
             fontWeight="medium"
-            color="gray.500"
+            color="brand.text"
             mb="2"
             letterSpacing="wide"
           >

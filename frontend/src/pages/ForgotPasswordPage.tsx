@@ -27,7 +27,7 @@ const ForgotPasswordPage = () => {
   return (
     <main className={css.mainFrame}>
       <Card.Root
-        variant="subtle"
+        variant="elevated"
         flexDirection="row"
         borderRadius={{ base: "none", md: "4xl" }}
         maxW="850px"
@@ -65,10 +65,11 @@ const ForgotPasswordPage = () => {
                 <Button
                   color="white"
                   fontWeight="bold"
-                  backgroundColor="blue.600"
+                  backgroundColor="brand.blue.100"
                   loading={loading}
                   loadingText="Iniciando Sesion"
                   type='submit'
+                  _hover={{ backgroundColor: "blue.600" }}
                   mt="4"
                   size="lg"
                   w="100%"

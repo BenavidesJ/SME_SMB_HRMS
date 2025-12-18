@@ -27,7 +27,7 @@ export const Layout = ({ children, pageTitle }: LayoutProps) => {
         rightContent={
           <Button
             onClick={logout}
-            backgroundColor="red.500"
+            backgroundColor="semantic.danger"
             size="xs"
           >
             <FiLogOut />

@@ -6,13 +6,15 @@ interface LinkProps {
   readonly path: string;
   // El contenido que tiene internamente el Link
   readonly children: React.ReactNode;
+  // El color del texto del link
+  readonly textColor?: string;
 }
 
-export const Link = ({ path, children, ...props }: LinkProps) => {
+export const Link = ({ path, children, textColor, ...props }: LinkProps) => {
   return (
     <ChakraLink
       asChild
-      color="#5185D6"
+      color={textColor || "brand.blue.100"}
       {...props}
     >
       <RouterLink

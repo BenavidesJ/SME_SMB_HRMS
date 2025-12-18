@@ -1,6 +1,6 @@
 import type { JSX } from "react";
-import { FiHome, FiUsers, FiSettings, FiCode } from "react-icons/fi";
-import { PiMoney } from "react-icons/pi";
+import { FiUsers, FiSettings, FiCode, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome } from "react-icons/fi";
+import { PiBank, PiCalendarCheck, PiCalendarPlus, PiHospital, PiMoney } from "react-icons/pi";
 
 /*
   El item de navegacion a renderizar en AppNavigation
@@ -34,9 +34,16 @@ export interface NavItem {
 
 export const NAV_MAIN: NavItem[] = [
   { label: "Principal", icon: <FiHome />, path: "/" },
-  { label: "Gestión de Empleados", icon: <FiUsers />, path: "/empleados" },
-  { label: "Planillas", icon: <PiMoney />, path: "/planillas" },
-  { label: "Schedules", icon: <FiUsers />, path: "/schedules" },
+  { label: "Mantenimientos", icon: <FiTable />, path: "/mantenimientos" },
+  { label: "Gestión de Planillas", icon: <PiMoney />, path: "/planillas" },
+  { label: "Asistencia de Empleados", icon: <PiCalendarCheck />, path: "/asistencia" },
+  { label: "Gestión de Vacaciones", icon: <FiBatteryCharging />, path: "/vacaciones" },
+  { label: "Gestión de Aguinaldos", icon: <PiBank />, path: "/aguinaldos" },
+  { label: "Gestión de Horas Extra", icon: <PiCalendarPlus />, path: "/horas-extra" },
+  { label: "Gestión de Liquidaciones", icon: <FiScissors />, path: "/liquidaciones" },
+  { label: "Evaluación de Desempeño", icon: <FiAward />, path: "/evaluacion" },
+  { label: "Gestión de Incapacidades", icon: <PiHospital />, path: "/incapacidades" },
+  { label: "Gestión de Permisos", icon: <FiUsers />, path: "/permisos" },
 ];
 
 export const NAV_SETTINGS: NavItem[] = [

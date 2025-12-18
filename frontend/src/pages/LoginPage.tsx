@@ -1,4 +1,4 @@
-import { Button, Card, Image, Box, Stack } from '@chakra-ui/react'
+import { Button, Card, Box, Stack } from '@chakra-ui/react'
 import { Form, InputField } from '../components/forms'
 import { useAuth } from '../context/AuthContext'
 import type { Credentials } from '../types';
@@ -6,7 +6,7 @@ import { login } from '../services/api/auth';
 import { useNavigate } from 'react-router';
 import logo from "../assets/LogoColor.svg";
 import { FiLogIn } from "react-icons/fi";
-import { Link } from '../components/general';
+import { Link, Logo } from '../components/general';
 import css from "../styles/global.module.css"
 
 const LoginPage = () => {
@@ -27,7 +27,7 @@ const LoginPage = () => {
   return (
     <main className={css.mainFrame}>
       <Card.Root
-        variant="subtle"
+        variant="elevated"
         flexDirection="row"
         borderRadius={{ base: "none", md: "4xl" }}
         maxW="850px"
@@ -42,7 +42,7 @@ const LoginPage = () => {
               display="flex"
               justifyContent="center"
             >
-              <Image src={logo} w="300px" h="400px" />
+              <Logo src={logo} width="300px" heigth="400px" />
             </Box>
             <Box w={{ base: "100%", md: "60%" }} p="8">
               <Card.Title fontSize="lg">
@@ -75,10 +75,11 @@ const LoginPage = () => {
                 <Button
                   color="white"
                   fontWeight="bold"
-                  backgroundColor="blue.600"
+                  backgroundColor="brand.blue.100"
                   loading={loading}
                   loadingText="Iniciando Sesion"
                   type='submit'
+                  _hover={{ backgroundColor: "blue.600" }}
                   mt="4"
                   size="lg"
                   w="100%"
