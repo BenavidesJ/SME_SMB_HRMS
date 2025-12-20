@@ -1,29 +1,30 @@
-import { useState } from 'react';
-import { Button, Card, Stack, Image, Box } from '@chakra-ui/react'
-import { Form, InputField } from '../components/forms'
-import type { Credentials } from '../types';
-import { restorePassword } from '../services/api/auth';
+import { Button, Card, Box, Stack } from '@chakra-ui/react'
+import { Form, InputField } from '../../components/forms'
+import { useAuth } from '../../context/AuthContext'
+import type { Credentials } from '../../types';
+import { login } from '../../services/api/auth';
 import { useNavigate } from 'react-router';
-import logo from "../assets/LogoColor.svg";
-import { FiArrowLeft } from "react-icons/fi";
-import { Link } from '../components/general';
-import css from "../styles/global.module.css";
+import logo from "../../assets/LogoColor.svg";
+import { FiLogIn } from "react-icons/fi";
+import { Link, Logo } from '../../components/general';
+import css from "../../styles/global.module.css"
 
-const ForgotPasswordPage = () => {
-  const [loading, setLoading] = useState(false);
+const LoginPage = () => {
   const nav = useNavigate();
+  const { authenticate, loading } = useAuth();
 
-  const handleResetPassword = async (credentials: Pick<Credentials, "username">) => {
+  const handleLogin = async (credentials: Credentials) => {
     try {
-      setLoading(true);
-      await restorePassword(credentials);
-      nav("/login");
+      const response = await login(credentials);
+      const { data: user } = response.data;
+      const authUser = await authenticate(user);
+      if (!authUser) return;
+      nav("/");
     } catch (error) {
       console.log(error)
-    } finally {
-      setLoading(false);
     }
   }
+
   return (
     <main className={css.mainFrame}>
       <Card.Root
@@ -42,16 +43,16 @@ const ForgotPasswordPage = () => {
               display="flex"
               justifyContent="center"
             >
-              <Image src={logo} w="300px" h="400px" />
+              <Logo src={logo} width="300px" heigth="400px" />
             </Box>
             <Box w={{ base: "100%", md: "60%" }} p="8">
               <Card.Title fontSize="lg">
                 Sistema de Gestion de Recursos Humanos - BioAlquimia.
               </Card.Title>
               <Card.Description mb="4" fontSize="lg">
-                Ingresa tus datos para recuperar tu contraseña.
+                Ingresa tus datos para ingresar al sistema.
               </Card.Description>
-              <Form onSubmit={handleResetPassword}>
+              <Form onSubmit={handleLogin}>
                 <InputField
                   fieldType="text"
                   label="Username"
@@ -60,6 +61,16 @@ const ForgotPasswordPage = () => {
                   rules={{
                     required: "El usuario es obligatorio",
                     minLength: { value: 3, message: "Debe tener al menos 3 caracteres" }
+                  }}
+                />
+                <InputField
+                  fieldType="password"
+                  label="Password"
+                  name="password"
+                  required
+                  rules={{
+                    required: "La contraseña es obligatoria",
+                    minLength: { value: 6, message: "Mínimo 6 caracteres" },
                   }}
                 />
                 <Button
@@ -75,10 +86,10 @@ const ForgotPasswordPage = () => {
                   w="100%"
                   marginBottom="5"
                 >
-                  Recuperar Contraseña
+                  Iniciar Sesion <FiLogIn />
                 </Button>
               </Form>
-              <Link path="/login"><FiArrowLeft />Volver al login</Link>
+              <Link path="/forgot-password">¿Olvidaste la contraseña?</Link>
             </Box>
           </Stack>
         </Card.Body>
@@ -87,4 +98,4 @@ const ForgotPasswordPage = () => {
   )
 }
 
-export default ForgotPasswordPage
+export default LoginPage

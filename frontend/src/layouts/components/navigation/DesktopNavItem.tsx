@@ -23,7 +23,7 @@ export const DesktopNavItem = ({
   return (
     <List.Item listStyle="none">
       <RouterLink key={label} to={path}>
-        <Tooltip content={label} >
+        <Tooltip content={label} showArrow positioning={{ placement: "right-end" }}>
           <Flex
             alignItems="center"
             justifyContent="center"
@@ -32,7 +32,7 @@ export const DesktopNavItem = ({
             py="2"
             borderRadius="lg"
             cursor="pointer"
-            _hover={{ bg: "brand.green.25", color: "brand.blue.100" }}
+            _hover={{ bg: "brand.green.25" }}
             onClick={isExpandable ? () => setOpen(!open) : undefined}
           >
             <Box fontSize="20px" color="gray.600" >

@@ -56,7 +56,8 @@ export const DesktopNav = () => {
   return (
     <Flex
       as="aside"
-      height="100vh"
+      h="full"
+      overflowY="auto"
       w={collapsed ? "80px" : "260px"}
       flexShrink={0}
       bg="white"
@@ -70,13 +71,19 @@ export const DesktopNav = () => {
       <Flex justifyContent="space-between" alignItems="center" mb="32px">
         {!collapsed && (
           <InputGroup flex={1} startElement={<FiSearch />}>
-            <Input placeholder="Buscar módulos" onChange={searchModule} />
+            <Input
+              name="find"
+              placeholder="Buscar módulos"
+              onChange={searchModule}
+              _focus={{ outlineColor: "blue.600" }}
+            />
           </InputGroup>
         )}
         <IconButton
           aria-label="collapse sidebar"
           variant="ghost"
           size="md"
+          ml={!collapsed ? 1 : 0}
           onClick={handleCollapseBar}
           _hover={{ bg: "brand.green.25" }}
         >

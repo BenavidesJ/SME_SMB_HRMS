@@ -1,12 +1,12 @@
 import { ChakraProvider } from '@chakra-ui/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AuthProvider } from './context/AuthContext';
+import { system } from './styles/theme';
+import "./styles/colors.css";
 import { RouterProvider } from 'react-router';
 import { Toaster } from './components/ui/toaster';
 import { router } from './router';
-import { AuthProvider } from './context/AuthContext';
-import "./styles/colors.css";
-import { system } from './styles/theme';
 
 document.title = 'BioAlquimia';
 

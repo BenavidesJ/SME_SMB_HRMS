@@ -1,11 +1,12 @@
 import { createBrowserRouter } from "react-router";
 import { PrivateRoute } from "./PrivateRoute";
 import { PublicRoute } from "./PublicRoute";
-import UIdocs from "../pages/UIdocs";
-import LoginPage from "../pages/LoginPage";
-import Main from "../pages/Main";
-import ForgotPasswordPage from "../pages/ForgotPasswordPage";
-import NotFoundPage from "../pages/NotFoundPage";
+import UIdocs from "../pages/Private/UIdocs";
+import LoginPage from "../pages/Public/LoginPage";
+import Main from "../pages/Private/Main";
+import ForgotPasswordPage from "../pages/Public/ForgotPasswordPage";
+import NotFoundPage from "../pages/Public/NotFoundPage";
+import Perfil from "../pages/Private/Perfil";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
       {
         path: "/",
         element: <Main />
+      },
+      {
+        path: "/perfil",
+        element: <Perfil />
       },
       {
         path: "/ui-docs",

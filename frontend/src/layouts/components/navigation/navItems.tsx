@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { FiUsers, FiSettings, FiCode, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome } from "react-icons/fi";
+import { FiUsers, FiCode, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome, FiUser } from "react-icons/fi";
 import { PiBank, PiCalendarCheck, PiCalendarPlus, PiHospital, PiMoney } from "react-icons/pi";
 
 /*
@@ -47,7 +47,6 @@ export const NAV_MAIN: NavItem[] = [
 ];
 
 export const NAV_SETTINGS: NavItem[] = [
-  { label: "Notification", icon: <FiUsers />, path: "/settings/notifications" },
-  { label: "Settings", icon: <FiSettings />, path: "/settings" },
+  { label: "Perfil de Usuario", icon: <FiUser />, path: "/perfil" },
   { label: "Documentacion UI", icon: <FiCode />, path: "/ui-docs", roles: ["SUPER_ADMIN"] },
 ];

@@ -1,14 +1,16 @@
 .mainFrame {
   height: 100vh;
   width: 100%;
-  background: var(--dark-blue-100);
+  background: var(--bg-light);
 
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mainFrame::before {
+.mainFrame::before,
+.notFound::before
+ {
   content: "";
   position: absolute;
   inset: 0;
@@ -52,4 +54,66 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+}
+
+.layoutFrame {
+  padding: 8px;
+}
+
+.notFound {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FAFAFA;
+
+  width: 100%;
+  height: 100vh;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    justify-content: center;
+    max-width: 800px;
+    text-align: center;
+  }
+}
+
+.notFound::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 20px,
+      rgba(34, 197, 94, 0.12) 20px,
+      rgba(34, 197, 94, 0.12) 21px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 30px,
+      rgba(16, 185, 129, 0.10) 30px,
+      rgba(16, 185, 129, 0.10) 31px
+    ),
+    repeating-linear-gradient(
+      60deg,
+      transparent,
+      transparent 40px,
+      rgba(59, 130, 246, 0.08) 40px,
+      rgba(59, 130, 246, 0.08) 41px
+    ),
+    repeating-linear-gradient(
+      150deg,
+      transparent,
+      transparent 35px,
+      rgba(147, 51, 234, 0.06) 35px,
+      rgba(147, 51, 234, 0.06) 36px
+    );
 }
