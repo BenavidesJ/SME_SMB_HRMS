@@ -66,15 +66,16 @@ export const DesktopNav = () => {
       justifyContent="flex-start"
       borderBottomRightRadius={15}
       transition="width 0.075s ease"
-      padding="20px"
+      padding="1rem"
     >
-      <Flex justifyContent="space-between" alignItems="center" mb="32px">
+      <Flex justifyContent="space-between" alignItems="center" mb="0.75rem">
         {!collapsed && (
           <InputGroup flex={1} startElement={<FiSearch />}>
             <Input
               name="find"
               placeholder="Buscar módulos"
               onChange={searchModule}
+              size="md"
               _focus={{ outlineColor: "blue.600" }}
             />
           </InputGroup>
@@ -83,7 +84,7 @@ export const DesktopNav = () => {
           aria-label="collapse sidebar"
           variant="ghost"
           size="md"
-          ml={!collapsed ? 1 : 0}
+          ml={1}
           onClick={handleCollapseBar}
           _hover={{ bg: "brand.green.25" }}
         >
@@ -91,11 +92,11 @@ export const DesktopNav = () => {
         </IconButton>
       </Flex>
 
-      <Box mb="30px">
+      <Box mb="0.75rem">
         {!collapsed && (
           <Text
             fontSize="md"
-            fontWeight="medium"
+            fontWeight="bold"
             color="brand.text"
             mb="2"
             letterSpacing="wide"
@@ -115,9 +116,9 @@ export const DesktopNav = () => {
         {!collapsed && (
           <Text
             fontSize="md"
-            fontWeight="medium"
+            fontWeight="bold"
             color="brand.text"
-            mb="2"
+            mb="1"
             letterSpacing="wide"
           >
             Configuraciones

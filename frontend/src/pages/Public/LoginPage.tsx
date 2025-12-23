@@ -1,4 +1,4 @@
-import { Button, Card, Box, Stack } from '@chakra-ui/react'
+import { Card, Box, Stack } from '@chakra-ui/react'
 import { Form, InputField } from '../../components/forms'
 import { useAuth } from '../../context/AuthContext'
 import type { Credentials } from '../../types';
@@ -8,6 +8,7 @@ import logo from "../../assets/LogoColor.svg";
 import { FiLogIn } from "react-icons/fi";
 import { Link, Logo } from '../../components/general';
 import css from "../../styles/global.module.css"
+import { Button } from '../../components/general/button/Button';
 
 const LoginPage = () => {
   const nav = useNavigate();
@@ -74,13 +75,10 @@ const LoginPage = () => {
                   }}
                 />
                 <Button
-                  color="white"
-                  fontWeight="bold"
-                  backgroundColor="brand.blue.100"
                   loading={loading}
                   loadingText="Iniciando Sesion"
+                  appearance="login"
                   type='submit'
-                  _hover={{ backgroundColor: "blue.600" }}
                   mt="4"
                   size="lg"
                   w="100%"

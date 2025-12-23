@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Stack, Image, Box } from '@chakra-ui/react'
+import { Card, Stack, Image, Box } from '@chakra-ui/react'
 import { Form, InputField } from '../../components/forms'
 import type { Credentials } from '../../types';
 import { restorePassword } from '../../services/api/auth';
@@ -8,6 +8,7 @@ import logo from "../../assets/LogoColor.svg";
 import { FiArrowLeft } from "react-icons/fi";
 import { Link } from '../../components/general';
 import css from "../../styles/global.module.css";
+import { Button } from '../../components/general/button/Button';
 
 const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
@@ -63,13 +64,9 @@ const ForgotPasswordPage = () => {
                   }}
                 />
                 <Button
-                  color="white"
-                  fontWeight="bold"
-                  backgroundColor="brand.blue.100"
                   loading={loading}
-                  loadingText="Iniciando Sesion"
+                  loadingText="Recuperando contraseña"
                   type='submit'
-                  _hover={{ backgroundColor: "blue.600" }}
                   mt="4"
                   size="lg"
                   w="100%"
