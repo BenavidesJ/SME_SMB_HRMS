@@ -32,6 +32,10 @@ interface FieldProps extends InputProps {
   */
   required?: boolean;
   /*
+  Indica si mostrar el indicador.
+  */
+  noIndicator?: boolean;
+  /*
   Reglas de validacion.
   */
   rules?: RegisterOptions;
@@ -59,7 +63,7 @@ const NumberField = () => {
 
 export const InputField = forwardRef<HTMLDivElement, FieldProps>(
   function InputField(props, ref) {
-    const { name, fieldType, label, helperText, required, placeholder, rules } = props;
+    const { name, fieldType, label, helperText, required, placeholder, rules, noIndicator = false } = props;
     const {
       register,
       formState: { errors },
@@ -80,16 +84,20 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(
       <Field.Root minW="300px" ref={ref} required={required} invalid={isInvalid} minH="90px">
         <Field.Label>
           {label}
-          {required ? (
-            <Field.RequiredIndicator />
-          ) : (
-            <Field.RequiredIndicator
-              fallback={
-                <Badge size="sm" variant="subtle">
-                  Opcional
-                </Badge>
-              }
-            />
+          {!noIndicator && (
+            <>
+              {required ? (
+                <Field.RequiredIndicator />
+              ) : (
+                <Field.RequiredIndicator
+                  fallback={
+                    <Badge size="sm" variant="subtle">
+                      Opcional
+                    </Badge>
+                  }
+                />
+              )}
+            </>
           )}
         </Field.Label>
         <Component
