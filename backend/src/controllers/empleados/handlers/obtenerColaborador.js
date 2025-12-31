@@ -75,3 +75,111 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
       : {},
   };
 };
+
+/**
+ * Obtiene los datos de todos los colaboradores
+ *
+ * @returns {Promise<Array<object>>}
+ */
+export const obtenerColaboradores = async () => {
+  const colaboradores = await Colaborador.findAll({
+    attributes: [
+      "id_colaborador",
+      "nombre",
+      "primer_apellido",
+      "segundo_apellido",
+      "id_genero",
+      "correo_electronico",
+      "identificacion",
+      "fecha_ingreso",
+      "fecha_nacimiento",
+      "estado_civil",
+      "estado",
+    ],
+    include: [
+      {
+        model: Genero,
+        attributes: ["genero"],
+        required: false,
+      },
+
+      {
+        model: EstadoCivil,
+        as: "estadoCivil",
+        attributes: ["estado_civil"],
+        required: false,
+      },
+
+      {
+        model: Estado,
+        as: "estadoColaborador",
+        attributes: ["estado"],
+        required: false,
+      },
+
+      {
+        model: Usuario,
+        attributes: [
+          "id_usuario",
+          "username",
+          "estado",
+          "requiere_cambio_contrasena",
+          "ultimo_acceso_en",
+        ],
+        required: false,
+        include: [
+          {
+            model: Rol,
+            attributes: ["nombre"],
+            through: { attributes: [] },
+            required: false,
+          },
+          {
+            model: Estado,
+            as: "estadoUsuario",
+            attributes: ["estado"],
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [["id_colaborador", "DESC"]],
+  });
+
+  return colaboradores.map((c) => {
+    const usuarios = c.Usuarios ?? c.usuarios ?? [];
+    const user = usuarios[0] ?? null;
+    const genero = c.Genero?.genero ?? c.genero?.genero ?? null;
+
+    return {
+      id: c.id_colaborador,
+      nombre: c.nombre,
+      primer_apellido: c.primer_apellido,
+      segundo_apellido: c.segundo_apellido,
+      correo_electronico: c.correo_electronico,
+      identificacion: c.identificacion,
+
+      genero,
+      estado_civil: c.estadoCivil?.estado_civil ?? null,
+
+      fecha_ingreso: c.fecha_ingreso ? dayjs(c.fecha_ingreso).format("YYYY-MM-DD") : null,
+      fecha_nacimiento: c.fecha_nacimiento ? dayjs(c.fecha_nacimiento).format("YYYY-MM-DD") : null,
+
+      estado: c.estadoColaborador?.estado ?? c.estado,
+
+      usuario: user
+        ? {
+          id_usuario: user.id_usuario,
+          username: user.username,
+          activo: user.estado,
+          requiere_cambio_contrasena: user.requiere_cambio_contrasena,
+          ultimo_acceso: user.ultimo_acceso_en
+            ? dayjs(user.ultimo_acceso_en).format("YYYY-MM-DD HH:mm:ss")
+            : null,
+          roles: (user.Rols ?? user.rols ?? []).map((r) => r.nombre),
+          estado_usuario: user.estadoUsuario?.estado ?? null,
+        }
+        : null,
+    };
+  });
+};
