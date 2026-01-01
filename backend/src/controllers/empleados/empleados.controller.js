@@ -1,6 +1,6 @@
 import { HTTP_CODES } from "../../common/strings.js";
-import { crearColaborador } from "./handlers/crearColaborador.js";
-import { obtenerColaboradores, obtenerColaboradorPorIdUsuario } from "./handlers/obtenerColaborador.js";
+import { crearColaborador } from "./handlers/empleados/crearColaborador.js";
+import { obtenerColaboradores, obtenerColaboradorPorIdUsuario } from "./handlers/empleados/obtenerColaborador.js";
 
 export const crearEmpleado = async (req, res, next) => {
   const {

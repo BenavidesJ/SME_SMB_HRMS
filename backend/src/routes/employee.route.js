@@ -12,6 +12,10 @@ import {
 import { authorization } from '../middlewares/authorization.js';
 import { crearGenero, obtenerTodosGeneros } from '../controllers/empleados/generos.controller.js';
 import { crearEstadoCivil, obtenerTodosEstadosCiviles } from '../controllers/empleados/estadoCivil.controller.js';
+import { crearDepartamento, obtenerTodosDepartamentos } from '../controllers/empleados/departamentos.controller.js';
+import { crearPuesto, obtenerTodosPuestos } from '../controllers/empleados/puestos.controller.js';
+import { crearTipoContrato, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
+import { crearTipoJornada, obtenerTodosTiposJornada } from '../controllers/empleados/jornadas.controller.js';
 
 const router = express.Router();
 // Empleados
@@ -24,6 +28,7 @@ router.get('/generos', authorization, obtenerTodosGeneros);
 // - Estado civil
 router.post('/estado_civil', authorization, crearEstadoCivil);
 router.get('/estado_civil', authorization, obtenerTodosEstadosCiviles);
+
 // Direcciones
 // - Provincias
 router.post('/provincias', authorization, crearProvincia);
@@ -35,5 +40,19 @@ router.get('/cantones', authorization, obtenerCantonesPorProvincia);
 // - Distritos
 router.post('/distritos', authorization, crearDistrito);
 router.get('/distritos', authorization, obtenerDistritoPorCanton);
+
+// Vínculo Laboral
+// - Departamentos
+router.post('/departamentos', authorization, crearDepartamento);
+router.get('/departamentos', authorization, obtenerTodosDepartamentos);
+// - Puestos
+router.post('/puestos', authorization, crearPuesto);
+router.get('/puestos', authorization, obtenerTodosPuestos);
+// - Contratos
+router.post('/tipos_contrato', authorization, crearTipoContrato);
+router.get('/tipos_contrato', authorization, obtenerTodosTiposContrato);
+// - Jornada
+router.post('/tipos_jornada', crearTipoJornada);
+router.get('/tipos_jornada', obtenerTodosTiposJornada);
 
 export default router;

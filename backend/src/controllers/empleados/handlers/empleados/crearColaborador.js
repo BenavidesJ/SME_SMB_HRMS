@@ -1,10 +1,10 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
-import { sendEmail } from "../../../services/mail.js";
-import { Usuario, Rol, Colaborador, Telefono, sequelize, Genero, EstadoCivil } from "../../../models/index.js";
-import { plantillaEmailBienvenida } from "../../../common/htmlLayouts/plantillaEmailBienvenida.js";
-import { generateTempPassword } from "../../../common/genTempPassword.js";
-import { generateUsername } from "../../../common/genUsername.js";
+import { sendEmail } from "../../../../services/mail.js";
+import { Usuario, Rol, Colaborador, Telefono, sequelize, Genero, EstadoCivil } from "../../../../models/index.js";
+import { plantillaEmailBienvenida } from "../../../../common/htmlLayouts/plantillaEmailBienvenida.js";
+import { generateTempPassword } from "../../../../common/genTempPassword.js";
+import { generateUsername } from "../../../../common/genUsername.js";
 
 /**
  * Crear Colaborador

@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { Colaborador, Usuario, Rol, Estado, EstadoCivil, Genero, Telefono } from "../../../models/index.js";
+import { Colaborador, Usuario, Rol, Estado, EstadoCivil, Genero, Telefono } from "../../../../models/index.js";
 
 /**
  * Obtiene los datos de un colaborador y su usuario asociado.

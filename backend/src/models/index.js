@@ -101,8 +101,8 @@ Estado.hasMany(SolicitudPermisosLicencias, { foreignKey: "estado_solicitud", as:
 SolicitudPermisosLicencias.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudPermisos" });
 
 // ---------- ORGANIZACIÓN ----------
-Departamento.hasMany(Puesto, { foreignKey: "id_departamento" });
-Puesto.belongsTo(Departamento, { foreignKey: "id_departamento" });
+Departamento.hasMany(Puesto, { foreignKey: "id_departamento", as: "puestoDepartamento" });
+Puesto.belongsTo(Departamento, { foreignKey: "id_departamento", as: "departamentoPuesto" });
 
 Puesto.hasMany(Contrato, { foreignKey: "id_puesto" });
 Contrato.belongsTo(Puesto, { foreignKey: "id_puesto" });

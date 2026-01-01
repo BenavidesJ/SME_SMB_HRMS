@@ -5,6 +5,9 @@ import { obtenerEstadosCiviles } from "./handlers/estadoCivil/obtenerEstadosCivi
 export const crearEstadoCivil = async (req, res, next) => {
   const { estado_civil } = req.body;
   try {
+
+    if (!estado_civil) throw new Error("El estado civil es obligatorio");
+
     const { id, estado_civil: marStat } = await crearNuevoEstadoCivil({ estado_civil });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
