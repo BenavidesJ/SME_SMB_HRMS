@@ -36,6 +36,8 @@ export interface LoggedUser {
   fecha_nacimiento: string;
   // Estado civil de la persona.
   estado_civil: string;
+  // Numero de telefono principal.
+  telefono?: number | string;
   // Usuario registrado en el sistema.
   usuario: User;
 }

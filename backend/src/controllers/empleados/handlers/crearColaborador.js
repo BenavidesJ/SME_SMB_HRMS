@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { sendEmail } from "../../../services/mail.js";
-import { Usuario, Rol, Colaborador, sequelize, Genero, EstadoCivil } from "../../../models/index.js";
+import { Usuario, Rol, Colaborador, Telefono, sequelize, Genero, EstadoCivil } from "../../../models/index.js";
 import { plantillaEmailBienvenida } from "../../../common/htmlLayouts/plantillaEmailBienvenida.js";
 import { generateTempPassword } from "../../../common/genTempPassword.js";
 import { generateUsername } from "../../../common/genUsername.js";
@@ -20,7 +20,8 @@ import { generateUsername } from "../../../common/genUsername.js";
  *      fecha_ingreso,
  *      cantidad_hijos,
  *      estado_civil,
- *      rol 
+ *      telefono, 
+ *      rol,
  *  }
  * @returns {Promise<{ colaborador }>}
  */
@@ -36,6 +37,7 @@ export const crearColaborador = async (
     fecha_ingreso,
     cantidad_hijos,
     estado_civil,
+    telefono,
     rol
   }) => {
 
@@ -90,6 +92,17 @@ export const crearColaborador = async (
       estado_civil: maritalStatus.id_estado_civil,
       estado: 1
     }, { transaction: tx });
+
+    if (telefono != null && String(telefono).trim() !== "") {
+      await Telefono.create(
+        {
+          id_colaborador: employee.id_colaborador,
+          numero: Number(telefono),
+          es_principal: true,
+        },
+        { transaction: tx }
+      );
+    }
 
     const username = generateUsername(nombre, primer_apellido, identificacion);
     const temporalPass = generateTempPassword(12);

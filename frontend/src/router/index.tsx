@@ -9,6 +9,7 @@ import NotFoundPage from "../pages/Public/NotFoundPage";
 import Perfil from "../pages/Private/Perfil";
 import Mantenimientos from "../pages/Private/Mantenimientos";
 import GestionEmpleados from "../pages/Private/administracion/GestionEmpleados";
+import ColaboradorDetalle from "../pages/Private/administracion/ColaboradorDetalle";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
       {
         path: "/mantenimientos/colaboradores",
         element: <GestionEmpleados />,
+      },
+      {
+        path: "/mantenimientos/colaboradores/:id",
+        element: <ColaboradorDetalle />,
       },
       {
         path: "/ui-docs",

@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { Colaborador, Usuario, Rol, Estado, EstadoCivil, Genero } from "../../../models/index.js";
+import { Colaborador, Usuario, Rol, Estado, EstadoCivil, Genero, Telefono } from "../../../models/index.js";
 
 /**
  * Obtiene los datos de un colaborador y su usuario asociado.
@@ -26,6 +26,13 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
           "estado_civil",
           "estado"
         ],
+        include: [
+          {
+            model: Telefono,
+            as: "telefonoColaborador",
+            attributes: ["numero"]
+          },
+        ]
       },
       {
         model: Rol,
@@ -51,6 +58,9 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
   const employee = user.colaborador;
   const employeeGender = await Genero.findByPk(employee.id_genero);
   const employeeMaritalStatus = await EstadoCivil.findByPk(employee.estado_civil);
+  const telefonos = employee.telefonoColaborador ?? [];
+  const telPrincipal = telefonos.find((t) => t.es_principal) ?? telefonos[0]
+
 
   return {
     id: employee.id_colaborador,
@@ -63,6 +73,7 @@ export const obtenerColaboradorPorIdUsuario = async ({ id }) => {
     fecha_ingreso: dayjs(employee.fecha_ingreso).format("DD-MM-YYYY HH:mm:ss"),
     fecha_nacimiento: dayjs(employee.fecha_nacimiento).format("DD-MM-YYYY HH:mm:ss"),
     estado_civil: employeeMaritalStatus.estado_civil,
+    telefono: telPrincipal?.numero ?? "",
     usuario: user
       ? {
         id_usuario: user.id_usuario,
@@ -118,6 +129,13 @@ export const obtenerColaboradores = async () => {
       },
 
       {
+        model: Telefono,
+        as: "telefonoColaborador",
+        attributes: ["numero"],
+        required: false,
+      },
+
+      {
         model: Usuario,
         attributes: [
           "id_usuario",
@@ -150,6 +168,8 @@ export const obtenerColaboradores = async () => {
     const usuarios = c.Usuarios ?? c.usuarios ?? [];
     const user = usuarios[0] ?? null;
     const genero = c.Genero?.genero ?? c.genero?.genero ?? null;
+    const telefonos = c.telefonoColaborador ?? [];
+    const telPrincipal = telefonos.find((t) => t.es_principal) ?? telefonos[0]
 
     return {
       id: c.id_colaborador,
@@ -166,6 +186,8 @@ export const obtenerColaboradores = async () => {
       fecha_nacimiento: c.fecha_nacimiento ? dayjs(c.fecha_nacimiento).format("YYYY-MM-DD") : null,
 
       estado: c.estadoColaborador?.estado ?? c.estado,
+
+      telefono: telPrincipal?.numero ?? "",
 
       usuario: user
         ? {

@@ -248,9 +248,9 @@ Usuario.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
 Usuario.hasMany(BitacoraAuditoria, { foreignKey: "actor_id" });
 BitacoraAuditoria.belongsTo(Usuario, { foreignKey: "actor_id" });
 
-// ---------- TELÉFONO (requisito académico) ----------
-Colaborador.hasMany(Telefono, { foreignKey: "id_colaborador" });
-Telefono.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
+// ---------- TELÉFONO ----------
+Colaborador.hasMany(Telefono, { foreignKey: "id_colaborador", as: "telefonoColaborador" });
+Telefono.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "colaboradorTelefono" });
 
 // ========================================
 //  EXPORTS

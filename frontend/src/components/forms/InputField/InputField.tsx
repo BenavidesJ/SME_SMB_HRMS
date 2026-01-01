@@ -87,7 +87,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
   }, [options]);
 
   return (
-    <Field.Root minW="250px" ref={ref} required={required} invalid={isInvalid} minH="90px">
+    <Field.Root minW="200px" ref={ref} required={required} invalid={isInvalid} minH="90px">
       <Field.Label>
         {label}
         {!noIndicator && (

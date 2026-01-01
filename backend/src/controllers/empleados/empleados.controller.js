@@ -14,6 +14,7 @@ export const crearEmpleado = async (req, res, next) => {
     fecha_ingreso,
     cantidad_hijos,
     estado_civil,
+    telefono,
     rol
   } = req.body;
   try {
@@ -29,6 +30,7 @@ export const crearEmpleado = async (req, res, next) => {
       "fecha_ingreso",
       "cantidad_hijos",
       "estado_civil",
+      "telefono",
       "rol"
     ];
 
@@ -49,6 +51,7 @@ export const crearEmpleado = async (req, res, next) => {
       fecha_ingreso,
       cantidad_hijos,
       estado_civil,
+      telefono,
       rol
     })
 
