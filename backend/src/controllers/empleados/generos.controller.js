@@ -6,7 +6,7 @@ export const crearGenero = async (req, res, next) => {
   const { genero } = req.body;
   try {
 
-    if (!genero) throw new Error("El estado civil es obligatorio");
+    if (!genero) throw new Error("El género es obligatorio");
 
     const { id, genero: gen } = await crearNuevoGenero({ genero });
 

@@ -100,6 +100,10 @@ SolicitudVacaciones.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "est
 Estado.hasMany(SolicitudPermisosLicencias, { foreignKey: "estado_solicitud", as: "solicitudesPermisos" });
 SolicitudPermisosLicencias.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudPermisos" });
 
+Estado.hasMany(HorarioLaboral, { foreignKey: "estado", as: "horariosLaborales" });
+HorarioLaboral.belongsTo(Estado, { foreignKey: "estado", as: "estadoHorario" });
+
+
 // ---------- ORGANIZACIÓN ----------
 Departamento.hasMany(Puesto, { foreignKey: "id_departamento", as: "puestoDepartamento" });
 Puesto.belongsTo(Departamento, { foreignKey: "id_departamento", as: "departamentoPuesto" });
@@ -121,6 +125,10 @@ HorarioLaboral.belongsTo(Contrato, { foreignKey: "id_contrato" });
 
 Contrato.hasMany(AjusteSalarial, { foreignKey: "id_contrato" });
 AjusteSalarial.belongsTo(Contrato, { foreignKey: "id_contrato" });
+
+TipoJornada.hasMany(HorarioLaboral, { foreignKey: "id_tipo_jornada", as: "horariosPorJornada" });
+HorarioLaboral.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada", as: "tipoJornadaHorario" });
+
 
 // ---------- PLANILLAS ----------
 CicloPago.hasMany(PeriodoPlanilla, { foreignKey: "id_ciclo_pago" });

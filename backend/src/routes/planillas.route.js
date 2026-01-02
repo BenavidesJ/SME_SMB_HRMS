@@ -4,6 +4,7 @@ import { crearCicloPago, obtenerTodosCiclos } from '../controllers/planillas/pla
 
 
 const router = express.Router();
+// Módulo de Calculo de Planillas
 // Ciclos de pago
 router.post('/ciclos_pago', authorization, crearCicloPago);
 router.get('/ciclos_pago', authorization, obtenerTodosCiclos);
