@@ -21,10 +21,6 @@ export const MarcaAsistencia = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
-    ip_dispositivo: {
-      type: DataTypes.STRING(45),
-      allowNull: false,
-    },
     observaciones: {
       type: DataTypes.STRING(255),
       allowNull: false,

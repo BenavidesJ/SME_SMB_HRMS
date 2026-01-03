@@ -73,7 +73,7 @@ export const obtenerRoles = async (_req, res, next) => {
 export const crearRol = async (req, res, next) => {
   const { rol } = req.body;
   try {
-    const { id, rol: role } = await crearNuevoRol({ genero });
+    const { id, rol: role } = await crearNuevoRol({ rol });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
       success: true,
