@@ -16,6 +16,7 @@ import { getAllRoles } from "../../../services/api/security";
 import { DataTable } from "../../../components/general/table/DataTable";
 import { useNavigate } from "react-router";
 import type { DataTableColumn } from "../../../components/general/table/types";
+import { toTitleCase } from "../../../utils";
 
 const GestionEmpleados = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,9 +32,6 @@ const GestionEmpleados = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  const toTitleCase = (s: string) =>
-    s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
   const mapToOptions = useCallback(
     (items: string[]) => items.map((v) => ({ label: toTitleCase(v), value: v })),
@@ -210,8 +208,8 @@ const GestionEmpleados = () => {
         <section>
           <Form onSubmit={handleCreateEmployee}>
             <SimpleGrid
-              columns={{ base: 1, md: 2, lg: 3 }}
-              gap={{ base: "24px", md: "1rem", lg: "0.25rem" }}
+              columns={{ base: 1, md: 2, lg: 2, xl: 4 }}
+              gapX="1rem"
             >
               <InputField
                 fieldType="text"
@@ -280,15 +278,6 @@ const GestionEmpleados = () => {
                 rules={{ required: "El campo es obligatorio" }}
               />
               <InputField
-                fieldType="number"
-                label="Cantidad de Hijos"
-                name="cantidad_hijos"
-                required
-                rules={{
-                  required: "El campo es obligatorio",
-                }}
-              />
-              <InputField
                 fieldType="select"
                 label="Estado Civil"
                 name="estado_civil"
@@ -308,9 +297,18 @@ const GestionEmpleados = () => {
                 rules={{ required: "El campo es obligatorio" }}
                 selectRootProps={{ disabled: roles.length === 0 }}
               />
+              <InputField
+                fieldType="number"
+                label="Cantidad de Hijos"
+                name="cantidad_hijos"
+                required
+                rules={{
+                  required: "El campo es obligatorio",
+                }}
+              />
             </SimpleGrid>
 
-            <Box w="300px" alignContent="center">
+            <Box w="250px" alignContent="center">
               <Button
                 loading={isSubmitting}
                 loadingText="Agregando"

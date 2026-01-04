@@ -1,0 +1,1 @@
+export const toTitleCase = (s: string) => s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());

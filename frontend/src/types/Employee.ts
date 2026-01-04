@@ -47,3 +47,19 @@ export interface EmployeeRow {
   telefono: number | string;         
   usuario: EmployeeUserInfo | null;
 }
+
+export interface TipoJornada {
+  id: number
+  tipo: string
+  max_horas_diarias: string
+  max_horas_semanales: string
+}
+
+export interface Puesto {
+  id: number
+  puesto: string
+  departamento: string
+  salario_ref_minimo: string
+  salario_ref_maximo: string
+  estado: string
+}
