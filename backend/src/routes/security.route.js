@@ -13,9 +13,5 @@ router.post('/roles', authorization, crearRol);
 router.patch('/change-password', authorization, cambioPassword);
 // Resetear Contraseña
 router.patch('/forgot-password', resetPassword);
-// Verificar Cuenta
-router.post('/verify', () => { });
-// Refrescar token
-router.post('/refresh', () => { });
 
 export default router;
