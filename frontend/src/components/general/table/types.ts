@@ -67,6 +67,9 @@ export interface DataTableProps<T> extends Omit<TableRootProps, "children" | "co
   /** Pagination */
   pagination?: DataTablePagination;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onRowClick?: (row: any) => void
+
   /** Action bar (works with selection) */
   actionBar?: DataTableActionBar;
 

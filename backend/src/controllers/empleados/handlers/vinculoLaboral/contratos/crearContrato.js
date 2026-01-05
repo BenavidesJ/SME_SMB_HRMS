@@ -7,9 +7,14 @@ import {
   TipoJornada,
   CicloPago,
   Estado,
+  HorarioLaboral,
 } from "../../../../../models/index.js";
 import { normalizeDecimal } from "../../../../../common/normalizeDecimal.js";
 import { normalizeDateOnly } from "../../../../../common/normalizeDateOnly.js";
+import { normalizeTime } from "../jornadas/horarioUtils/normalizeTime.js";
+import { normalizeDays } from "../jornadas/horarioUtils/normalizeDays.js";
+import { setsAreDisjoint } from "../jornadas/horarioUtils/checkSetsDisjoint.js";
+import dayjs from "dayjs";
 
 /**
  * Crear Contrato
@@ -23,6 +28,7 @@ export const crearNuevoContrato = async ({
   salario_base,
   ciclo_pago,
   horas_semanales,
+  horario
 }) => {
   const tx = await sequelize.transaction();
 
@@ -35,12 +41,16 @@ export const crearNuevoContrato = async ({
       tipo_jornada,
       salario_base,
       ciclo_pago,
+      horario,
     };
 
     for (const [field, value] of Object.entries(required)) {
       if (value === undefined || value === null || String(value).trim() === "") {
         throw new Error(`El campo ${field} es obligatorio`);
       }
+    }
+    if (!horario || typeof horario !== "object" || Array.isArray(horario)) {
+      throw new Error("La información del horario es obligatoria");
     }
 
     const estadoActivo = await Estado.findOne({
@@ -69,11 +79,17 @@ export const crearNuevoContrato = async ({
     if (!contractType) throw new Error(`No existe un tipo de contrato ${tipo_contrato}`);
 
     const nombreTipoJornada = String(tipo_jornada ?? "").trim().toUpperCase();
-    const scheduleType = await TipoJornada.findOne({ where: { tipo: nombreTipoJornada } }, { transaction: tx });
+    const scheduleType = await TipoJornada.findOne({
+      where: { tipo: nombreTipoJornada },
+      transaction: tx,
+    });
     if (!scheduleType) throw new Error(`No existe un tipo de jornada ${tipo_jornada}`);
 
     const nombreCicloPago = String(ciclo_pago ?? "").trim().toUpperCase();
-    const paymentCycle = await CicloPago.findOne({ where: { nombre: nombreCicloPago } }, { transaction: tx });
+    const paymentCycle = await CicloPago.findOne({
+      where: { nombre: nombreCicloPago },
+      transaction: tx
+    });
     if (!paymentCycle) throw new Error(`No existe un ciclo de pago ${ciclo_pago}`);
 
     // -----------------------------
@@ -159,6 +175,52 @@ export const crearNuevoContrato = async ({
       { transaction: tx }
     );
 
+    const {
+      hora_inicio,
+      hora_fin,
+      minutos_descanso,
+      dias_laborales,
+      dias_libres,
+    } = horario ?? {};
+
+    const inicio = normalizeTime(hora_inicio, "horario.hora_inicio");
+    const fin = normalizeTime(hora_fin, "horario.hora_fin");
+
+    if (inicio === fin) {
+      throw new Error("La hora de inicio y la hora de salida no pueden ser iguales.");
+    }
+
+    const descanso =
+      minutos_descanso === undefined || minutos_descanso === null || String(minutos_descanso).trim() === ""
+        ? 0
+        : Number(minutos_descanso);
+
+    if (!Number.isInteger(descanso) || descanso < 0) {
+      throw new Error("Los minutos de descanso debe ser un entero mayor o igual a 0");
+    } const laborales = normalizeDays(dias_laborales, "horario.dias_laborales", { defaultValue: "LKMJV" });
+    const libres = normalizeDays(dias_libres, "horario.dias_libres", { defaultValue: "SD" });
+
+    if (!setsAreDisjoint(laborales, libres)) {
+      throw new Error("horario.dias_laborales y horario.dias_libres no pueden contener los mismos días");
+    }
+
+    const fechaActualizacion = dayjs().format("YYYY-MM-DD");
+
+    const horarioCreado = await HorarioLaboral.create(
+      {
+        id_contrato: nuevoContrato.id_contrato,
+        hora_inicio: inicio,
+        hora_fin: fin,
+        minutos_descanso: descanso,
+        dias_laborales: laborales,
+        dias_libres: libres,
+        estado: ESTADO_ACTIVO_ID,
+        fecha_actualizacion: fechaActualizacion,
+        id_tipo_jornada: scheduleType.id_tipo_jornada,
+      },
+      { transaction: tx }
+    );
+
     await tx.commit();
 
     return {
@@ -172,6 +234,18 @@ export const crearNuevoContrato = async ({
       salario_base: nuevoContrato.salario_base,
       id_ciclo_pago: nuevoContrato.id_ciclo_pago,
       estado: nuevoContrato.estado,
+      horario: {
+        id: horarioCreado.id_horario,
+        id_contrato: horarioCreado.id_contrato,
+        hora_inicio: horarioCreado.hora_inicio,
+        hora_fin: horarioCreado.hora_fin,
+        minutos_descanso: horarioCreado.minutos_descanso,
+        dias_laborales: horarioCreado.dias_laborales,
+        dias_libres: horarioCreado.dias_libres,
+        fecha_actualizacion: horarioCreado.fecha_actualizacion,
+        id_tipo_jornada: horarioCreado.id_tipo_jornada,
+        estado: horarioCreado.estado,
+      },
       warnings,
     };
   } catch (error) {

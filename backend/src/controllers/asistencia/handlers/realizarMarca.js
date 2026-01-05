@@ -97,11 +97,7 @@ export const registrarMarcaAsistencia = async ({
       .trim()
       .toUpperCase();
 
-    if (!diasLaborales.includes(dayLetter)) {
-      throw new Error(
-        `Hoy (${dayLetter}) no es día laboral según el horario (${diasLaborales})`
-      );
-    }
+    const esDiaLaboral = diasLaborales.includes(dayLetter);
 
     const tipoMarcaDb = await TipoMarca.findOne({
       where: { nombre: tipoTxt },
@@ -220,6 +216,9 @@ export const registrarMarcaAsistencia = async ({
       if (early) warnings.push("SALIDA_TEMPRANO");
     }
 
+    let horasOrdinarias = 0.0;
+    let horasExtra = 0.0;
+
     if (entrada && salida) {
       const diffMinutes = dayjs(salida.timestamp).diff(dayjs(entrada.timestamp), "minute");
       const descanso = Number(horarioActivo.minutos_descanso ?? 0);
@@ -230,7 +229,32 @@ export const registrarMarcaAsistencia = async ({
         warnings.push("MINUTOS_NEGATIVOS_POR_DESCANSO");
       }
 
-      horasTrabajadas = round2(workedMinutes / 60);
+      const workedHours = round2(workedMinutes / 60);
+
+      // --- CASO 1: No es día laboral => todo es extra
+      if (!esDiaLaboral) {
+        horasOrdinarias = 0.0;
+        horasExtra = workedHours;
+        warnings.push("DIA_NO_LABORAL_CARGADO_COMO_EXTRA");
+      } else {
+        // --- CASO 2: Día laboral
+        // Si la salida supera la hora_fin del horario: 8 ordinarias + extra
+        const salidaProgramada = dayjs(`${todayDate} ${horarioActivo.hora_fin}`);
+        const salidaReal = dayjs(salida.timestamp);
+
+        const salioTarde = salidaReal.isAfter(salidaProgramada);
+
+        if (salioTarde) {
+          // Extra = horas trabajadas - 8 
+          horasOrdinarias = Math.min(8, workedHours);
+          horasExtra = round2(Math.max(0, workedHours - 8));
+          if (horasExtra > 0) warnings.push("SALIDA_TARDE_EXTRA");
+        } else {
+          // Si no se pasó, todo ordinario
+          horasOrdinarias = Math.min(8, workedHours);
+          horasExtra = 0.0;
+        }
+      }
     }
 
     const jornadaExistente = await JornadaDiaria.findOne({
@@ -246,8 +270,8 @@ export const registrarMarcaAsistencia = async ({
         {
           id_colaborador: colaborador.id_colaborador,
           fecha: todayDate,
-          horas_trabajadas: horasTrabajadas,
-          horas_extra: 0,
+          horas_trabajadas: horasOrdinarias,
+          horas_extra: horasExtra,
           horas_nocturnas: 0,
           feriado_obligatorio: 0,
         },
@@ -256,7 +280,8 @@ export const registrarMarcaAsistencia = async ({
     } else {
       await jornadaExistente.update(
         {
-          horas_trabajadas: horasTrabajadas,
+          horas_trabajadas: horasOrdinarias,
+          horas_extra: horasExtra,
         },
         { transaction: tx }
       );
@@ -278,7 +303,8 @@ export const registrarMarcaAsistencia = async ({
       warnings,
       jornada: {
         fecha: todayDate,
-        horas_trabajadas: horasTrabajadas,
+        horas_trabajadas: horasOrdinarias,
+        horas_extra: horasExtra,
         entrada: entrada?.timestamp ?? null,
         salida: salida?.timestamp ?? null,
       },

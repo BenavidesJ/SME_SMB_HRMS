@@ -108,23 +108,23 @@ HorarioLaboral.belongsTo(Estado, { foreignKey: "estado", as: "estadoHorario" });
 Departamento.hasMany(Puesto, { foreignKey: "id_departamento", as: "puestoDepartamento" });
 Puesto.belongsTo(Departamento, { foreignKey: "id_departamento", as: "departamentoPuesto" });
 
-Puesto.hasMany(Contrato, { foreignKey: "id_puesto" });
-Contrato.belongsTo(Puesto, { foreignKey: "id_puesto" });
+Puesto.hasMany(Contrato, { foreignKey: "id_puesto", as: "puestoContrato" });
+Contrato.belongsTo(Puesto, { foreignKey: "id_puesto", as: "contratoPuesto" });
 
-TipoContrato.hasMany(Contrato, { foreignKey: "id_tipo_contrato" });
-Contrato.belongsTo(TipoContrato, { foreignKey: "id_tipo_contrato" });
+TipoContrato.hasMany(Contrato, { foreignKey: "id_tipo_contrato", as: "tipo_contrato_contrato" });
+Contrato.belongsTo(TipoContrato, { foreignKey: "id_tipo_contrato", as: "contrato_tipo_contrato" });
 
-TipoJornada.hasMany(Contrato, { foreignKey: "id_tipo_jornada" });
-Contrato.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada" });
+TipoJornada.hasMany(Contrato, { foreignKey: "id_tipo_jornada", as: "tipoJornada_contrato" });
+Contrato.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada", as: "contrato_tipoJornada" });
 
-CicloPago.hasMany(Contrato, { foreignKey: "id_ciclo_pago" });
-Contrato.belongsTo(CicloPago, { foreignKey: "id_ciclo_pago" });
+CicloPago.hasMany(Contrato, { foreignKey: "id_ciclo_pago", as: "cicloPago_contrato" });
+Contrato.belongsTo(CicloPago, { foreignKey: "id_ciclo_pago", as: "contrato_cicloPago" });
 
-Contrato.hasMany(HorarioLaboral, { foreignKey: "id_contrato" });
-HorarioLaboral.belongsTo(Contrato, { foreignKey: "id_contrato" });
+Contrato.hasMany(HorarioLaboral, { foreignKey: "id_contrato", as: "contrato_horario" });
+HorarioLaboral.belongsTo(Contrato, { foreignKey: "id_contrato", as: "horario_contrato" });
 
-Contrato.hasMany(AjusteSalarial, { foreignKey: "id_contrato" });
-AjusteSalarial.belongsTo(Contrato, { foreignKey: "id_contrato" });
+Contrato.hasMany(AjusteSalarial, { foreignKey: "id_contrato", as: "contrato_ajusteSalarial" });
+AjusteSalarial.belongsTo(Contrato, { foreignKey: "id_contrato", as: "ajusteSalarial_contrato" });
 
 TipoJornada.hasMany(HorarioLaboral, { foreignKey: "id_tipo_jornada", as: "horariosPorJornada" });
 HorarioLaboral.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada", as: "tipoJornadaHorario" });
@@ -148,6 +148,9 @@ DeduccionPlanilla.belongsTo(DetallePlanilla, { foreignKey: "id_detalle" });
 
 TipoDeduccion.hasMany(DeduccionPlanilla, { foreignKey: "id_tipo_deduccion" });
 DeduccionPlanilla.belongsTo(TipoDeduccion, { foreignKey: "id_tipo_deduccion" });
+
+Colaborador.hasMany(DetallePlanilla, { foreignKey: "id_colaborador", as: "planillasColaborador" });
+DetallePlanilla.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "colaborador_detalle_planilla" });
 
 // ---------- AGUINALDO ----------
 Colaborador.hasMany(Aguinaldo, { foreignKey: "id_colaborador" });
@@ -259,6 +262,39 @@ BitacoraAuditoria.belongsTo(Usuario, { foreignKey: "actor_id" });
 // ---------- TELÉFONO ----------
 Colaborador.hasMany(Telefono, { foreignKey: "id_colaborador", as: "telefonoColaborador" });
 Telefono.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "colaboradorTelefono" });
+
+//----------- CONTRATOS ↔ COLABORADOR ----------
+Colaborador.hasMany(Contrato, { foreignKey: "id_colaborador", as: "contratosColaborador" });
+Contrato.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "datosColaboradorEnContrato" });
+
+// ---------- DIRECCIONES ----------
+Provincia.hasMany(Canton, { foreignKey: "id_provincia", as: "cantonesPorProvincia" });
+Canton.belongsTo(Provincia, { foreignKey: "id_provincia", as: "provinciaPorCantones" });
+
+Canton.hasMany(Distrito, { foreignKey: "id_canton", as: "distritosPorCantones" });
+Distrito.belongsTo(Canton, { foreignKey: "id_canton", as: "cantonesPorDistrito" });
+
+Provincia.hasMany(Direccion, { foreignKey: "id_provincia", as: "direccionesProvincia" });
+Direccion.belongsTo(Provincia, { foreignKey: "id_provincia", as: "provinciaEnDirecciones" });
+
+Canton.hasMany(Direccion, { foreignKey: "id_canton", as: "direccionesCanton" });
+Direccion.belongsTo(Canton, { foreignKey: "id_canton", as: "cantonEnDirecciones" });
+
+Distrito.hasMany(Direccion, { foreignKey: "id_distrito", as: "direccionesDistrito" });
+Direccion.belongsTo(Distrito, { foreignKey: "id_distrito", as: "distritoEnDirecciones" });
+
+// PERMISOS/LICENCIAS ↔ COLABORADOR (solicitante)
+Colaborador.hasMany(SolicitudPermisosLicencias, { foreignKey: "id_colaborador", as: "permisos_solicitados" });
+SolicitudPermisosLicencias.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "solicitante" });
+
+// PERMISOS/LICENCIAS ↔ COLABORADOR (aprobador)
+Colaborador.hasMany(SolicitudPermisosLicencias, { foreignKey: "id_aprobador", as: "permisos_aprobados" });
+SolicitudPermisosLicencias.belongsTo(Colaborador, { foreignKey: "id_aprobador", as: "aprobadorSolicitudes" });
+
+// VACACIONES ↔ APROBADOR
+Colaborador.hasMany(SolicitudVacaciones, { foreignKey: "id_aprobador", as: "vacaciones_aprobadas" });
+SolicitudVacaciones.belongsTo(Colaborador, { foreignKey: "id_aprobador", as: "aprobadorVacaciones" });
+
 
 // ========================================
 //  EXPORTS

@@ -14,7 +14,7 @@ import {
 import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
 
-type FieldType = "text" | "password" | "email" | "number" | "select" | "date";
+type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
 
 export type SelectOption = { label: string; value: string; disabled?: boolean };
 
@@ -38,6 +38,7 @@ interface FieldProps extends InputProps {
   options?: SelectOption[];
   selectRootProps?: Omit<SelectRootProps, "collection" | "value" | "onValueChange" | "name">;
   clearable?: boolean;
+  disableSelectPortal?: boolean;
 }
 
 const TextField = (props: Omit<FieldProps, "fieldType">) => <Input {...props} />;
@@ -62,6 +63,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     options = [],
     selectRootProps,
     clearable = true,
+    disableSelectPortal = false,
 
     ...restInputProps
   } = props;
@@ -85,6 +87,19 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       })),
     });
   }, [options]);
+
+  const positioner = (
+    <Select.Positioner>
+      <Select.Content>
+        {collection.items.map((item) => (
+          <Select.Item item={item} key={item.value}>
+            {item.label}
+            <Select.ItemIndicator />
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select.Positioner>
+  );
 
   return (
     <Field.Root minW="200px" ref={ref} required={required} invalid={isInvalid} minH="90px">
@@ -140,53 +155,75 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
         />
       )}
 
+      {fieldType === "time" && (
+        <Input
+          type="time"
+          required={required}
+          {...restInputProps}
+          {...register(name, { required, ...rules })}
+          _focus={focusOutline}
+        />
+      )}
+
       {fieldType === "select" && (
         <Controller
           name={name}
           control={control}
           rules={{ required, ...rules }}
-          render={({ field }) => (
-            <Select.Root
-              collection={collection}
-              value={field.value ? [String(field.value)] : []}
-              onValueChange={(details) => {
-                const next = details.value?.[0] ?? "";
-                field.onChange(next);
-              }}
-              name={field.name}
-              disabled={field.disabled}
-              {...selectRootProps}
-              _focusVisible={{ outline: !isInvalid ? "blue.600" : "red.600" }}
-            >
-              <Select.HiddenSelect onBlur={field.onBlur} />
+          render={({ field }) => {
+            const isMultiple = Boolean(selectRootProps?.multiple);
 
-              <Select.Control >
-                <Select.Trigger >
-                  <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />
-                </Select.Trigger>
+            const value = isMultiple
+              ? Array.isArray(field.value)
+                ? field.value.map(String)
+                : []
+              : field.value
+                ? [String(field.value)]
+                : [];
 
-                <Select.IndicatorGroup>
-                  <Select.Indicator />
-                  {clearable && <Select.ClearTrigger />}
-                </Select.IndicatorGroup>
-              </Select.Control>
+            return (
+              <Select.Root
+                collection={collection}
+                value={value}
+                onValueChange={(details) => {
+                  if (isMultiple) {
+                    field.onChange(details.value ?? []);
+                  } else {
+                    const next = details.value?.[0] ?? "";
+                    field.onChange(next);
+                  }
+                }}
+                name={field.name}
+                disabled={field.disabled}
+                {...selectRootProps}
+                _focusVisible={{ outline: !isInvalid ? "blue.600" : "red.600" }}
+              >
+                <Select.HiddenSelect onBlur={field.onBlur} />
 
-              <Portal>
-                <Select.Positioner>
-                  <Select.Content>
-                    {collection.items.map((item) => (
-                      <Select.Item item={item} key={item.value}>
-                        {item.label}
-                        <Select.ItemIndicator />
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Positioner>
-              </Portal>
-            </Select.Root>
-          )}
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />
+                  </Select.Trigger>
+
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                    {clearable && <Select.ClearTrigger />}
+                  </Select.IndicatorGroup>
+                </Select.Control>
+
+                {disableSelectPortal ? (
+                  positioner
+                ) : (
+                  <Portal>
+                    {positioner}
+                  </Portal>
+                )}
+              </Select.Root>
+            );
+          }}
         />
       )}
+
 
       {fieldType === "number" && (
         <Controller

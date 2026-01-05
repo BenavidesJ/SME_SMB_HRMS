@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, Employee, EmployeeRow, Puesto, TipoJornada } from '../../types';
+import type { ApiResponse, ContractPayload, Contrato, Employee, EmployeeRow, Puesto, TipoJornada } from '../../types';
 
 export const getEmployees = () => {
   return api.get<ApiResponse<EmployeeRow[]>>("empleados");
@@ -30,4 +30,12 @@ export const getAllJobPositions= () => {
 
 export const getAllContractTypes= () => {
   return api.get<ApiResponse<string[]>>("tipos_contrato"); 
+};
+
+export const createAndAssignContract= (contract: ContractPayload) => {
+  return api.post("contratos", contract); 
+};
+
+export const getAllContractsByEmployee= (id: number) => {
+  return api.get<ApiResponse<Contrato[]>>(`contratos/colaborador/${id}`);
 };

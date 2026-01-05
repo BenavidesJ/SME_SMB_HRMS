@@ -14,7 +14,7 @@ import { crearGenero, obtenerTodosGeneros } from '../controllers/empleados/gener
 import { crearEstadoCivil, obtenerTodosEstadosCiviles } from '../controllers/empleados/estadoCivil.controller.js';
 import { crearDepartamento, obtenerTodosDepartamentos } from '../controllers/empleados/departamentos.controller.js';
 import { crearPuesto, obtenerTodosPuestos } from '../controllers/empleados/puestos.controller.js';
-import { crearContrato, crearTipoContrato, editarContrato, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
+import { crearContrato, crearTipoContrato, editarContrato, obtenerContratosDeColaborador, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
 import { crearHorario, crearTipoJornada, modificarHorario, obtenerTodosHorarios, obtenerTodosTiposJornada } from '../controllers/empleados/jornadas.controller.js';
 
 const router = express.Router();
@@ -53,6 +53,7 @@ router.post('/tipos_contrato', authorization, crearTipoContrato);
 router.get('/tipos_contrato', authorization, obtenerTodosTiposContrato);
 router.post('/contratos', authorization, crearContrato);
 router.patch('/contratos/:id', authorization, editarContrato);
+router.get('/contratos/colaborador/:id', authorization, obtenerContratosDeColaborador);
 // - Jornada
 router.post('/tipos_jornada', authorization, crearTipoJornada);
 router.get('/tipos_jornada', authorization, obtenerTodosTiposJornada);

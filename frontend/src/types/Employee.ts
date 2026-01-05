@@ -63,3 +63,60 @@ export interface Puesto {
   salario_ref_maximo: string
   estado: string
 }
+
+export interface ContractPayload {
+  id_colaborador: number;
+  puesto: string;
+  fecha_inicio: string;
+  tipo_contrato: string;
+  tipo_jornada: string;
+  salario_base: number;
+  ciclo_pago: string;
+  horas_semanales: number;
+  horario: {
+    hora_inicio: string;
+    hora_fin: string;
+    minutos_descanso: number;
+    dias_laborales: string;
+    dias_libres: string;
+  };
+};
+
+export interface CreateContractForm {
+  puesto: string;
+  tipo_contrato: string;
+  tipo_jornada: string;
+  ciclo_pago: string;
+  salario_base: number | string;
+  fecha_ingreso: string;
+  horas_semanales: number | string;
+  hora_inicio: string;
+  hora_fin: string;
+  minutos_descanso: number | string;
+  dias_laborales: string[];
+  dias_libres: string[];
+};
+
+export interface Contrato {
+  id_contrato: number
+  id_colaborador: number
+  puesto: string
+  fecha_inicio: string
+  tipo_contrato: string
+  tipo_jornada: string
+  horas_semanales: string
+  salario_base: string
+  ciclo_pago: string
+  horarios: Horario[]
+}
+
+export interface Horario {
+  id_horario: number
+  hora_inicio: string
+  hora_fin: string
+  minutos_descanso: number
+  dias_laborales: string
+  dias_libres: string
+  estado: number
+  fecha_actualizacion: string
+}

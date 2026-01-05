@@ -2,6 +2,7 @@ import { HTTP_CODES } from "../../common/strings.js";
 import { crearNuevoContrato } from "./handlers/vinculoLaboral/contratos/crearContrato.js";
 import { crearNuevoTipoContrato } from "./handlers/vinculoLaboral/contratos/crearTipoContrato.js";
 import { editarContratoExistente } from "./handlers/vinculoLaboral/contratos/editarContrato.js";
+import { obtenerContratosPorColaborador } from "./handlers/vinculoLaboral/contratos/obtenerContrato.js";
 import { obtenerTiposContrato } from "./handlers/vinculoLaboral/contratos/obtenerTiposContrato.js";
 
 export const crearTipoContrato = async (req, res, next) => {
@@ -38,6 +39,7 @@ export const crearContrato = async (req, res, next) => {
       salario_base,
       ciclo_pago,
       horas_semanales,
+      horario,
     } = req.body;
 
     const requiredFields = {
@@ -70,6 +72,7 @@ export const crearContrato = async (req, res, next) => {
       salario_base,
       ciclo_pago,
       horas_semanales,
+      horario,
     });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
@@ -77,16 +80,7 @@ export const crearContrato = async (req, res, next) => {
       status_code: HTTP_CODES.SUCCESS.CREATED,
       message: "Contrato creado correctamente",
       data: {
-        id: result.id,
-        id_colaborador: result.id_colaborador,
-        id_puesto: result.id_puesto,
-        fecha_inicio: result.fecha_inicio,
-        id_tipo_contrato: result.id_tipo_contrato,
-        id_tipo_jornada: result.id_tipo_jornada,
-        horas_semanales: result.horas_semanales,
-        salario_base: result.salario_base,
-        id_ciclo_pago: result.id_ciclo_pago,
-        estado: result.estado,
+        ...result,
       },
       warnings: result.warnings ?? [],
     });
@@ -158,6 +152,32 @@ export const editarContrato = async (req, res, next) => {
         estado: result.estado,
       },
       warnings: result.warnings ?? [],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerContratosDeColaborador = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || String(id).trim() === "") {
+      throw new Error("El parámetro ID es obligatorio");
+    }
+
+    const idCol = Number(id);
+    if (!Number.isInteger(idCol) || idCol <= 0) {
+      throw new Error("El parámetro ID debe ser un entero válido");
+    }
+
+    const data = await obtenerContratosPorColaborador({ id_colaborador: idCol });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
     });
   } catch (error) {
     next(error);

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as React from "react";
+import React from "react";
 import {
   Checkbox,
   Table,
@@ -126,6 +126,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       variant={variant}
       striped={striped}
       stickyHeader
+      interactive
       css={{
         ...(showStickyCss ? stickyCss : {}),
         ...(css as any),
