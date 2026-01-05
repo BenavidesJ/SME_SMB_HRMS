@@ -7,7 +7,7 @@ import Main from "../pages/Private/Main";
 import ForgotPasswordPage from "../pages/Public/ForgotPasswordPage";
 import NotFoundPage from "../pages/Public/NotFoundPage";
 import Perfil from "../pages/Private/Perfil";
-import Mantenimientos from "../pages/Private/Mantenimientos";
+import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/administracion/GestionEmpleados";
 import ColaboradorDetalle from "../pages/Private/administracion/ColaboradorDetalle";
 
