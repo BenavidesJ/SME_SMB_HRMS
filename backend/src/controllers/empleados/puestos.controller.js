@@ -1,6 +1,9 @@
 
 import { HTTP_CODES } from "../../common/strings.js";
+import { actualizarPuesto } from "./handlers/vinculoLaboral/puestos/actualizarPuesto.js";
 import { crearNuevoPuesto } from "./handlers/vinculoLaboral/puestos/crearNuevoPuesto.js";
+import { eliminarPuesto } from "./handlers/vinculoLaboral/puestos/eliminarPuesto.js";
+import { obtenerPuestoPorId } from "./handlers/vinculoLaboral/puestos/obtenerPuesto.js";
 import { obtenerPuestos } from "./handlers/vinculoLaboral/puestos/obtenerPuestos.js";
 
 export const crearPuesto = async (req, res, next) => {
@@ -87,4 +90,48 @@ export const obtenerTodosPuestos = async (_req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+export const obtenerPuesto = async (req, res, next) => {
+  try {
+    const data = await obtenerPuestoPorId({ id: req.params.id });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const patchPuesto = async (req, res, next) => {
+  try {
+    const data = await actualizarPuesto({
+      id: req.params.id,
+      patch: req.body,
+    });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Puesto actualizado",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const borrarPuesto = async (req, res, next) => {
+  try {
+    const data = await eliminarPuesto({ id: req.params.id });
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Puesto marcado como INACTIVO",
+      data,
+    });
+  } catch (e) { next(e); }
 };

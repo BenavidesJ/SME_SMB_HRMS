@@ -10,10 +10,10 @@ import {
   obtenerProvincias
 } from '../controllers/empleados/direcciones.controller.js';
 import { authorization } from '../middlewares/authorization.js';
-import { crearGenero, obtenerTodosGeneros } from '../controllers/empleados/generos.controller.js';
-import { crearEstadoCivil, obtenerTodosEstadosCiviles } from '../controllers/empleados/estadoCivil.controller.js';
+import { borrarGenero, crearGenero, obtenerGenero, obtenerTodosGeneros, patchGenero } from '../controllers/empleados/generos.controller.js';
+import { borrarEstadoCivil, crearEstadoCivil, obtenerEstadoCivil, obtenerTodosEstadosCiviles, patchEstadoCivil } from '../controllers/empleados/estadoCivil.controller.js';
 import { crearDepartamento, obtenerTodosDepartamentos } from '../controllers/empleados/departamentos.controller.js';
-import { crearPuesto, obtenerTodosPuestos } from '../controllers/empleados/puestos.controller.js';
+import { borrarPuesto, crearPuesto, obtenerPuesto, obtenerTodosPuestos, patchPuesto } from '../controllers/empleados/puestos.controller.js';
 import { crearContrato, crearTipoContrato, editarContrato, obtenerContratosDeColaborador, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
 import { crearHorario, crearTipoJornada, modificarHorario, obtenerTodosHorarios, obtenerTodosTiposJornada } from '../controllers/empleados/jornadas.controller.js';
 
@@ -25,9 +25,15 @@ router.get('/empleados/:id', authorization, obtenerColaboradorPorUserId);
 // - Generos
 router.post('/generos', authorization, crearGenero);
 router.get('/generos', authorization, obtenerTodosGeneros);
+router.get('/generos/:id', authorization, obtenerGenero);
+router.patch('/generos/:id', authorization, patchGenero);
+router.delete('/generos/:id', authorization, borrarGenero);
 // - Estado civil
 router.post('/estado_civil', authorization, crearEstadoCivil);
 router.get('/estado_civil', authorization, obtenerTodosEstadosCiviles);
+router.get('/estado_civil/:id', authorization, obtenerEstadoCivil);
+router.patch('/estado_civil/:id', authorization, patchEstadoCivil);
+router.delete('/estado_civil/:id', authorization, borrarEstadoCivil);
 
 // Direcciones
 // - Provincias
@@ -48,6 +54,9 @@ router.get('/departamentos', authorization, obtenerTodosDepartamentos);
 // - Puestos
 router.post('/puestos', authorization, crearPuesto);
 router.get('/puestos', authorization, obtenerTodosPuestos);
+router.get('/puestos/:id', authorization, obtenerPuesto);
+router.patch('/puestos/:id', authorization, patchPuesto);
+router.patch('/puestos/:id', authorization, borrarPuesto);
 // - Contratos
 router.post('/tipos_contrato', authorization, crearTipoContrato);
 router.get('/tipos_contrato', authorization, obtenerTodosTiposContrato);

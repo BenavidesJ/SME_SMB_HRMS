@@ -1,5 +1,8 @@
 import { HTTP_CODES } from "../../common/strings.js";
+import { actualizarEstadoCivil } from "./handlers/estadoCivil/actualizarEstadoCivil.js";
 import { crearNuevoEstadoCivil } from "./handlers/estadoCivil/crearNuevoEstadoCivil.js";
+import { eliminarEstadoCivil } from "./handlers/estadoCivil/eliminarEstadoCivil.js";
+import { obtenerEstadoCivilPorId } from "./handlers/estadoCivil/obtenerEstadoCivilPorId.js";
 import { obtenerEstadosCiviles } from "./handlers/estadoCivil/obtenerEstadosCiviles.js";
 
 export const crearEstadoCivil = async (req, res, next) => {
@@ -37,4 +40,43 @@ export const obtenerTodosEstadosCiviles = async (_req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const obtenerEstadoCivil = async (req, res, next) => {
+  try {
+    const data = await obtenerEstadoCivilPorId({ id: req.params.id });
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (e) { next(e); }
+};
+
+export const patchEstadoCivil = async (req, res, next) => {
+  try {
+    const data = await actualizarEstadoCivil({
+      id: req.params.id,
+      patch: req.body,
+    });
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Estado civil actualizado",
+      data,
+    });
+  } catch (e) { next(e); }
+};
+
+export const borrarEstadoCivil = async (req, res, next) => {
+  try {
+    const data = await eliminarEstadoCivil({ id: req.params.id });
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Estado civil eliminado",
+      data,
+    });
+  } catch (e) { next(e); }
 };
