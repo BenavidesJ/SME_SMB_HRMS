@@ -1,8 +1,8 @@
 import { Card, Grid, GridItem, Text } from "@chakra-ui/react";
-import { Layout } from "../../layouts";
-import { Button } from "../../components/general/button/Button";
-import { Form, InputField } from "../../components/forms";
-import { useAuth } from "../../context/AuthContext";
+import { Layout } from "../../../layouts";
+import { Button } from "../../../components/general/button/Button";
+import { Form, InputField } from "../../../components/forms";
+import { useAuth } from "../../../context/AuthContext";
 
 const Perfil = () => {
   const { user } = useAuth();

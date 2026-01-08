@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { Layout } from "../../../layouts";
+import { Layout } from "../../../../layouts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   Contrato,
@@ -7,7 +7,7 @@ import type {
   EmployeeRow,
   Puesto,
   TipoJornada,
-} from "../../../types";
+} from "../../../../types";
 import {
   createAndAssignContract,
   getAllContractsByEmployee,
@@ -15,7 +15,7 @@ import {
   getAllJobPositions,
   getAllScheduleTypes,
   getEmployeeByID,
-} from "../../../services/api/employees";
+} from "../../../../services/api/employees";
 import {
   Badge,
   Button,
@@ -27,14 +27,14 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { FiFilePlus, FiFileText } from "react-icons/fi";
-import { Form, InputField } from "../../../components/forms";
-import { getAllPaymentCycles } from "../../../services/api/planillas";
-import { toTitleCase } from "../../../utils";
-import { showToast } from "../../../services/toast/toastService";
-import { Modal } from "../../../components/general";
+import { Form, InputField } from "../../../../components/forms";
+import { getAllPaymentCycles } from "../../../../services/api/planillas";
+import { toTitleCase } from "../../../../utils";
+import { showToast } from "../../../../services/toast/toastService";
+import { Modal } from "../../../../components/general";
 import { mapFormToPayload } from "./mapContractFormToPayload";
-import { DataTable } from "../../../components/general/table/DataTable";
-import type { DataTableColumn } from "../../../components/general/table/types";
+import { DataTable } from "../../../../components/general/table/DataTable";
+import type { DataTableColumn } from "../../../../components/general/table/types";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();

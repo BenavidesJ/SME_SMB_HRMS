@@ -63,13 +63,14 @@ const Mantenimientos = () => {
       >
         {
           showModules && showModules.map((m) => (
-            <GridItem>
+            <GridItem key={m.name}>
               <VStack>
                 <IconButton
                   variant="solid"
                   onClick={() => handleNavigation(m.path)}
-                  backgroundColor="brand.blue.100"
-                  size="2xl"
+                  backgroundColor="brand.green.75"
+                  color="brand.blue.100"
+                  size="xl"
                 >
                   {m.icon}
                 </IconButton>

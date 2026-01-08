@@ -34,16 +34,66 @@ export interface NavItem {
 
 export const NAV_MAIN: NavItem[] = [
   { label: "Principal", icon: <FiHome />, path: "/" },
-  { label: "Mantenimientos", icon: <FiTable />, path: "/mantenimientos" },
-  { label: "Gestión de Planillas", icon: <PiMoney />, path: "/planillas" },
-  { label: "Asistencia de Empleados", icon: <PiCalendarCheck />, path: "/asistencia" },
-  { label: "Gestión de Vacaciones", icon: <FiBatteryCharging />, path: "/vacaciones" },
-  { label: "Gestión de Aguinaldos", icon: <PiBank />, path: "/aguinaldos" },
-  { label: "Gestión de Horas Extra", icon: <PiCalendarPlus />, path: "/horas-extra" },
-  { label: "Gestión de Liquidaciones", icon: <FiScissors />, path: "/liquidaciones" },
-  { label: "Evaluación de Desempeño", icon: <FiAward />, path: "/evaluacion" },
-  { label: "Gestión de Incapacidades", icon: <PiHospital />, path: "/incapacidades" },
-  { label: "Gestión de Permisos", icon: <FiUsers />, path: "/permisos" },
+  { 
+    label: "Mantenimientos y Consultas", 
+    icon: <FiTable />, 
+    path: "/mantenimientos-consultas",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+  },
+  { 
+    label: "Gestión de Planillas", 
+    icon: <PiMoney />, 
+    path: "/planillas",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+  },
+  { 
+    label: "Asistencia de Empleados", 
+    icon: <PiCalendarCheck />, 
+    path: "/asistencia",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+  },
+  { 
+    label: "Gestión de Vacaciones", 
+    icon: <FiBatteryCharging />, 
+    path: "/vacaciones",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+  },
+  { 
+    label: "Gestión de Aguinaldos", 
+    icon: <PiBank />, 
+    path: "/aguinaldos",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+  },
+  { 
+    label: "Gestión de Horas Extra", 
+    icon: <PiCalendarPlus />, 
+    path: "/horas-extra",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+  },
+  { 
+    label: "Gestión de Liquidaciones", 
+    icon: <FiScissors />, 
+    path: "/liquidaciones",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+  },
+  { 
+    label: "Evaluación de Desempeño", 
+    icon: <FiAward />, 
+    path: "/evaluacion",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+  },
+  { 
+    label: "Gestión de Incapacidades", 
+    icon: <PiHospital />, 
+    path: "/incapacidades",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+  },
+  { 
+    label: "Gestión de Permisos", 
+    icon: <FiUsers />, 
+    path: "/permisos",
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+  },
 ];
 
 export const NAV_SETTINGS: NavItem[] = [

@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, SimpleGrid, Stack, Badge, Button as ChakraButton, HStack } from "@chakra-ui/react";
-import { Layout } from "../../../layouts";
-import { Form, InputField } from "../../../components/forms";
+import { Layout } from "../../../../layouts";
+import { Form, InputField } from "../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
-import { Button } from "../../../components/general/button/Button";
-import type { Employee, EmployeeRow } from "../../../types";
+import { Button } from "../../../../components/general/button/Button";
+import type { Employee, EmployeeRow } from "../../../../types";
 import {
   createEmployee,
   getAllGenders,
   getAllMaritalStatuses,
   getEmployees,
-} from "../../../services/api/employees";
-import { showToast } from "../../../services/toast/toastService";
-import { getAllRoles } from "../../../services/api/security";
-import { DataTable } from "../../../components/general/table/DataTable";
+} from "../../../../services/api/employees";
+import { showToast } from "../../../../services/toast/toastService";
+import { getAllRoles } from "../../../../services/api/security";
+import { DataTable } from "../../../../components/general/table/DataTable";
 import { useNavigate } from "react-router";
-import type { DataTableColumn } from "../../../components/general/table/types";
-import { toTitleCase } from "../../../utils";
+import type { DataTableColumn } from "../../../../components/general/table/types";
+import { toTitleCase } from "../../../../utils";
 
 const GestionEmpleados = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);

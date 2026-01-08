@@ -6,10 +6,10 @@ import LoginPage from "../pages/Public/LoginPage";
 import Main from "../pages/Private/Main";
 import ForgotPasswordPage from "../pages/Public/ForgotPasswordPage";
 import NotFoundPage from "../pages/Public/NotFoundPage";
-import Perfil from "../pages/Private/Perfil";
+import Perfil from "../pages/Private/administracion/Perfil";
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
-import GestionEmpleados from "../pages/Private/administracion/GestionEmpleados";
-import ColaboradorDetalle from "../pages/Private/administracion/ColaboradorDetalle";
+import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/GestionEmpleados";
+import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/ColaboradorDetalle";
 
 export const router = createBrowserRouter([
   {
@@ -31,11 +31,11 @@ export const router = createBrowserRouter([
         element: <Perfil />
       },
       {
-        path: "/mantenimientos",
+        path: "/mantenimientos-consultas",
         element: <Mantenimientos />,
       },
       {
-        path: "/mantenimientos/colaboradores",
+        path: "/mantenimientos-consultas/colaboradores",
         element: <GestionEmpleados />,
       },
       {

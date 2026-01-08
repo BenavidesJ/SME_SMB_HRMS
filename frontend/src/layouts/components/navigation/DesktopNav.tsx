@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Box,
   Flex,
@@ -7,19 +8,39 @@ import {
   InputGroup,
   Input,
 } from "@chakra-ui/react";
-
 import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
-
 import { DesktopNavItem } from "./DesktopNavItem";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useMemo, useEffect } from "react";
 import { NAV_MAIN, NAV_SETTINGS } from "./navItems";
 import { FiSearch } from "react-icons/fi";
-
+import { useAuth } from "../../../context/AuthContext";
 
 export const DesktopNav = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [modules, setModules] = useState(NAV_MAIN);
   const debounceRef = useRef<number | null>(null);
+  const { user } = useAuth();
+
+  const userRoles = user?.usuario.roles || [];
+
+  const filteredMainNav = useMemo(() => {
+    return NAV_MAIN.filter(item => {
+      if (!item.roles || item.roles.length === 0) return true;
+      return item.roles.some(role => userRoles.includes(role));
+    });
+  }, [userRoles]);
+
+  const filteredSettingsNav = useMemo(() => {
+    return NAV_SETTINGS.filter(item => {
+      if (!item.roles || item.roles.length === 0) return true;
+      return item.roles.some(role => userRoles.includes(role));
+    });
+  }, [userRoles]);
+
+  const [modules, setModules] = useState(filteredMainNav);
+
+  useEffect(() => {
+    setModules(filteredMainNav);
+  }, [filteredMainNav]);
 
   const handleCollapseBar = useCallback(() => {
     setCollapsed((state) => !state)
@@ -27,12 +48,12 @@ export const DesktopNav = () => {
 
   const filterModules = (query: string) => {
     if (!query) {
-      setModules(NAV_MAIN);
+      setModules(filteredMainNav);
       return;
     }
     const q = query.toLowerCase();
     setModules(
-      NAV_MAIN.filter((item) =>
+      filteredMainNav.filter((item) =>
         item.label.toLowerCase().includes(q)
       )
     );
@@ -50,7 +71,7 @@ export const DesktopNav = () => {
         filterModules(value);
       }, 300);
     },
-    []
+    [filteredMainNav]
   );
 
   return (
@@ -126,7 +147,7 @@ export const DesktopNav = () => {
         )}
 
         <List.Root gap="2">
-          {NAV_SETTINGS.map((item) => (
+          {filteredSettingsNav.map((item) => (
             <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
           ))}
         </List.Root>
