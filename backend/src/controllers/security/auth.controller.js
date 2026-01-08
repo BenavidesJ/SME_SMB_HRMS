@@ -1,10 +1,15 @@
 import { HTTP_CODES } from "../../common/strings.js";
 import { autenticarUsuario } from "./handlers/autenticarUsuario.js";
 import { cambiarPassword } from "./handlers/cambiarPassword.js";
-import { crearNuevoRol } from "./handlers/crearRol.js";
-import { obtenerTodosRoles } from "./handlers/obtenerRoles.js";
+import { crearNuevoRol } from "./handlers/roles/crearRol.js";
+import { obtenerTodosRoles } from "./handlers/roles/obtenerRoles.js";
 import { resetPasswordOlvidado } from "./handlers/resetPasswordOlvidado.js";
+import { obtenerRolPorId } from "./handlers/roles/obtenerRol.js";
+import { actualizarRol } from "./handlers/roles/actualizarRol.js";
+import { eliminarRol } from "./handlers/roles/eliminarRol.js";
+import { obtenerEstadoPorId } from "../estados/handlers/obtenerEstado.js";
 
+// Autenticacion
 export const login = async (req, res, next) => {
   const { username, password } = req.body;
   try {
@@ -21,6 +26,7 @@ export const login = async (req, res, next) => {
   }
 };
 
+// Seguridad
 export const cambioPassword = async (req, res, next) => {
   const { password_anterior, password_nuevo } = req.body;
   try {
@@ -55,6 +61,7 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 
+// Seguridad - Roles
 export const obtenerRoles = async (_req, res, next) => {
   try {
     const data = await obtenerTodosRoles();
@@ -70,10 +77,25 @@ export const obtenerRoles = async (_req, res, next) => {
   }
 };
 
-export const crearRol = async (req, res, next) => {
-  const { rol } = req.body;
+export const obtenerRol = async (req, res, next) => {
   try {
-    const { id, rol: role } = await crearNuevoRol({ rol });
+    const data = await obtenerEstadoPorId({ id: req.params.id });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const crearRol = async (req, res, next) => {
+  const { nombre } = req.body;
+  try {
+    const { id, rol: role } = await crearNuevoRol({ nombre });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
       success: true,
@@ -86,5 +108,31 @@ export const crearRol = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const patchRol = async (req, res, next) => {
+  try {
+    const data = await actualizarRol({ id: req.params.id, patch: req.body });
+    res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true, status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Rol actualizado", 
+      data,
+    });
+  } catch (error) { 
+    next(error); 
+  }
+};
+
+export const borrarRol = async (req, res, next) => {
+  try {
+    const data = await eliminarRol({ id: req.params.id });
+    res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true, status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Rol actualizado", 
+      data,
+    });
+  } catch (error) { 
+    next(error); 
   }
 };

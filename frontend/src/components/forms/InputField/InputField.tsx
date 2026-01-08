@@ -29,25 +29,34 @@ interface FieldProps extends InputProps {
   rules?: RegisterOptions;
 
   // number
-  numberProps?: Omit<
-    NumberInputRootProps,
-    "name" | "value" | "onValueChange" | "disabled"
-  >;
+  numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
 
-  // select 
+  // select
   options?: SelectOption[];
   selectRootProps?: Omit<SelectRootProps, "collection" | "value" | "onValueChange" | "name">;
   clearable?: boolean;
   disableSelectPortal?: boolean;
 }
 
+
+function getFocusStyles(isInvalid: boolean) {
+  if (isInvalid) {
+    return {
+      outline: "2px solid",
+      outlineColor: "red.600",
+    } as const;
+  }
+
+  return {
+    outline: "1px solid",
+    outlineColor: "brand.blue.100",
+  } as const;
+}
+
 const TextField = (props: Omit<FieldProps, "fieldType">) => <Input {...props} />;
 const PasswordField = (props: Omit<FieldProps, "fieldType">) => <PasswordInput {...props} />;
 
-export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputField(
-  props,
-  ref,
-) {
+export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputField(props, ref) {
   const {
     name,
     fieldType = "text",
@@ -68,15 +77,13 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     ...restInputProps
   } = props;
 
-  const {
-    register,
-    control,
-    formState: { errors },
-  } = useFormContext();
+  const { register, control, getFieldState, formState } = useFormContext();
 
-  const error = errors[name]?.message as string | undefined;
-  const isInvalid = Boolean(error);
-  const focusOutline = { outlineColor: !isInvalid ? "blue.600" : "red.600" };
+  const { error } = getFieldState(name, formState);
+  const errorMessage = (error?.message as string | undefined) ?? undefined;
+  const isInvalid = Boolean(errorMessage);
+
+  const focusStyles = getFocusStyles(isInvalid);
 
   const collection = useMemo(() => {
     return createListCollection({
@@ -102,7 +109,13 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
   );
 
   return (
-    <Field.Root minW="200px" ref={ref} required={required} invalid={isInvalid} minH="90px">
+    <Field.Root
+      minW="200px"
+      ref={ref}
+      required={required}
+      invalid={isInvalid}
+      minH="90px"
+    >
       <Field.Label>
         {label}
         {!noIndicator && (
@@ -122,7 +135,6 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
         )}
       </Field.Label>
 
-
       {(fieldType === "text" || fieldType === "email") && (
         <TextField
           type={fieldType}
@@ -130,10 +142,10 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
           required={required}
           {...restInputProps}
           {...register(name, { required, ...rules })}
-          _focus={focusOutline}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
         />
       )}
-
 
       {fieldType === "password" && (
         <PasswordField
@@ -141,7 +153,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
           required={required}
           {...restInputProps}
           {...register(name, { required, ...rules })}
-          _focus={focusOutline}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
         />
       )}
 
@@ -151,7 +164,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
           required={required}
           {...restInputProps}
           {...register(name, { required, ...rules })}
-          _focus={focusOutline}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
         />
       )}
 
@@ -161,7 +175,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
           required={required}
           {...restInputProps}
           {...register(name, { required, ...rules })}
-          _focus={focusOutline}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
         />
       )}
 
@@ -170,6 +185,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
           name={name}
           control={control}
           rules={{ required, ...rules }}
+          defaultValue={selectRootProps?.multiple ? [] : ""}
           render={({ field }) => {
             const isMultiple = Boolean(selectRootProps?.multiple);
 
@@ -196,12 +212,12 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
                 name={field.name}
                 disabled={field.disabled}
                 {...selectRootProps}
-                _focusVisible={{ outline: !isInvalid ? "blue.600" : "red.600" }}
               >
                 <Select.HiddenSelect onBlur={field.onBlur} />
 
-                <Select.Control>
-                  <Select.Trigger>
+                {/* ✅ Para el focus ring: aplica al Control/Trigger */}
+                <Select.Control _focusWithin={focusStyles}>
+                  <Select.Trigger _focusVisible={focusStyles}>
                     <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />
                   </Select.Trigger>
 
@@ -211,19 +227,12 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
                   </Select.IndicatorGroup>
                 </Select.Control>
 
-                {disableSelectPortal ? (
-                  positioner
-                ) : (
-                  <Portal>
-                    {positioner}
-                  </Portal>
-                )}
+                {disableSelectPortal ? positioner : <Portal>{positioner}</Portal>}
               </Select.Root>
             );
           }}
         />
       )}
-
 
       {fieldType === "number" && (
         <Controller
@@ -238,9 +247,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
               name={field.name}
               value={field.value ?? ""}
               onValueChange={({ value }) => {
-                const next =
-                  value === "" ? undefined : Number(value);
-
+                const next = value === "" ? undefined : Number(value);
                 field.onChange(Number.isNaN(next as number) ? undefined : next);
               }}
               min={0}
@@ -249,14 +256,20 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
                 <NumberInput.IncrementTrigger />
                 <NumberInput.DecrementTrigger />
               </NumberInput.Control>
-              <NumberInput.Input placeholder={placeholder} onBlur={field.onBlur} _focusVisible={{ borderColor: !isInvalid ? "blue.600" : "red.600" }} />
+
+              <NumberInput.Input
+                placeholder={placeholder}
+                onBlur={field.onBlur}
+                _focusVisible={focusStyles}
+                aria-invalid={isInvalid || undefined}
+              />
             </NumberInput.Root>
           )}
         />
       )}
 
-      {error ? (
-        <Field.ErrorText>{error}</Field.ErrorText>
+      {errorMessage ? (
+        <Field.ErrorText>{errorMessage}</Field.ErrorText>
       ) : (
         <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>
       )}

@@ -1,4 +1,4 @@
-import { sequelize, Rol } from "../../../models/index.js";
+import { sequelize, Rol } from "../../../../models/index.js";
 
 /**
  * Crear Rol
@@ -10,20 +10,20 @@ import { sequelize, Rol } from "../../../models/index.js";
  */
 export const crearNuevoRol = async (
   {
-    rol
+    nombre
   }) => {
 
   const tx = await sequelize.transaction();
 
   try {
     const exists = await Rol.findOne({
-      where: { nombre: rol },
+      where: { nombre },
       transaction: tx
     });
 
-    if (exists) throw new Error(`Ya existe un rol: ${rol}`)
+    if (exists) throw new Error(`Ya existe un rol: ${nombre}`)
 
-    const roleValue = rol?.trim().toUpperCase();
+    const roleValue = nombre?.trim().toUpperCase();
 
     const newRole = await Rol.create({
       nombre: roleValue

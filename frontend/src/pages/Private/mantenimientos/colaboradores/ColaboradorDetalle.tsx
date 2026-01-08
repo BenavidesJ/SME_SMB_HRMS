@@ -51,7 +51,6 @@ export default function ColaboradorDetalle() {
 
   const [isTableLoading, setIsTableLoading] = useState(true);
 
-  // Table state (igual que GestiónEmpleados)
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;

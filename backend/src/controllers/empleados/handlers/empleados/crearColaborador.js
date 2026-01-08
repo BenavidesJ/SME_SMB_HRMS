@@ -51,6 +51,23 @@ export const crearColaborador = async (
 
     if (exists) throw new Error(`Ya existe un colaborador con el número de identificación: ${identificacion}`)
 
+    if (!fecha_nacimiento) {
+      throw new Error("La fecha de nacimiento es obligatoria.");
+    }
+
+    const birthDate = dayjs(fecha_nacimiento);
+    if (!birthDate.isValid()) {
+      throw new Error("La fecha de nacimiento no tiene un formato válido.");
+    }
+
+    const edad = dayjs().diff(birthDate, "year");
+
+    if (edad < 18) {
+      throw new Error(
+        "Esta persona no se puede agregar porque es menor de edad segun la ley costarricense"
+      );
+    }
+
     const genderValue = genero?.trim().toUpperCase();
     const maritalStatusValue = estado_civil?.trim().toUpperCase();
     const roleValue = rol?.trim().toUpperCase();

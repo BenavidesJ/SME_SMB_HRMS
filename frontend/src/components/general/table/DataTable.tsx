@@ -9,6 +9,7 @@ import { stickyCss } from "./sticky";
 import type { DataTableProps } from "./types";
 import { TablePagination } from "./TablePagination";
 import { TableActionBar } from "./TableActionBar";
+import { isInteractiveTarget } from "./isInteractiveTarget";
 
 export function DataTable<T>(props: DataTableProps<T>) {
   const {
@@ -47,8 +48,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   const toggleAll = (checked: boolean) => {
     if (!selectionEnabled || !selection || !rowKey) return;
-    selection.onChange(checked ? data.map((r) => rowKey(r)) : []);
+
+    const keys = data
+      .map((r) => rowKey(r))
+      .filter((k): k is string => Boolean(k));
+
+    selection.onChange(checked ? keys : []);
   };
+
 
   const toggleOne = (key: string, checked: boolean) => {
     if (!selectionEnabled || !selection) return;
@@ -72,11 +79,54 @@ export function DataTable<T>(props: DataTableProps<T>) {
         const key = rowKey ? rowKey(row) : undefined;
         const isSelected = key ? selectedKeys.includes(key) : false;
 
+        const handleRowToggle = () => {
+          if (!selectionEnabled || !selection || !key) return;
+          toggleOne(String(key), !isSelected);
+        };
+
         return (
           <Table.Row
+            _hover={{
+              bg: "brand.blue.25",
+            }}
+            css={{
+              '&[data-selected]': {
+                bg: "brand.blue.50",
+              },
+              '&[data-selected]:hover': {
+                bg: "brand.blue.75",
+              },
+            }}
             key={key ?? String((row as any)?.id ?? Math.random())}
             data-selected={isSelected ? "" : undefined}
             {...(getRowProps?.(row) ?? {})}
+            onClick={(e) => {
+              (getRowProps?.(row) as any)?.onClick?.(e);
+
+              if (e.defaultPrevented) return;
+              if (!selectionEnabled) return;
+              if (isInteractiveTarget(e.target)) return;
+
+              handleRowToggle();
+            }}
+
+            onKeyDown={(e) => {
+              (getRowProps?.(row) as any)?.onKeyDown?.(e);
+
+              if (e.defaultPrevented) return;
+              if (!selectionEnabled) return;
+
+              if (e.key === "Enter" || e.key === " ") {
+                if (isInteractiveTarget(e.target)) return;
+                e.preventDefault();
+                handleRowToggle();
+              }
+            }}
+            tabIndex={selectionEnabled ? 0 : undefined}
+            style={{
+              cursor: selectionEnabled ? "pointer" : undefined,
+              ...(getRowProps?.(row)?.style ?? {}),
+            }}
           >
             {selectionEnabled && (
               <Table.Cell w="6">
@@ -89,6 +139,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   onCheckedChange={(changes) => {
                     toggleOne(String(key), Boolean(changes.checked));
                   }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Checkbox.HiddenInput />
                   <Checkbox.Control />

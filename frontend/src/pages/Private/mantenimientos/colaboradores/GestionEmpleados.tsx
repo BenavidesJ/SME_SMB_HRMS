@@ -17,10 +17,12 @@ import { DataTable } from "../../../../components/general/table/DataTable";
 import { useNavigate } from "react-router";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { toTitleCase } from "../../../../utils";
+import { Modal } from "../../../../components/general";
 
 const GestionEmpleados = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const nav = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
 
   const [genders, setGenders] = useState<string[]>([]);
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
@@ -118,9 +120,11 @@ const GestionEmpleados = () => {
       setSelection([]);
       setPage(1);
       await fillEmployees();
+
+      return true;
     } catch (error) {
       console.log(error);
-      showToast("Error al crear el empleado.", "error");
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -206,31 +210,123 @@ const GestionEmpleados = () => {
     <Layout pageTitle="Creación de Empleados">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
-          <Form onSubmit={handleCreateEmployee}>
-            <SimpleGrid
-              columns={{ base: 1, md: 2, lg: 2, xl: 4 }}
-              gapX="1rem"
+          <Box w="250px" alignContent="center">
+            <Button
+              appearance="login"
+              mt="4"
+              size="lg"
+              w="100%"
+              marginBottom="5"
+              onClick={() => setOpenModal(true)}
             >
+              Crear Colaborador <FiPlus />
+            </Button>
+          </Box>
+        </section>
+        <section style={{ marginBottom: "100px" }}>
+          <DataTable<EmployeeRow>
+            data={isTableLoading ? [] : pagedEmployees}
+            columns={columns}
+            isDataLoading={isTableLoading}
+            size="md"
+            selection={{
+              enabled: true,
+              selectedKeys: selection,
+              onChange: setSelection,
+              getRowKey: (r) => String(r.usuario?.id_usuario),
+            }}
+            actionBar={{
+              enabled: true,
+              renderActions: () => (
+                <>
+                  <ChakraButton
+                    variant="solid"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => console.log("Eliminar", selection)}
+                  >
+                    Desactivar
+                  </ChakraButton>
+                  <ChakraButton
+                    variant="solid"
+                    colorPalette="yellow"
+                    size="sm"
+                    disabled={selection.length !== 1}
+                    onClick={() => console.log("Exportar", selection)}
+                  >
+                    Editar
+                  </ChakraButton>
+                  <ChakraButton
+                    variant="solid"
+                    colorPalette="teal"
+                    size="sm"
+                    disabled={selection.length !== 1}
+                    onClick={() => nav(`/mantenimientos/colaboradores/${selection}`)}
+                  >
+                    Administrar Vínculo Laboral
+                  </ChakraButton>
+                </>
+              ),
+            }}
+            pagination={{
+              enabled: true,
+              page,
+              pageSize,
+              totalCount: employees.length,
+              onPageChange: setPage,
+            }}
+          />
+        </section>
+      </Stack>
+        <Modal
+          title="Crear empleado"
+          isOpen={openModal}
+          size="lg"
+          onOpenChange={(e) => setOpenModal(e.open)}
+          content={
+          <Form onSubmit={handleCreateEmployee} resetOnSuccess >
+            <SimpleGrid columns={2} gapX="1rem">
               <InputField
                 fieldType="text"
                 label="Nombre"
                 name="nombre"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{
+                  required: "El campo es obligatorio",
+                  pattern: {
+                    value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
+                    message: "Solo se permiten letras y espacios",
+                  },
+                  setValueAs: (v) => String(v ?? "").trim(),
+                }}
               />
               <InputField
                 fieldType="text"
                 label="Primer Apellido"
                 name="primer_apellido"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{
+                  required: "El campo es obligatorio",
+                  pattern: {
+                    value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
+                    message: "Solo se permiten letras y espacios",
+                  },
+                  setValueAs: (v) => String(v ?? "").trim(),
+                }}
               />
               <InputField
                 fieldType="text"
                 label="Segundo Apellido"
                 name="segundo_apellido"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{
+                  required: "El campo es obligatorio",
+                  pattern: {
+                    value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
+                    message: "Solo se permiten letras y espacios",
+                  },
+                  setValueAs: (v) => String(v ?? "").trim(),
+                }}
               />
               <InputField
                 fieldType="select"
@@ -247,7 +343,13 @@ const GestionEmpleados = () => {
                 label="Cédula o DIMEX"
                 name="identificacion"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{ 
+                  required: "El campo es obligatorio",
+                  pattern: {
+                    value: /^\d+$/,
+                    message: "Solo se permiten números."
+                  }
+                }}
               />
               <InputField
                 fieldType="email"
@@ -261,7 +363,13 @@ const GestionEmpleados = () => {
                 label="Teléfono"
                 name="telefono"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{
+                  required: "El campo es obligatorio",
+                  pattern: { value: /^\d+$/, message: "Solo se permiten números" },
+                  minLength: { value: 8, message: "Debe tener al menos 8 dígitos" },
+                  maxLength: { value: 15, message: "No puede exceder 15 dígitos" },
+                  setValueAs: (v) => String(v ?? "").trim(),
+                }}
               />
               <InputField
                 fieldType="date"
@@ -323,59 +431,8 @@ const GestionEmpleados = () => {
               </Button>
             </Box>
           </Form>
-        </section>
-        <section style={{ marginBottom: "100px" }}>
-          <DataTable<EmployeeRow>
-            data={isTableLoading ? [] : pagedEmployees}
-            columns={columns}
-            isDataLoading={isTableLoading}
-            size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (r) => String(r.usuario?.id_usuario),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: (count) => (
-                <>
-                  <ChakraButton
-                    variant="outline"
-                    _hover={{ backgroundColor: "brand.blue.25" }}
-                    size="sm"
-                    onClick={() => console.log("Eliminar", selection)}
-                  >
-                    Desactivar ({count})
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => console.log("Exportar", selection)}
-                  >
-                    Modificar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="outline"
-                    size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => nav(`/mantenimientos/colaboradores/${selection}`)}
-                  >
-                    Administrar Vínculo Laboral
-                  </ChakraButton>
-                </>
-              ),
-            }}
-            pagination={{
-              enabled: true,
-              page,
-              pageSize,
-              totalCount: employees.length,
-              onPageChange: setPage,
-            }}
-          />
-        </section>
-      </Stack>
+          }
+        />
     </Layout>
   );
 };

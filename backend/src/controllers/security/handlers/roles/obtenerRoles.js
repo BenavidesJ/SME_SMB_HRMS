@@ -1,4 +1,4 @@
-import { Rol } from "../../../models/index.js";
+import { Rol } from "../../../../models/index.js";
 
 /**
  * Obtiene los datos de todos los roles

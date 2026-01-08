@@ -1,15 +1,18 @@
 import { Departamento } from "../../../../../models/index.js";
 
-
 /**
- * Obtiene los datos de todos los departamentos
+ * Obtiene todos los departamentos
  *
- * @returns {Promise<Array<object>>}
+ * @returns {Promise<Array<{id:number, departamento:string}>>}
  */
 export const obtenerDepartamentos = async () => {
-  const departments = await Departamento.findAll();
-
-  return departments.map((d) => {
-    return d.nombre;
+  const deps = await Departamento.findAll({
+    attributes: ["id_departamento", "nombre"],
+    order: [["id_departamento", "DESC"]],
   });
+
+  return deps.map((d) => ({
+    id: d.id_departamento,
+    departamento: d.nombre,
+  }));
 };

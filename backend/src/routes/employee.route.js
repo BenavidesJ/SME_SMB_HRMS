@@ -12,7 +12,7 @@ import {
 import { authorization } from '../middlewares/authorization.js';
 import { borrarGenero, crearGenero, obtenerGenero, obtenerTodosGeneros, patchGenero } from '../controllers/empleados/generos.controller.js';
 import { borrarEstadoCivil, crearEstadoCivil, obtenerEstadoCivil, obtenerTodosEstadosCiviles, patchEstadoCivil } from '../controllers/empleados/estadoCivil.controller.js';
-import { crearDepartamento, obtenerTodosDepartamentos } from '../controllers/empleados/departamentos.controller.js';
+import { borrarDepartamento, crearDepartamento, obtenerDepartamento, obtenerTodosDepartamentos, patchDepartamento } from '../controllers/empleados/departamentos.controller.js';
 import { borrarPuesto, crearPuesto, obtenerPuesto, obtenerTodosPuestos, patchPuesto } from '../controllers/empleados/puestos.controller.js';
 import { crearContrato, crearTipoContrato, editarContrato, obtenerContratosDeColaborador, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
 import { crearHorario, crearTipoJornada, modificarHorario, obtenerTodosHorarios, obtenerTodosTiposJornada } from '../controllers/empleados/jornadas.controller.js';
@@ -51,6 +51,9 @@ router.get('/distritos', authorization, obtenerDistritoPorCanton);
 // - Departamentos
 router.post('/departamentos', authorization, crearDepartamento);
 router.get('/departamentos', authorization, obtenerTodosDepartamentos);
+router.get('/departamentos/:id', authorization, obtenerDepartamento);
+router.patch('/departamentos/:id', authorization, patchDepartamento);
+router.patch('/departamentos/:id', authorization, borrarDepartamento);
 // - Puestos
 router.post('/puestos', authorization, crearPuesto);
 router.get('/puestos', authorization, obtenerTodosPuestos);

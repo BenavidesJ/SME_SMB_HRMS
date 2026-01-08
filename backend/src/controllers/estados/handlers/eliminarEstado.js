@@ -1,4 +1,4 @@
-import { sequelize, Estado } from "../../../models/index.js";
+import { Estado } from "../../../models/index.js";
 
 export const eliminarEstado = async ({ id }) => {
   const eid = Number(id);
