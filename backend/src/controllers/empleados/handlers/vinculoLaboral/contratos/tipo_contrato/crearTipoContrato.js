@@ -1,4 +1,4 @@
-import { sequelize, TipoContrato } from "../../../../../models/index.js";
+import { sequelize, TipoContrato } from "../../../../../../models/index.js";
 
 /**
  * Crear Tipo Contrato

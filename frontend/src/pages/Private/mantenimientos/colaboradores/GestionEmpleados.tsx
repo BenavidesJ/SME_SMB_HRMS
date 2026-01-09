@@ -4,10 +4,9 @@ import { Layout } from "../../../../layouts";
 import { Form, InputField } from "../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
 import { Button } from "../../../../components/general/button/Button";
-import type { Employee, EmployeeRow } from "../../../../types";
+import type { Employee, EmployeeRow, Gender } from "../../../../types";
 import {
   createEmployee,
-  getAllGenders,
   getAllMaritalStatuses,
   getEmployees,
 } from "../../../../services/api/employees";
@@ -18,13 +17,14 @@ import { useNavigate } from "react-router";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { toTitleCase } from "../../../../utils";
 import { Modal } from "../../../../components/general";
+import { getAllGenders } from "../../../../services/api/generos";
 
 const GestionEmpleados = () => {
   const nav = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openModal, setOpenModal] = useState(false);
 
-  const [genders, setGenders] = useState<string[]>([]);
+  const [genders, setGenders] = useState<Gender[]>([]);
   const [maritalStatuses, setMaritalStatuses] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
 
@@ -37,6 +37,10 @@ const GestionEmpleados = () => {
 
   const mapToOptions = useCallback(
     (items: string[]) => items.map((v) => ({ label: toTitleCase(v), value: v })),
+    [],
+  );
+  const mapGenderToOptions = useCallback(
+    (items: Gender[]) => items.map((v) => ({ label: toTitleCase(v.genero), value: v.genero })),
     [],
   );
 
@@ -94,7 +98,7 @@ const GestionEmpleados = () => {
     fillEmployees();
   }, [fillGenders, fillMaritalStatuses, fillRoles, fillEmployees]);
 
-  const genderOptions = useMemo(() => mapToOptions(genders), [genders, mapToOptions]);
+  const genderOptions = useMemo(() => mapGenderToOptions(genders), [genders, mapGenderToOptions]);
   const marStatsOptions = useMemo(
     () => mapToOptions(maritalStatuses),
     [maritalStatuses, mapToOptions],
@@ -261,7 +265,7 @@ const GestionEmpleados = () => {
                     colorPalette="teal"
                     size="sm"
                     disabled={selection.length !== 1}
-                    onClick={() => nav(`/mantenimientos/colaboradores/${selection}`)}
+                    onClick={() => nav(`/mantenimientos-consultas/colaboradores/${selection}`)}
                   >
                     Administrar Vínculo Laboral
                   </ChakraButton>

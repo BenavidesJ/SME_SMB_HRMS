@@ -1,4 +1,4 @@
-import { TipoContrato } from "../../../../../models/index.js";
+import { TipoContrato } from "../../../../../../models/index.js";
 
 /**
  * Obtiene los datos de todos los tipos de contrato
@@ -9,6 +9,9 @@ export const obtenerTiposContrato = async () => {
   const contractTypes = await TipoContrato.findAll();
 
   return contractTypes.map((tc) => {
-    return tc.tipo_contrato;
+    return {
+      id_tipo_contrato: tc.id_tipo_contrato,
+      tipo_contrato: tc.tipo_contrato,
+    };
   });
 };

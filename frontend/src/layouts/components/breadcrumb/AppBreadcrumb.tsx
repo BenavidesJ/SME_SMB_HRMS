@@ -83,24 +83,28 @@ export function AppBreadcrumb() {
 
       const label = meta?.label ?? titleFromSegment(seg);
 
-      // `to` por defecto: la ruta acumulada.
-      // pero si el diccionario quiere forzar otro to, úsalo.
       const to = meta?.to ?? acc;
 
       items.push({
         label,
-        to: isLast ? undefined : to, // último no navega
+        to: isLast ? undefined : to, 
         isCurrent: isLast,
       });
     }
 
-    // Si ya estás en "/", evita duplicar Inicio como current
     if (pathname === "/") {
       return [{ label: ROUTE_LABELS["/"]?.label ?? "Inicio", isCurrent: true }];
     }
 
     return items;
   }, [pathname]);
+
+  const backTo = React.useMemo((): string => {
+  for (let i = crumbs.length - 1; i >= 0; i--) {
+    if (crumbs[i].to) return crumbs[i].to!;
+  }
+  return "/";
+}, [crumbs]);
 
   if (crumbs.length === 0) return null;
 
@@ -111,7 +115,7 @@ export function AppBreadcrumb() {
           aria-label="Volver"
           size="sm"
           variant="outline"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(backTo)}
         >
           <FiArrowLeft /> Volver
         </Button>

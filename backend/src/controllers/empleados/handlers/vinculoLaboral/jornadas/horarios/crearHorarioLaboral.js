@@ -4,11 +4,11 @@ import {
   Contrato,
   TipoJornada,
   Estado,
-} from "../../../../../models/index.js";
+} from "../../../../../../models/index.js";
 import dayjs from "dayjs";
-import { normalizeTime } from "./horarioUtils/normalizeTime.js";
-import { normalizeDays } from "./horarioUtils/normalizeDays.js";
-import { setsAreDisjoint } from "./horarioUtils/checkSetsDisjoint.js";
+import { normalizeTime } from "../helpers/normalizeTime.js";
+import { normalizeDays } from "../helpers/normalizeDays.js";
+import { setsAreDisjoint } from "../helpers/checkSetsDisjoint.js";
 
 /**
  * Crear Horario Laboral

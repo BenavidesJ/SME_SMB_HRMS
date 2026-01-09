@@ -13,6 +13,7 @@ import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/Co
 import Generos from "../pages/Private/mantenimientos/generos/Generos";
 import AjustesSalariales from "../pages/Private/mantenimientos/ajustesSalariales/AjustesSalariales";
 import CiclosPago from "../pages/Private/mantenimientos/ciclosPago/CiclosPago";
+import TiposContrato from "../pages/Private/mantenimientos/tiposContrato/TiposContrato";
 
 export const router = createBrowserRouter([
   {
@@ -42,12 +43,16 @@ export const router = createBrowserRouter([
         element: <GestionEmpleados />,
       },
       {
-        path: "/mantenimientos/colaboradores/:id",
+        path: "/mantenimientos-consultas/colaboradores/:id",
         element: <ColaboradorDetalle />,
       },
       {
         path: "/mantenimientos-consultas/generos",
         element: <Generos />,
+      },
+      {
+        path: "/mantenimientos-consultas/tipos_contrato",
+        element: <TiposContrato />,
       },
       {
         path: "/mantenimientos-consultas/ajustes_salariales",

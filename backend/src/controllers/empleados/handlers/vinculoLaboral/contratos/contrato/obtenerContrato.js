@@ -7,7 +7,7 @@ import {
   CicloPago,
   Estado,
   HorarioLaboral,
-} from "../../../../../models/index.js";
+} from "../../../../../../models/index.js";
 
 /**
  * Obtener todos los contratos de un colaborador

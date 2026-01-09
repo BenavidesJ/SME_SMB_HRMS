@@ -7,9 +7,9 @@ import {
   TipoJornada,
   CicloPago,
   Estado,
-} from "../../../../../models/index.js";
-import { normalizeDecimal } from "../../../../../common/normalizeDecimal.js";
-import { normalizeDateOnly } from "../../../../../common/normalizeDateOnly.js";
+} from "../../../../../../models/index.js";
+import { normalizeDecimal } from "../../../../../../common/normalizeDecimal.js";
+import { normalizeDateOnly } from "../../../../../../common/normalizeDateOnly.js";
 
 /**
  * Modificar Contrato

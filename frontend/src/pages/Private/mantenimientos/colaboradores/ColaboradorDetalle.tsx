@@ -11,7 +11,6 @@ import type {
 import {
   createAndAssignContract,
   getAllContractsByEmployee,
-  getAllContractTypes,
   getAllJobPositions,
   getAllScheduleTypes,
   getEmployeeByID,
@@ -35,6 +34,7 @@ import { Modal } from "../../../../components/general";
 import { mapFormToPayload } from "./mapContractFormToPayload";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
+import { getAllContractTypesFull, type TipoContratoRow } from "../../../../services/api/tiposContrato";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +44,7 @@ export default function ColaboradorDetalle() {
   const [ciclosPago, setCiclosPago] = useState<string[]>([]);
   const [tiposJornada, setTiposJornada] = useState<TipoJornada[]>([]);
   const [positions, setPositions] = useState<Puesto[]>([]);
-  const [tipoContratos, setTipoContratos] = useState<string[]>([]);
+  const [tipoContratos, setTipoContratos] = useState<TipoContratoRow[]>([]);
 
   const [openModal, setOpenModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +57,10 @@ export default function ColaboradorDetalle() {
 
   const mapToOptions = useCallback(
     (items: string[]) => items.map((v) => ({ label: toTitleCase(v), value: v })),
+    [],
+  );
+  const mapContractTypesToOptions = useCallback(
+    (items: TipoContratoRow[]) => items.map((v) => ({ label: toTitleCase(v.tipo_contrato), value: v.tipo_contrato })),
     [],
   );
 
@@ -104,7 +108,7 @@ export default function ColaboradorDetalle() {
 
   const fillContractTypes = useCallback(async () => {
     try {
-      const res = await getAllContractTypes();
+      const res = await getAllContractTypesFull();
       setTipoContratos(res.data.data ?? []);
     } catch (error) {
       console.log(error);
@@ -185,8 +189,8 @@ export default function ColaboradorDetalle() {
   );
 
   const contractTypesOptions = useMemo(
-    () => mapToOptions(tipoContratos),
-    [tipoContratos, mapToOptions],
+    () => mapContractTypesToOptions(tipoContratos),
+    [tipoContratos, mapContractTypesToOptions],
   );
 
   const paymentCyclesOptions = useMemo(

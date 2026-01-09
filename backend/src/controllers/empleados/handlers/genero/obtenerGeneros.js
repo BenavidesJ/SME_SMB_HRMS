@@ -9,6 +9,9 @@ export const obtenerGeneros = async () => {
   const genders = await Genero.findAll();
 
   return genders.map((g) => {
-    return g.genero;
+    return {
+      id_genero: g.id_genero,
+      genero: g.genero
+    };
   });
 };

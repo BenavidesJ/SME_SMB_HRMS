@@ -5,7 +5,7 @@ import {
   Estado,
   TipoJornada,
   Puesto,
-} from "../../../../../models/index.js";
+} from "../../../../../../models/index.js";
 
 /**
  * Obtiene todos los horarios laborales

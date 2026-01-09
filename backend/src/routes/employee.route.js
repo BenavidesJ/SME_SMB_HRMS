@@ -14,8 +14,8 @@ import { borrarGenero, crearGenero, obtenerGenero, obtenerTodosGeneros, patchGen
 import { borrarEstadoCivil, crearEstadoCivil, obtenerEstadoCivil, obtenerTodosEstadosCiviles, patchEstadoCivil } from '../controllers/empleados/estadoCivil.controller.js';
 import { borrarDepartamento, crearDepartamento, obtenerDepartamento, obtenerTodosDepartamentos, patchDepartamento } from '../controllers/empleados/departamentos.controller.js';
 import { borrarPuesto, crearPuesto, obtenerPuesto, obtenerTodosPuestos, patchPuesto } from '../controllers/empleados/puestos.controller.js';
-import { crearContrato, crearTipoContrato, editarContrato, obtenerContratosDeColaborador, obtenerTodosTiposContrato } from '../controllers/empleados/contratos.controller.js';
-import { crearHorario, crearTipoJornada, modificarHorario, obtenerTodosHorarios, obtenerTodosTiposJornada } from '../controllers/empleados/jornadas.controller.js';
+import { borrarTipoContrato, crearContrato, crearTipoContrato, editarContrato, obtenerContratosDeColaborador, obtenerTipoContrato, obtenerTodosTiposContrato, patchTipoContrato } from '../controllers/empleados/contratos.controller.js';
+import { borrarTipoJornada, crearHorario, crearTipoJornada, modificarHorario, obtenerTipoJornada, obtenerTodosHorarios, obtenerTodosTiposJornada, patchTipoJornada } from '../controllers/empleados/jornadas.controller.js';
 
 const router = express.Router();
 // Gestión de Empleados
@@ -53,7 +53,7 @@ router.post('/departamentos', authorization, crearDepartamento);
 router.get('/departamentos', authorization, obtenerTodosDepartamentos);
 router.get('/departamentos/:id', authorization, obtenerDepartamento);
 router.patch('/departamentos/:id', authorization, patchDepartamento);
-router.patch('/departamentos/:id', authorization, borrarDepartamento);
+router.delete('/departamentos/:id', authorization, borrarDepartamento);
 // - Puestos
 router.post('/puestos', authorization, crearPuesto);
 router.get('/puestos', authorization, obtenerTodosPuestos);
@@ -61,14 +61,21 @@ router.get('/puestos/:id', authorization, obtenerPuesto);
 router.patch('/puestos/:id', authorization, patchPuesto);
 router.patch('/puestos/:id', authorization, borrarPuesto);
 // - Contratos
-router.post('/tipos_contrato', authorization, crearTipoContrato);
-router.get('/tipos_contrato', authorization, obtenerTodosTiposContrato);
 router.post('/contratos', authorization, crearContrato);
 router.patch('/contratos/:id', authorization, editarContrato);
 router.get('/contratos/colaborador/:id', authorization, obtenerContratosDeColaborador);
+// Tipo Contrato
+router.post('/tipos_contrato', authorization, crearTipoContrato);
+router.get('/tipos_contrato', authorization, obtenerTodosTiposContrato);
+router.get('/tipos_contrato/:id', authorization, obtenerTipoContrato);
+router.patch('/tipos_contrato/:id', authorization, patchTipoContrato);
+router.delete('/tipos_contrato/:id', authorization, borrarTipoContrato);
 // - Jornada
 router.post('/tipos_jornada', authorization, crearTipoJornada);
 router.get('/tipos_jornada', authorization, obtenerTodosTiposJornada);
+router.get('/tipos_jornada/:id', authorization, obtenerTipoJornada);
+router.patch('/tipos_jornada/:id', authorization, patchTipoJornada);
+router.delete('/tipos_jornada/:id', authorization, borrarTipoJornada);
 // - Horarios
 router.post('/horarios', authorization, crearHorario);
 router.get('/horarios', authorization, obtenerTodosHorarios);

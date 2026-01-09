@@ -1,4 +1,4 @@
-import { TipoJornada } from "../../../../../models/index.js";
+import { TipoJornada } from "../../../../../../models/index.js";
 
 /**
  * Obtiene los datos de todos los tipos de jornada

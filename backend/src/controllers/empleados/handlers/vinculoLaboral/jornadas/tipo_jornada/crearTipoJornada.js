@@ -1,5 +1,5 @@
-import { normalizeDecimal } from "../../../../../common/normalizeDecimal.js";
-import { sequelize, TipoJornada } from "../../../../../models/index.js";
+import { normalizeDecimal } from "../../../../../../common/normalizeDecimal.js";
+import { sequelize, TipoJornada } from "../../../../../../models/index.js";
 
 /**
  * Crear Tipo Jornada
