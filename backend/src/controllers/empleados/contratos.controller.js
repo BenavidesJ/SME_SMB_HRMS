@@ -1,32 +1,12 @@
 import { HTTP_CODES } from "../../common/strings.js";
-import { crearNuevoContrato } from "./handlers/vinculoLaboral/contratos/crearContrato.js";
-import { crearNuevoTipoContrato } from "./handlers/vinculoLaboral/contratos/crearTipoContrato.js";
-import { editarContratoExistente } from "./handlers/vinculoLaboral/contratos/editarContrato.js";
-import { obtenerContratosPorColaborador } from "./handlers/vinculoLaboral/contratos/obtenerContrato.js";
-import { obtenerTiposContrato } from "./handlers/vinculoLaboral/contratos/obtenerTiposContrato.js";
-
-export const crearTipoContrato = async (req, res, next) => {
-  const { tipo } = req.body;
-  try {
-    if (!tipo || String(tipo).trim() === "") {
-      throw new Error("El tipo de contrato es obligatorio");
-    }
-
-    const { id, tipo_contrato: contractType } = await crearNuevoTipoContrato({ tipo });
-
-    return res.status(HTTP_CODES.SUCCESS.CREATED).json({
-      success: true,
-      status_code: HTTP_CODES.SUCCESS.CREATED,
-      message: "Tipo de contrato creado correctamente",
-      data: {
-        id: id,
-        tipo_contrato: contractType
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+import { crearNuevoContrato } from "./handlers/vinculoLaboral/contratos/contrato/crearContrato.js";
+import { crearNuevoTipoContrato } from "./handlers/vinculoLaboral/contratos/tipo_contrato/crearTipoContrato.js";
+import { editarContratoExistente } from "./handlers/vinculoLaboral/contratos/contrato/editarContrato.js";
+import { obtenerContratosPorColaborador } from "./handlers/vinculoLaboral/contratos/contrato/obtenerContrato.js";
+import { obtenerTiposContrato } from "./handlers/vinculoLaboral/contratos/tipo_contrato/obtenerTiposContrato.js";
+import { obtenerTipoContratoPorId } from "./handlers/vinculoLaboral/contratos/tipo_contrato/obtenerTipoContrato.js";
+import { actualizarTipoContrato } from "./handlers/vinculoLaboral/contratos/tipo_contrato/actualizarTipoContrato.js";
+import { eliminarTipoContrato } from "./handlers/vinculoLaboral/contratos/tipo_contrato/eliminarTipoContrato.js";
 
 export const crearContrato = async (req, res, next) => {
   try {
@@ -83,21 +63,6 @@ export const crearContrato = async (req, res, next) => {
         ...result,
       },
       warnings: result.warnings ?? [],
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const obtenerTodosTiposContrato = async (_req, res, next) => {
-  try {
-    const data = await obtenerTiposContrato();
-
-    return res.status(HTTP_CODES.SUCCESS.OK).json({
-      success: true,
-      status_code: HTTP_CODES.SUCCESS.OK,
-      message: "Consulta exitosa",
-      data
     });
   } catch (error) {
     next(error);
@@ -181,5 +146,92 @@ export const obtenerContratosDeColaborador = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// Tipos de Contrato
+
+export const crearTipoContrato = async (req, res, next) => {
+  const { tipo } = req.body;
+  try {
+    if (!tipo || String(tipo).trim() === "") {
+      throw new Error("El tipo de contrato es obligatorio");
+    }
+
+    const { id, tipo_contrato: contractType } = await crearNuevoTipoContrato({ tipo });
+
+    return res.status(HTTP_CODES.SUCCESS.CREATED).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.CREATED,
+      message: "Tipo de contrato creado correctamente",
+      data: {
+        id: id,
+        tipo_contrato: contractType
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerTodosTiposContrato = async (_req, res, next) => {
+  try {
+    const data = await obtenerTiposContrato();
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerTipoContrato = async (req, res, next) => {
+  try {
+    const data = await obtenerTipoContratoPorId({ id: req.params.id });
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const patchTipoContrato = async (req, res, next) => {
+  try {
+    const data = await actualizarTipoContrato({
+      id: req.params.id,
+      patch: req.body,
+    });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Tipo de contrato actualizado",
+      data,
+    });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const borrarTipoContrato = async (req, res, next) => {
+  try {
+    const data = await eliminarTipoContrato({ id: req.params.id });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Tipo de contrato eliminado",
+      data,
+    });
+  } catch (e) {
+    next(e);
   }
 };

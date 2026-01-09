@@ -333,6 +333,7 @@ const GestionEmpleados = () => {
                 label="Género"
                 name="genero"
                 required
+                disableSelectPortal
                 placeholder={genders.length ? "Seleccione una opción" : "Cargando..."}
                 options={genderOptions}
                 rules={{ required: "El campo es obligatorio" }}
@@ -389,6 +390,7 @@ const GestionEmpleados = () => {
                 fieldType="select"
                 label="Estado Civil"
                 name="estado_civil"
+                disableSelectPortal
                 required
                 placeholder={maritalStatuses.length ? "Seleccione una opción" : "Cargando..."}
                 options={marStatsOptions}
@@ -400,6 +402,7 @@ const GestionEmpleados = () => {
                 label="Rol"
                 name="rol"
                 required
+                disableSelectPortal
                 placeholder={roles.length ? "Seleccione una opción" : "Cargando..."}
                 options={rolesOptions}
                 rules={{ required: "El campo es obligatorio" }}

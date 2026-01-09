@@ -7,6 +7,7 @@ import { FiLogOut } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
 import { DesktopNav } from "./components/navigation/DesktopNav";
+import { AppBreadcrumb } from "./components/breadcrumb/AppBreadcrumb";
 
 interface LayoutProps {
   pageTitle: string;
@@ -41,6 +42,7 @@ export const Layout = ({ children, pageTitle }: LayoutProps) => {
           <DesktopNav />
           <Box as="section" flex={1} overflow="auto">
             <section className={css.layoutFrame}>
+              <AppBreadcrumb />
               <Heading as="h1" size="2xl">
                 {pageTitle}
               </Heading>
