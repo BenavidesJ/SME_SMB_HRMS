@@ -1,4 +1,4 @@
-import { sequelize, TipoMarca } from "../../../models/index.js";
+import { sequelize, TipoMarca } from "../../../../models/index.js";
 
 /**
  * Crear Tipo Marca

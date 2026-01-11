@@ -5,7 +5,8 @@ import {
   Colaborador,
   MarcaAsistencia,
   TipoMarca,
-} from "../../../models/index.js";
+} from "../../../../models/index.js";
+import { groupByDay } from "../helpers/groupByDay.js";
 
 /**
  * Obtener marcas por rango de fechas
@@ -79,9 +80,17 @@ export const obtenerMarcasAsistenciaPorRango = async ({
       transaction: tx,
     });
 
-    await tx.commit();
-
-    return {
+    
+    const datosMarcas = marcas.map((m) => ({
+      id_marca: m.id_marca,
+      tipo_marca: (m.tipo_marca?.nombre ?? m.TipoMarca?.nombre ?? null),
+      timestamp: m.timestamp,
+      observaciones: m.observaciones,
+    }));
+    
+    const marcasAgrupadas = groupByDay(datosMarcas, { useUTC: false });
+    
+    const result = {
       colaborador,
       filtro: {
         desde: d.format("YYYY-MM-DD"),
@@ -89,13 +98,10 @@ export const obtenerMarcasAsistenciaPorRango = async ({
         tipo_marca: tipoTxt ?? null,
       },
       total: marcas.length,
-      marcas: marcas.map((m) => ({
-        id_marca: m.id_marca,
-        tipo_marca: m.tipo_marca?.nombre ?? null,
-        timestamp: m.timestamp,
-        observaciones: m.observaciones,
-      })),
+      marcas: marcasAgrupadas,
     };
+    await tx.commit();
+    return result;
   } catch (error) {
     await tx.rollback();
     throw error;

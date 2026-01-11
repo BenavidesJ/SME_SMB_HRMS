@@ -8,9 +8,9 @@ import {
   TipoMarca,
   MarcaAsistencia,
   JornadaDiaria,
-} from "../../../models/index.js";
-import { getDayInitial } from "./asistenciaUtils/getDayInitial.js";
-import { isAfterWithTolerance, isBeforeWithTolerance, round2 } from "./asistenciaUtils/checkTolerances.js";
+} from "../../../../models/index.js";
+import { getDayInitial } from "../helpers/getDayInitial.js";
+import { isAfterWithTolerance, isBeforeWithTolerance, round2 } from "../helpers/checkTolerances.js";
 
 /**
  * Registrar marca de asistencia

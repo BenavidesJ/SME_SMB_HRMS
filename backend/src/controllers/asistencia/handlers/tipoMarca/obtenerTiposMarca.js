@@ -1,4 +1,4 @@
-import { TipoMarca } from "../../../models/index.js";
+import { TipoMarca } from "../../../../models/index.js";
 
 /**
  * Obtiene los datos de todos los tipos de marca
