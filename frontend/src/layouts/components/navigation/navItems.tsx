@@ -24,73 +24,93 @@ export interface NavItem {
   /*
     Items anidados.
   */
-  children?: NavItem[];
+  children?: Omit<NavItem, "icon">[];
 
   /*
     Array de roles que pueden acceder esa ruta.
   */
   roles?: string[];
+  /*
+    Array de roles que pueden acceder el submenu.
+  */
+  childrenRoles?: string[];
+
+  parentClickBehavior?: {
+    // path por rol 
+    defaultChildPathForRoles?: Record<string, string>;
+  };
 }
 
 export const NAV_MAIN: NavItem[] = [
   { label: "Principal", icon: <FiHome />, path: "/" },
-  { 
-    label: "Mantenimientos y Consultas", 
-    icon: <FiTable />, 
+  {
+    label: "Mantenimientos y Consultas",
+    icon: <FiTable />,
     path: "/mantenimientos-consultas",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
-  { 
-    label: "Gestión de Planillas", 
-    icon: <PiMoney />, 
+  {
+    label: "Gestión de Planillas",
+    icon: <PiMoney />,
     path: "/planillas",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
-  { 
-    label: "Asistencia de Empleados", 
-    icon: <PiCalendarCheck />, 
+  {
+    label: "Asistencia",
+    icon: <PiCalendarCheck />,
     path: "/asistencia",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
-  },
-  { 
-    label: "Gestión de Vacaciones", 
-    icon: <FiBatteryCharging />, 
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    children: [
+      { label: "Marcar Asistencia", path: "/asistencia/marca", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Gestionar Asistencias", path: "/asistencia/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+    ],
+    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/asistencia/marca",
+      },
+    },
+  }
+  ,
+  {
+    label: "Gestión de Vacaciones",
+    icon: <FiBatteryCharging />,
     path: "/vacaciones",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
   },
-  { 
-    label: "Gestión de Aguinaldos", 
-    icon: <PiBank />, 
+  {
+    label: "Gestión de Aguinaldos",
+    icon: <PiBank />,
     path: "/aguinaldos",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
-  { 
-    label: "Gestión de Horas Extra", 
-    icon: <PiCalendarPlus />, 
+  {
+    label: "Gestión de Horas Extra",
+    icon: <PiCalendarPlus />,
     path: "/horas-extra",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
   },
-  { 
-    label: "Gestión de Liquidaciones", 
-    icon: <FiScissors />, 
+  {
+    label: "Gestión de Liquidaciones",
+    icon: <FiScissors />,
     path: "/liquidaciones",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
-  { 
-    label: "Evaluación de Desempeño", 
-    icon: <FiAward />, 
+  {
+    label: "Evaluación de Desempeño",
+    icon: <FiAward />,
     path: "/evaluacion",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
-  { 
-    label: "Gestión de Incapacidades", 
-    icon: <PiHospital />, 
+  {
+    label: "Gestión de Incapacidades",
+    icon: <PiHospital />,
     path: "/incapacidades",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
   },
-  { 
-    label: "Gestión de Permisos", 
-    icon: <FiUsers />, 
+  {
+    label: "Gestión de Permisos",
+    icon: <FiUsers />,
     path: "/permisos",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
   },

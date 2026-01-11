@@ -11,9 +11,11 @@ import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/GestionEmpleados";
 import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/ColaboradorDetalle";
 import Generos from "../pages/Private/mantenimientos/generos/Generos";
-import AjustesSalariales from "../pages/Private/mantenimientos/ajustesSalariales/AjustesSalariales";
 import CiclosPago from "../pages/Private/mantenimientos/ciclosPago/CiclosPago";
 import TiposContrato from "../pages/Private/mantenimientos/tiposContrato/TiposContrato";
+import { MarcasAsistencia } from "../pages/Private/asistencias/MarcasAsistencia";
+import { GestionarAsistencias } from "../pages/Private/asistencias/GestionarAsistencias";
+import { MarcasAsistenciaColaborador } from "../pages/Private/asistencias/MarcasAsistenciaColaborador";
 
 export const router = createBrowserRouter([
   {
@@ -35,6 +37,18 @@ export const router = createBrowserRouter([
         element: <Perfil />
       },
       {
+        path: "/asistencia/marca",
+        element: <MarcasAsistencia />
+      },
+      {
+        path: "/asistencia/gestion",
+        element: <GestionarAsistencias />
+      },
+      {
+        path: "/asistencia/gestion/colaborador/:id",
+        element: <MarcasAsistenciaColaborador />
+      },
+      {
         path: "/mantenimientos-consultas",
         element: <Mantenimientos />,
       },
@@ -53,10 +67,6 @@ export const router = createBrowserRouter([
       {
         path: "/mantenimientos-consultas/tipos_contrato",
         element: <TiposContrato />,
-      },
-      {
-        path: "/mantenimientos-consultas/ajustes_salariales",
-        element: <AjustesSalariales />,
       },
       {
         path: "/mantenimientos-consultas/ciclos_pago",

@@ -1,31 +1,31 @@
 /* Empleado */
 export interface Employee {
-    nombre: string;
-    primer_apellido: string;
-    segundo_apellido: string;
-    genero: string;
-    identificacion: number;
-    fecha_nacimiento: string;
-    correo_electronico: string;
-    fecha_ingreso: string;
-    cantidad_hijos: number;
-    estado_civil: string;
-    rol: string;
+  nombre: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  genero: string;
+  identificacion: number;
+  fecha_nacimiento: string;
+  correo_electronico: string;
+  fecha_ingreso: string;
+  cantidad_hijos: number;
+  estado_civil: string;
+  rol: string;
 }
 
 /* Genero */
 export interface Genero {
-    data: string[]
+  data: string[]
 }
 /* Estado Civil */
 export interface EstadoCivil {
-    data: string[]
+  data: string[]
 }
 
 export interface EmployeeUserInfo {
   id_usuario: number;
   username: string;
-  activo: number; 
+  activo: number;
   requiere_cambio_contrasena: boolean;
   ultimo_acceso: string;
   roles: string[];
@@ -38,13 +38,13 @@ export interface EmployeeRow {
   primer_apellido: string;
   segundo_apellido: string;
   correo_electronico: string;
-  identificacion: number;
+  identificacion: number | string;
   genero: string;
   estado_civil: string;
-  fecha_ingreso: string; 
-  fecha_nacimiento: string;   
+  fecha_ingreso: string;
+  fecha_nacimiento: string;
   estado: string;
-  telefono: number | string;         
+  telefono: number | string;
   usuario: EmployeeUserInfo | null;
 }
 
@@ -119,4 +119,39 @@ export interface Horario {
   dias_libres: string
   estado: number
   fecha_actualizacion: string
+}
+
+// Asistencia
+
+interface ColaboradorAsistencia {
+  id_colaborador: number
+  identificacion: number
+  nombre: string
+  primer_apellido: string
+  segundo_apellido: string
+}
+
+export interface Filtro {
+  desde: string
+  hasta: string
+  tipo_marca: "ENTRADA" | "SALIDA"
+}
+
+export interface Marca {
+  dia: string
+  asistencia: AsistenciaResumen[]
+}
+
+export interface AsistenciaResumen {
+  id_marca: number
+  tipo_marca: string
+  timestamp: string
+  observaciones: string
+}
+
+export interface Asistencia {
+  colaborador: ColaboradorAsistencia
+  filtro: Filtro
+  total: number
+  marcas: Marca[]
 }

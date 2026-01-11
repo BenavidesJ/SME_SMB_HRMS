@@ -6,8 +6,8 @@ import { TopNavBar } from "./components/navigation/TopNavBar";
 import { FiLogOut } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 
-import { DesktopNav } from "./components/navigation/DesktopNav";
 import { AppBreadcrumb } from "./components/breadcrumb/AppBreadcrumb";
+import { DesktopNav } from "./components";
 
 interface LayoutProps {
   pageTitle: string;

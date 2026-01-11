@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 import { Layout } from "../../../../layouts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type {
   Contrato,
   CreateContractForm,
@@ -10,10 +10,6 @@ import type {
 } from "../../../../types";
 import {
   createAndAssignContract,
-  getAllContractsByEmployee,
-  getAllJobPositions,
-  getAllScheduleTypes,
-  getEmployeeByID,
 } from "../../../../services/api/employees";
 import {
   Badge,
@@ -27,29 +23,26 @@ import {
 } from "@chakra-ui/react";
 import { FiFilePlus, FiFileText } from "react-icons/fi";
 import { Form, InputField } from "../../../../components/forms";
-import { getAllPaymentCycles } from "../../../../services/api/planillas";
 import { toTitleCase } from "../../../../utils";
 import { showToast } from "../../../../services/toast/toastService";
 import { Modal } from "../../../../components/general";
 import { mapFormToPayload } from "./mapContractFormToPayload";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
-import { getAllContractTypesFull, type TipoContratoRow } from "../../../../services/api/tiposContrato";
+import { type TipoContratoRow } from "../../../../services/api/tiposContrato";
+import { useApiQuery } from "../../../../hooks/useApiQuery";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
-
-  const [employee, setEmployee] = useState<EmployeeRow | null>(null);
-  const [employeeContracts, setEmployeeContracts] = useState<Contrato[]>([]);
-  const [ciclosPago, setCiclosPago] = useState<string[]>([]);
-  const [tiposJornada, setTiposJornada] = useState<TipoJornada[]>([]);
-  const [positions, setPositions] = useState<Puesto[]>([]);
-  const [tipoContratos, setTipoContratos] = useState<TipoContratoRow[]>([]);
+  const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
+  const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `contratos/colaborador/${employee?.id}`, enabled: Boolean(employee?.id) });
+  const { data: ciclosPago = [] } = useApiQuery<string[]>({ url: "planillas/ciclos_pago" });
+  const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "tipos_jornada" });
+  const { data: positions = [] } = useApiQuery<Puesto[]>({ url: "puestos" });
+  const { data: tipoContratos = [] } = useApiQuery<TipoContratoRow[]>({ url: "tipos_contrato" });
 
   const [openModal, setOpenModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [isTableLoading, setIsTableLoading] = useState(true);
 
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -64,125 +57,6 @@ export default function ColaboradorDetalle() {
     [],
   );
 
-  const fillPaymentCycles = useCallback(async () => {
-    try {
-      const res = await getAllPaymentCycles();
-      setCiclosPago(res.data.data ?? []);
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "Error al cargar los ciclos de pago. Recargue la página o contacte a soporte.",
-        "error",
-      );
-      setCiclosPago([]);
-    }
-  }, []);
-
-  const fillScheduleTypes = useCallback(async () => {
-    try {
-      const res = await getAllScheduleTypes();
-      setTiposJornada(res.data.data ?? []);
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "Error al cargar los tipos de jornada. Recargue la página o contacte a soporte.",
-        "error",
-      );
-      setTiposJornada([]);
-    }
-  }, []);
-
-  const fillPositions = useCallback(async () => {
-    try {
-      const res = await getAllJobPositions();
-      setPositions(res.data.data ?? []);
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "Error al cargar los puestos. Recargue la página o contacte a soporte.",
-        "error",
-      );
-      setPositions([]);
-    }
-  }, []);
-
-  const fillContractTypes = useCallback(async () => {
-    try {
-      const res = await getAllContractTypesFull();
-      setTipoContratos(res.data.data ?? []);
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "Error al cargar los tipos de contrato. Recargue la página o contacte a soporte.",
-        "error",
-      );
-      setTipoContratos([]);
-    }
-  }, []);
-
-  const getEmployeeContracts = useCallback(async () => {
-    try {
-      setIsTableLoading(true);
-
-      const userID = Number(id);
-      if (!Number.isInteger(userID) || userID <= 0) {
-        throw new Error("ID de colaborador inválido");
-      }
-
-      const res = await getAllContractsByEmployee(userID);
-      const contracts = (res.data.data ?? []) as Contrato[];
-
-      setEmployeeContracts(contracts);
-
-      // reset table ui
-      setSelection([]);
-      setPage(1);
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "Error al cargar los contratos. Recargue la página o contacte a soporte.",
-        "error",
-      );
-      setEmployeeContracts([]);
-    } finally {
-      setIsTableLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    const getEmployeeData = async () => {
-      try {
-        const userID = Number(id);
-        if (!Number.isInteger(userID) || userID <= 0) {
-          throw new Error("ID de colaborador inválido");
-        }
-
-        const res = await getEmployeeByID(userID);
-        setEmployee(res.data.data ?? null);
-      } catch (error) {
-        console.log(error);
-        showToast(
-          "Error al cargar el colaborador. Recargue la página o contacte a soporte.",
-          "error",
-        );
-        setEmployee(null);
-      }
-    };
-
-    getEmployeeData();
-  }, [id]);
-
-  useEffect(() => {
-    fillPaymentCycles();
-    fillScheduleTypes();
-    fillPositions();
-    fillContractTypes();
-  }, [fillPaymentCycles, fillScheduleTypes, fillPositions, fillContractTypes]);
-
-  useEffect(() => {
-    getEmployeeContracts();
-  }, [getEmployeeContracts]);
-
   const positionsOptions = useMemo(
     () => mapToOptions(positions.map((p) => p.puesto)),
     [positions, mapToOptions],
@@ -194,7 +68,7 @@ export default function ColaboradorDetalle() {
   );
 
   const paymentCyclesOptions = useMemo(
-    () => mapToOptions(ciclosPago),
+    () => mapToOptions(ciclosPago!),
     [ciclosPago, mapToOptions],
   );
 
@@ -224,8 +98,8 @@ export default function ColaboradorDetalle() {
 
   const pagedContracts = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return employeeContracts.slice(start, start + pageSize);
-  }, [employeeContracts, page]);
+    return contracts.slice(start, start + pageSize);
+  }, [contracts, page]);
 
   const handleCreateContract = async (form: CreateContractForm) => {
     try {
@@ -243,7 +117,7 @@ export default function ColaboradorDetalle() {
       setOpenModal(false);
 
       // refrescar tabla
-      await getEmployeeContracts();
+      await refetchContracts();
     } catch (error) {
       console.log(error);
       showToast("Error al crear el contrato.", "error");
@@ -367,25 +241,66 @@ export default function ColaboradorDetalle() {
     ];
   }, []);
 
-  const hasContracts = employeeContracts.length > 0;
+  const isTableLoading = isEmployeeLoading || isContractsLoading;
+  const hasContracts = contracts.length > 0;
 
   return (
     <Layout pageTitle={`Vínculo laboral de ${computeFullName()} con BioAlquimia`}>
-      {isTableLoading ? (
-        <DataTable<Contrato>
-          data={[]}
-          columns={columns}
-          isDataLoading
-          size="md"
-          pagination={{
-            enabled: true,
-            page,
-            pageSize,
-            totalCount: 0,
-            onPageChange: setPage,
-          }}
-        />
-      ) : !hasContracts ? (
+      {
+        !isTableLoading && hasContracts && (
+          <DataTable<Contrato>
+            data={isTableLoading ? [] : pagedContracts}
+            columns={columns}
+            isDataLoading={isTableLoading}
+            size="md"
+            selection={{
+              enabled: true,
+              selectedKeys: selection,
+              onChange: setSelection,
+              getRowKey: (r) => String(r.id_contrato),
+            }}
+            actionBar={{
+              enabled: contracts.length > 0,
+              renderActions: (count) => (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOpenModal(true)}
+                  >
+                    Nuevo contrato
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={count !== 1}
+                  >
+                    Editar ({count})
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={count === 0}
+                  >
+                    Desactivar ({count})
+                  </Button>
+                </>
+              ),
+            }}
+            pagination={{
+              enabled: true,
+              page,
+              pageSize,
+              totalCount: contracts.length,
+              onPageChange: setPage,
+            }}
+          />
+        )
+      }
+
+      {!isTableLoading && contracts.length === 0 && (
         <EmptyState.Root
           colorPalette="blue"
           h="500px"
@@ -403,8 +318,7 @@ export default function ColaboradorDetalle() {
                 {computeFullName()} aún no tiene contratos para mostrar.
               </EmptyState.Title>
               <EmptyState.Description>
-                Empieza llenando los datos para asignarle un contrato a{" "}
-                {computeFullName()}
+                Empieza creando un contrato para este colaborador.
               </EmptyState.Description>
             </VStack>
             <ButtonGroup>
@@ -414,63 +328,6 @@ export default function ColaboradorDetalle() {
             </ButtonGroup>
           </EmptyState.Content>
         </EmptyState.Root>
-      ) : (
-        <DataTable<Contrato>
-          data={pagedContracts}
-          columns={columns}
-          isDataLoading={isTableLoading}
-          size="md"
-          selection={{
-            enabled: true,
-            selectedKeys: selection,
-            onChange: setSelection,
-            getRowKey: (r) => String(r.id_contrato),
-          }}
-          actionBar={{
-            enabled: true,
-            renderActions: (count) => (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setOpenModal(true)}
-                >
-                  Nuevo contrato
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={count !== 1}
-                  onClick={() => {
-                    const idContrato = selection[0];
-                    console.log("Editar contrato", idContrato);
-                  }}
-                >
-                  Editar ({count})
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={count === 0}
-                  onClick={() => {
-                    console.log("Desactivar contratos", selection);
-                  }}
-                >
-                  Desactivar ({count})
-                </Button>
-              </>
-            ),
-          }}
-          pagination={{
-            enabled: true,
-            page,
-            pageSize,
-            totalCount: employeeContracts.length,
-            onPageChange: setPage,
-          }}
-        />
       )}
 
       <Modal
@@ -522,11 +379,11 @@ export default function ColaboradorDetalle() {
                 label="Ciclo de Pago"
                 name="ciclo_pago"
                 required
-                placeholder={ciclosPago.length ? "Seleccione una opción" : "Cargando..."}
+                placeholder={ciclosPago?.length ? "Seleccione una opción" : "Cargando..."}
                 disableSelectPortal
                 options={paymentCyclesOptions}
                 rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: ciclosPago.length === 0 }}
+                selectRootProps={{ disabled: ciclosPago?.length === 0 }}
               />
 
               <InputField
