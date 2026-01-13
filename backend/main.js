@@ -9,6 +9,7 @@ import employeeRoutes from "./src/routes/employee.route.js"
 import planillasRoutes from "./src/routes/planillas.route.js"
 import asistenciaRoutes from "./src/routes/asistencia.route.js"
 import estadosRoutes from "./src/routes/estado.route.js"
+import horasExtraRoutes from "./src/routes/horasExtra.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -42,6 +43,7 @@ app.use(`/${API_VERSION}`, employeeRoutes);
 app.use(`/${API_VERSION}/planillas`, planillasRoutes);
 app.use(`/${API_VERSION}/asistencia`, asistenciaRoutes);
 app.use(`/${API_VERSION}/estados`, estadosRoutes);
+app.use(`/${API_VERSION}/horas-extra`, horasExtraRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

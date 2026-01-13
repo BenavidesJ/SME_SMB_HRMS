@@ -1,25 +1,26 @@
-import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
 import { useMemo, useState } from "react";
-import { FiPlus } from "react-icons/fi";
-import { DataTable } from "../../../../components/general/table/DataTable";
-import type { Gender } from "../../../../types";
-import { Modal } from "../../../../components/general";
-import { Form, InputField } from "../../../../components/forms";
-import type { DataTableColumn } from "../../../../components/general/table/types";
-import { deleteGender } from "../../../../services/api/generos";
-import { Button } from "../../../../components/general/button/Button";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
+import type { DataTableColumn } from "../../../../components/general/table/types";
+import { DataTable } from "../../../../components/general/table/DataTable";
+import { Layout } from "../../../../layouts";
+import { Box, Button as ChakraButton, Stack, } from "@chakra-ui/react";
+import { FiPlus } from "react-icons/fi";
+import { Modal } from "../../../../components/general";
+import { Form, InputField } from "../../../../components/forms";
+import { Button } from "../../../../components/general/button/Button";
+import type { Department } from "../../../../types/Company";
+import { deleteDepartment } from "../../../../services/api/empresa";
 
-export default function Generos() {
+
+export const Departamentos = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: genders = [], isLoading: isTableLoading, refetch: refetchGenders } = useApiQuery<Gender[]>({ url: "generos" });
-  const { mutate: createGender, isLoading: isSubmitting } = useApiMutation<{ genero: string }, void>({ url: "/generos", method: "POST" });
-  const { mutate: patchGender } =
-    useApiMutation<{ genero: string }, void, number>({
-      url: (id) => `/generos/${id}`,
+  const { data: departments = [], isLoading: isTableLoading, refetch: refetch } = useApiQuery<Department[]>({ url: "departamentos" });
+  const { mutate: createDepartment, isLoading: isSubmitting } = useApiMutation<{ departamento: string }, void>({ url: "/departamentos", method: "POST" });
+  const { mutate: patchDepartment } =
+    useApiMutation<{ nombre: string }, void, number>({
+      url: (id) => `/departamentos/${id}`,
       method: "PATCH",
     })
   const [selection, setSelection] = useState<string[]>([]);
@@ -34,48 +35,27 @@ export default function Generos() {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return genders.find((r) => r.id_genero === selectedId) ?? null;
-  }, [genders, selectedId]);
+    return departments.find((r) => r.id === selectedId) ?? null;
+  }, [departments, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return genders.slice(start, start + pageSize);
-  }, [genders, page]);
+    return departments.slice(start, start + pageSize);
+  }, [departments, page]);
 
-  const columns = useMemo<DataTableColumn<Gender>[]>(() => {
-    return [
-      {
-        id: "id",
-        header: "ID",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${r.id_genero}`,
-      },
-      {
-        id: "genero",
-        header: "Género",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${r.genero}`,
-      }
-    ]
-  },
-    []);
-
-
-  const handleCreate = async (values: { genero: string }) => {
+  const handleCreate = async (values: { departamento: string }) => {
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        departamento: String(values.departamento ?? "").trim().toUpperCase(),
       };
 
-      await createGender(payload);
+      await createDepartment(payload);
 
       setOpenModal(false);
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetch();
 
       return true;
     } catch (error) {
@@ -84,20 +64,20 @@ export default function Generos() {
     }
   };
 
-  const handleEdit = async (values: { genero: string }) => {
+  const handleEdit = async (values: { nombre: string }) => {
     if (!selectedId) return false;
 
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
-      await patchGender(selectedId, payload);
+      await patchDepartment(selectedId, payload);
 
       setOpenEditModal(false);
       setSelection([]);
-      await refetchGenders();
+      await refetch();
 
       return true;
     } catch (error) {
@@ -110,20 +90,39 @@ export default function Generos() {
     if (!selectedId) return;
 
     try {
-      await deleteGender(selectedId);
+      await deleteDepartment(selectedId);
 
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetch();
     } catch (error) {
       console.log(error);
       return false;
     }
   };
 
+  const columns = useMemo<DataTableColumn<Department>[]>(() => {
+    return [
+      {
+        id: "id",
+        header: "ID",
+        minW: "80px",
+        textAlign: "center",
+        cell: (r) => `${r.id}`,
+      },
+      {
+        id: "departamento",
+        header: "Departamento",
+        minW: "80px",
+        textAlign: "center",
+        cell: (r) => `${r.departamento}`,
+      }
+    ]
+  },
+    []);
 
   return (
-    <Layout pageTitle="Mantenimiento de Géneros">
+    <Layout pageTitle="Mantenimiento de Departamentos">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px" alignContent="center">
@@ -135,12 +134,12 @@ export default function Generos() {
               marginBottom="5"
               onClick={() => setOpenModal(true)}
             >
-              Crear Genero <FiPlus />
+              Crear Departamento<FiPlus />
             </Button>
           </Box>
         </section>
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<Gender>
+          <DataTable<Department>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -149,7 +148,7 @@ export default function Generos() {
               enabled: true,
               selectedKeys: selection,
               onChange: setSelection,
-              getRowKey: (r) => String(r.id_genero),
+              getRowKey: (r) => String(r.id),
             }}
             actionBar={{
               enabled: true,
@@ -179,14 +178,14 @@ export default function Generos() {
               enabled: true,
               page,
               pageSize,
-              totalCount: genders.length,
+              totalCount: departments.length,
               onPageChange: setPage,
             }}
           />
         </section>
       </Stack>
       <Modal
-        title="Crear género"
+        title="Crear departamento"
         isOpen={openModal}
         size="lg"
         onOpenChange={(e) => setOpenModal(e.open)}
@@ -194,8 +193,8 @@ export default function Generos() {
           <Form onSubmit={handleCreate} resetOnSuccess >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Departamento"
+              name="departamento"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -224,7 +223,7 @@ export default function Generos() {
         }
       />
       <Modal
-        title="Editar género"
+        title="Editar departamento"
         isOpen={openEditModal}
         size="md"
         onOpenChange={(e) => setOpenEditModal(e.open)}
@@ -232,13 +231,13 @@ export default function Generos() {
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              genero: selectedRow?.genero ?? "",
+              nombre: selectedRow?.departamento ?? "",
             }}
           >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Departamento"
+              name="nombre"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -268,5 +267,5 @@ export default function Generos() {
         }
       />
     </Layout>
-  );
+  )
 }

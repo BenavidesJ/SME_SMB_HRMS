@@ -4,17 +4,18 @@ import { Layout } from "../../../../layouts";
 import { Form, InputField } from "../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
 import { Button } from "../../../../components/general/button/Button";
-import type { Employee, EmployeeRow, Gender } from "../../../../types";
+import type { Employee, EmployeeRow, Gender, Roles } from "../../../../types";
 import { toTitleCase } from "../../../../utils";
 import { Modal } from "../../../../components/general";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { GestionEmpleadosTabla } from "./GestionEmpleadosTabla";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
+import type { MaritalStatus } from "../../../../types/MaritalStatus";
 
 const GestionEmpleados = () => {
   const { data: genders = [] } = useApiQuery<Gender[]>({ url: "/generos" });
-  const { data: maritalStatuses = [] } = useApiQuery<string[]>({ url: "/estado_civil" });
-  const { data: roles = [] } = useApiQuery<string[]>({ url: "/auth/roles" });
+  const { data: maritalStatuses = [] } = useApiQuery<MaritalStatus[]>({ url: "/estado_civil" });
+  const { data: roles = [] } = useApiQuery<Roles[]>({ url: "/auth/roles" });
   const { data: employees = [], isLoading: isTableLoading, refetch: refetchEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const { mutate: createEmployee, isLoading: isSubmitting } = useApiMutation<Employee, void>({ url: "/empleados", method: "POST" });
   const [openModal, setOpenModal] = useState(false);
@@ -22,21 +23,25 @@ const GestionEmpleados = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
-  const mapToOptions = useCallback(
-    (items: string[]) => items.map((v) => ({ label: toTitleCase(v), value: v })),
+  const mapMaritalStatusToOptions = useCallback(
+    (items: MaritalStatus[]) => items.map((v) => ({ label: toTitleCase(v.estado_civil), value: v.estado_civil })),
     [],
   );
   const mapGenderToOptions = useCallback(
     (items: Gender[]) => items.map((v) => ({ label: toTitleCase(v.genero), value: v.genero })),
     [],
   );
+  const mapRoleToOptions = useCallback(
+    (items: Roles[]) => items.map((v) => ({ label: toTitleCase(v.nombre), value: v.nombre })),
+    [],
+  );
 
   const genderOptions = useMemo(() => mapGenderToOptions(genders), [genders, mapGenderToOptions]);
   const marStatsOptions = useMemo(
-    () => mapToOptions(maritalStatuses),
-    [maritalStatuses, mapToOptions],
+    () => mapMaritalStatusToOptions(maritalStatuses),
+    [maritalStatuses, mapMaritalStatusToOptions],
   );
-  const rolesOptions = useMemo(() => mapToOptions(roles), [roles, mapToOptions]);
+  const rolesOptions = useMemo(() => mapRoleToOptions(roles), [roles, mapRoleToOptions]);
 
   const handleCreateEmployee = async (employee: Employee) => {
     try {
@@ -225,7 +230,7 @@ const GestionEmpleados = () => {
                 }}
               />
             </SimpleGrid>
-            <Heading as="h3" size="md">Dirección</Heading>
+            {/* <Heading as="h3" size="md">Dirección</Heading>
             <SimpleGrid columns={{ base: 2, md: 3 }} gap={2}>
               <InputField
                 fieldType="select"
@@ -269,7 +274,7 @@ const GestionEmpleados = () => {
               rules={{
                 required: "El campo es obligatorio",
               }}
-            />
+            /> */}
 
             <Box w="250px" alignContent="center">
               <Button

@@ -61,6 +61,7 @@ import { CausaLiquidacion } from "./causa_liquidacion.js";
 
 // Otros
 import { Telefono } from "./telefono.js";
+import { Feriado } from "./feriado.js";
 
 // ========================================
 //  RELACIONES
@@ -357,4 +358,5 @@ export {
 
   // Otros
   Telefono,
+  Feriado,
 };

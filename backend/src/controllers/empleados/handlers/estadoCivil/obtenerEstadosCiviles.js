@@ -9,6 +9,9 @@ export const obtenerEstadosCiviles = async () => {
   const maritalStatuses = await EstadoCivil.findAll();
 
   return maritalStatuses.map((m) => {
-    return m.estado_civil;
+    return {
+      id: m.id_estado_civil,
+      estado_civil: m.estado_civil,
+    };
   });;
 };

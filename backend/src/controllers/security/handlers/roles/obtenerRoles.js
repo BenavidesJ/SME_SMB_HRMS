@@ -9,6 +9,9 @@ export const obtenerTodosRoles = async () => {
   const roles = await Rol.findAll();
 
   return roles.map((r) => {
-    return r.nombre;
+    return {
+      id: r.id_rol,
+      nombre: r.nombre
+    };
   });
 };

@@ -1,28 +1,28 @@
-import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
 import { useMemo, useState } from "react";
+import { Layout } from "../../../../layouts";
+import { useApiQuery } from "../../../../hooks/useApiQuery";
+import type { Status } from "../../../../types";
+import type { DataTableColumn } from "../../../../components/general/table/types";
+import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
+import { Button } from "../../../../components/general/button/Button";
 import { FiPlus } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";
-import type { Gender } from "../../../../types";
 import { Modal } from "../../../../components/general";
 import { Form, InputField } from "../../../../components/forms";
-import type { DataTableColumn } from "../../../../components/general/table/types";
-import { deleteGender } from "../../../../services/api/generos";
-import { Button } from "../../../../components/general/button/Button";
-import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
+import { deleteStatus } from "../../../../services/api/estados";
 
-export default function Generos() {
+export const Estados = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: genders = [], isLoading: isTableLoading, refetch: refetchGenders } = useApiQuery<Gender[]>({ url: "generos" });
-  const { mutate: createGender, isLoading: isSubmitting } = useApiMutation<{ genero: string }, void>({ url: "/generos", method: "POST" });
-  const { mutate: patchGender } =
-    useApiMutation<{ genero: string }, void, number>({
-      url: (id) => `/generos/${id}`,
+  const { data: estados = [], isLoading: statusLoading, refetch: refetchStatus } = useApiQuery<Status[]>({ url: "estados" });
+  const [selection, setSelection] = useState<string[]>([]);
+  const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "/estados", method: "POST" });
+  const { mutate: modifyStatus } =
+    useApiMutation<{ estado: string }, void, number>({
+      url: (id) => `/estados/${id}`,
       method: "PATCH",
     })
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -34,48 +34,47 @@ export default function Generos() {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return genders.find((r) => r.id_genero === selectedId) ?? null;
-  }, [genders, selectedId]);
+    return estados.find((r) => r.id === selectedId) ?? null;
+  }, [estados, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return genders.slice(start, start + pageSize);
-  }, [genders, page]);
+    return estados.slice(start, start + pageSize);
+  }, [estados, page]);
 
-  const columns = useMemo<DataTableColumn<Gender>[]>(() => {
+  const columns = useMemo<DataTableColumn<Status>[]>(() => {
     return [
       {
-        id: "id",
-        header: "ID",
+        id: "id_estado",
+        header: "Id",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => `${r.id_genero}`,
+        cell: (r) => `${r.id}`,
       },
       {
-        id: "genero",
-        header: "Género",
+        id: "estado",
+        header: "Estado",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => `${r.genero}`,
+        cell: (r) => `${r.estado}`,
       }
     ]
   },
     []);
 
-
-  const handleCreate = async (values: { genero: string }) => {
+  const handleCreate = async (values: { estado: string }) => {
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        estado: String(values.estado ?? "").trim().toUpperCase(),
       };
 
-      await createGender(payload);
+      await createStatus(payload);
 
       setOpenModal(false);
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetchStatus();
 
       return true;
     } catch (error) {
@@ -84,20 +83,20 @@ export default function Generos() {
     }
   };
 
-  const handleEdit = async (values: { genero: string }) => {
+  const handleEdit = async (values: { estado: string }) => {
     if (!selectedId) return false;
 
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        estado: String(values.estado ?? "").trim().toUpperCase(),
       };
 
-      await patchGender(selectedId, payload);
+      await modifyStatus(selectedId, payload);
 
       setOpenEditModal(false);
       setSelection([]);
-      await refetchGenders();
+      await refetchStatus();
 
       return true;
     } catch (error) {
@@ -110,20 +109,19 @@ export default function Generos() {
     if (!selectedId) return;
 
     try {
-      await deleteGender(selectedId);
+
+      await deleteStatus(selectedId);
 
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetchStatus();
     } catch (error) {
       console.log(error);
       return false;
     }
   };
-
-
   return (
-    <Layout pageTitle="Mantenimiento de Géneros">
+    <Layout pageTitle="Mantenimiento de Estados">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px" alignContent="center">
@@ -135,21 +133,21 @@ export default function Generos() {
               marginBottom="5"
               onClick={() => setOpenModal(true)}
             >
-              Crear Genero <FiPlus />
+              Crear Estado <FiPlus />
             </Button>
           </Box>
         </section>
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<Gender>
-            data={isTableLoading ? [] : pagedRows}
+          <DataTable<Status>
+            data={statusLoading ? [] : pagedRows}
             columns={columns}
-            isDataLoading={isTableLoading}
+            isDataLoading={statusLoading}
             size="md"
             selection={{
               enabled: true,
               selectedKeys: selection,
               onChange: setSelection,
-              getRowKey: (r) => String(r.id_genero),
+              getRowKey: (r) => String(r.id),
             }}
             actionBar={{
               enabled: true,
@@ -179,14 +177,14 @@ export default function Generos() {
               enabled: true,
               page,
               pageSize,
-              totalCount: genders.length,
+              totalCount: estados.length,
               onPageChange: setPage,
             }}
           />
         </section>
       </Stack>
       <Modal
-        title="Crear género"
+        title="Crear empleado"
         isOpen={openModal}
         size="lg"
         onOpenChange={(e) => setOpenModal(e.open)}
@@ -194,8 +192,8 @@ export default function Generos() {
           <Form onSubmit={handleCreate} resetOnSuccess >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Estado"
+              name="estado"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -224,7 +222,7 @@ export default function Generos() {
         }
       />
       <Modal
-        title="Editar género"
+        title="Editar estado"
         isOpen={openEditModal}
         size="md"
         onOpenChange={(e) => setOpenEditModal(e.open)}
@@ -232,13 +230,13 @@ export default function Generos() {
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              genero: selectedRow?.genero ?? "",
+              estado: selectedRow?.estado ?? "",
             }}
           >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Estado"
+              name="estado"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -268,5 +266,5 @@ export default function Generos() {
         }
       />
     </Layout>
-  );
+  )
 }

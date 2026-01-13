@@ -5,12 +5,14 @@ import { useCallback, useRef, useState } from "react";
 import { apiRequest, ApiError } from "../services/api";
 import type { HttpMethod } from "../types";
 
-type UseApiMutationOptions<TBody, _TResponse> = {
-  url: string | ((body: TBody) => string);
+type UseApiMutationOptions<_TBody, _TResponse, TKey = unknown> = {
+  url: string | ((key: TKey) => string);
   method: Exclude<HttpMethod, "GET">;
 };
 
-export function useApiMutation<TBody, TResponse>(opts: UseApiMutationOptions<TBody, TResponse>) {
+export function useApiMutation<TBody, TResponse, TKey = unknown>(
+  opts: UseApiMutationOptions<TBody, TResponse, TKey>,
+) {
   const { url, method } = opts;
 
   const [data, setData] = useState<TResponse | null>(null);
@@ -19,16 +21,20 @@ export function useApiMutation<TBody, TResponse>(opts: UseApiMutationOptions<TBo
 
   const abortRef = useRef<AbortController | null>(null);
 
-  const mutate = useCallback(
-    async (body: TBody) => {
-      abortRef.current?.abort();
-      abortRef.current = new AbortController();
+  // Overloads
+  async function mutate(body: TBody): Promise<TResponse>;
+  async function mutate(key: TKey, body?: TBody): Promise<TResponse>;
+  async function mutate(arg1: any, arg2?: any) {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
 
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const finalUrl = typeof url === "function" ? url(body) : url;
+    try {
+      if (arg2 === undefined) {
+        const body = arg1 as TBody;
+        const finalUrl = typeof url === "function" ? url(arg1 as TKey) : url;
 
         const result = await apiRequest<TResponse, TBody>({
           url: finalUrl,
@@ -39,16 +45,32 @@ export function useApiMutation<TBody, TResponse>(opts: UseApiMutationOptions<TBo
 
         setData(result);
         return result;
-      } catch (err: any) {
-        if (err?.name === "AbortError") return null;
-        setError(err);
-        throw err;
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [url, method],
-  );
 
-  return { mutate, data, isLoading, error };
+      const key = arg1 as TKey;
+      const body = arg2 as TBody | undefined;
+      const finalUrl = typeof url === "function" ? url(key) : url;
+
+      const result = await apiRequest<TResponse, TBody>({
+        url: finalUrl,
+        method,
+        ...(body !== undefined ? { body } : {}),
+        signal: abortRef.current.signal,
+      });
+
+      setData(result);
+      return result;
+    } catch (err: any) {
+      if (err?.name === "AbortError") return null;
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const mutateCb = useCallback(mutate as any, [url, method]);
+
+  return { mutate: mutateCb as typeof mutate, data, isLoading, error };
 }

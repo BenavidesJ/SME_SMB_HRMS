@@ -16,6 +16,10 @@ import TiposContrato from "../pages/Private/mantenimientos/tiposContrato/TiposCo
 import { MarcasAsistencia } from "../pages/Private/asistencias/MarcasAsistencia";
 import { GestionarAsistencias } from "../pages/Private/asistencias/GestionarAsistencias";
 import { MarcasAsistenciaColaborador } from "../pages/Private/asistencias/MarcasAsistenciaColaborador";
+import { Estados } from "../pages/Private/mantenimientos/estados/Estados";
+import { EstadosCiviles } from "../pages/Private/mantenimientos/estadosCiviles/EstadosCiviles";
+import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
+import { Departamentos } from "../pages/Private/mantenimientos/departamentos/Departamentos";
 
 export const router = createBrowserRouter([
   {
@@ -63,6 +67,22 @@ export const router = createBrowserRouter([
       {
         path: "/mantenimientos-consultas/generos",
         element: <Generos />,
+      },
+      {
+        path: "/mantenimientos-consultas/estados",
+        element: <Estados />,
+      },
+      {
+        path: "/mantenimientos-consultas/estados_civiles",
+        element: <EstadosCiviles />,
+      },
+      {
+        path: "/mantenimientos-consultas/departamentos",
+        element: <Departamentos />,
+      },
+      {
+        path: "/mantenimientos-consultas/roles",
+        element: <RolesPage />,
       },
       {
         path: "/mantenimientos-consultas/tipos_contrato",

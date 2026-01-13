@@ -61,11 +61,6 @@ export const obtenerContratosPorColaborador = async ({ id_colaborador }) => {
     ],
   });
 
-  console.log(contratos.map((c) => ({
-    puesto: c.contratoPuesto.nombre
-  })))
-
-
   return contratos.map((c) => ({
     id_contrato: c.id_contrato,
     id_colaborador: c.id_colaborador,

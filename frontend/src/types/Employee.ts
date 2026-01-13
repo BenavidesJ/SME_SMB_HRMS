@@ -155,3 +155,8 @@ export interface Asistencia {
   total: number
   marcas: Marca[]
 }
+
+export interface Roles {
+  id: number,
+  nombre: string
+}

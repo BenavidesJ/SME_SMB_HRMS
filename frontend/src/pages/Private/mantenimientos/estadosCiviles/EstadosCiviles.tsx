@@ -1,25 +1,25 @@
-import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
 import { useMemo, useState } from "react";
+import { Layout } from "../../../../layouts";
+import { useApiQuery } from "../../../../hooks/useApiQuery";
+import type { MaritalStatus } from "../../../../types/MaritalStatus";
+import type { DataTableColumn } from "../../../../components/general/table/types";
+import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
+import { Button } from "../../../../components/general/button/Button";
 import { FiPlus } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";
-import type { Gender } from "../../../../types";
 import { Modal } from "../../../../components/general";
-import { Form, InputField } from "../../../../components/forms";
-import type { DataTableColumn } from "../../../../components/general/table/types";
-import { deleteGender } from "../../../../services/api/generos";
-import { Button } from "../../../../components/general/button/Button";
-import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
+import { deleteMaritalStatus } from "../../../../services/api/estadoCivil";
+import { Form, InputField } from "../../../../components/forms";
 
-export default function Generos() {
+export const EstadosCiviles = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: genders = [], isLoading: isTableLoading, refetch: refetchGenders } = useApiQuery<Gender[]>({ url: "generos" });
-  const { mutate: createGender, isLoading: isSubmitting } = useApiMutation<{ genero: string }, void>({ url: "/generos", method: "POST" });
-  const { mutate: patchGender } =
-    useApiMutation<{ genero: string }, void, number>({
-      url: (id) => `/generos/${id}`,
+  const { data: maritalStatuses = [], isLoading: isTableLoading, refetch: refetchMaritalStatuses } = useApiQuery<MaritalStatus[]>({ url: "estado_civil" });
+  const { mutate: createMaritalStatus, isLoading: isSubmitting } = useApiMutation<{ estado_civil: string }, void>({ url: "/estado_civil", method: "POST" });
+  const { mutate: patchMaritalStatus } =
+    useApiMutation<{ estado_civil: string }, void, number>({
+      url: (id) => `/estado_civil/${id}`,
       method: "PATCH",
     })
   const [selection, setSelection] = useState<string[]>([]);
@@ -34,48 +34,27 @@ export default function Generos() {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return genders.find((r) => r.id_genero === selectedId) ?? null;
-  }, [genders, selectedId]);
+    return maritalStatuses.find((r) => r.id === selectedId) ?? null;
+  }, [maritalStatuses, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return genders.slice(start, start + pageSize);
-  }, [genders, page]);
+    return maritalStatuses.slice(start, start + pageSize);
+  }, [maritalStatuses, page]);
 
-  const columns = useMemo<DataTableColumn<Gender>[]>(() => {
-    return [
-      {
-        id: "id",
-        header: "ID",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${r.id_genero}`,
-      },
-      {
-        id: "genero",
-        header: "Género",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${r.genero}`,
-      }
-    ]
-  },
-    []);
-
-
-  const handleCreate = async (values: { genero: string }) => {
+  const handleCreate = async (values: { estado_civil: string }) => {
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        estado_civil: String(values.estado_civil ?? "").trim().toUpperCase(),
       };
 
-      await createGender(payload);
+      await createMaritalStatus(payload);
 
       setOpenModal(false);
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetchMaritalStatuses();
 
       return true;
     } catch (error) {
@@ -84,20 +63,20 @@ export default function Generos() {
     }
   };
 
-  const handleEdit = async (values: { genero: string }) => {
+  const handleEdit = async (values: { estado_civil: string }) => {
     if (!selectedId) return false;
 
     try {
 
       const payload = {
-        genero: String(values.genero ?? "").trim().toUpperCase(),
+        estado_civil: String(values.estado_civil ?? "").trim().toUpperCase(),
       };
 
-      await patchGender(selectedId, payload);
+      await patchMaritalStatus(selectedId, payload);
 
       setOpenEditModal(false);
       setSelection([]);
-      await refetchGenders();
+      await refetchMaritalStatuses();
 
       return true;
     } catch (error) {
@@ -110,20 +89,39 @@ export default function Generos() {
     if (!selectedId) return;
 
     try {
-      await deleteGender(selectedId);
+      await deleteMaritalStatus(selectedId);
 
       setSelection([]);
       setPage(1);
-      await refetchGenders();
+      await refetchMaritalStatuses();
     } catch (error) {
       console.log(error);
       return false;
     }
   };
 
+  const columns = useMemo<DataTableColumn<MaritalStatus>[]>(() => {
+    return [
+      {
+        id: "id",
+        header: "ID",
+        minW: "80px",
+        textAlign: "center",
+        cell: (r) => `${r.id}`,
+      },
+      {
+        id: "estado_civil",
+        header: "Estado Civil",
+        minW: "80px",
+        textAlign: "center",
+        cell: (r) => `${r.estado_civil}`,
+      }
+    ]
+  },
+    []);
 
   return (
-    <Layout pageTitle="Mantenimiento de Géneros">
+    <Layout pageTitle="Mantenimiento de Estados Civiles">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px" alignContent="center">
@@ -135,12 +133,12 @@ export default function Generos() {
               marginBottom="5"
               onClick={() => setOpenModal(true)}
             >
-              Crear Genero <FiPlus />
+              Crear Estado Civil <FiPlus />
             </Button>
           </Box>
         </section>
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<Gender>
+          <DataTable<MaritalStatus>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -149,7 +147,7 @@ export default function Generos() {
               enabled: true,
               selectedKeys: selection,
               onChange: setSelection,
-              getRowKey: (r) => String(r.id_genero),
+              getRowKey: (r) => String(r.id),
             }}
             actionBar={{
               enabled: true,
@@ -179,14 +177,14 @@ export default function Generos() {
               enabled: true,
               page,
               pageSize,
-              totalCount: genders.length,
+              totalCount: maritalStatuses.length,
               onPageChange: setPage,
             }}
           />
         </section>
       </Stack>
       <Modal
-        title="Crear género"
+        title="Crear estado civil"
         isOpen={openModal}
         size="lg"
         onOpenChange={(e) => setOpenModal(e.open)}
@@ -194,8 +192,8 @@ export default function Generos() {
           <Form onSubmit={handleCreate} resetOnSuccess >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Estado Civil"
+              name="estado_civil"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -224,7 +222,7 @@ export default function Generos() {
         }
       />
       <Modal
-        title="Editar género"
+        title="Editar estado civil"
         isOpen={openEditModal}
         size="md"
         onOpenChange={(e) => setOpenEditModal(e.open)}
@@ -232,13 +230,13 @@ export default function Generos() {
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              genero: selectedRow?.genero ?? "",
+              estado_civil: selectedRow?.estado_civil ?? "",
             }}
           >
             <InputField
               fieldType="text"
-              label="Género"
-              name="genero"
+              label="Estado Civil"
+              name="estado_civil"
               required
               rules={{
                 required: "El campo es obligatorio",
@@ -268,5 +266,5 @@ export default function Generos() {
         }
       />
     </Layout>
-  );
+  )
 }

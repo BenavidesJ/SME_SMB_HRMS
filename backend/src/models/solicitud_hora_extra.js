@@ -35,10 +35,14 @@ export const SolicitudHoraExtra = sequelize.define(
     },
     aprobado_por: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     horas_aprobadas: {
       type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+    },
+    justificacion: {
+      type: DataTypes.STRING(100),
       allowNull: false,
     },
   },
