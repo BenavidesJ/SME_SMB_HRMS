@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "",
-    "dev": "node --watch --env-file=.env main.js"
+    "dev": "node --watch --env-file=.env main.js",
+    "seed:ubicaciones": "node --env-file=.env src/seeds/run-seeds.js"
   },
   "keywords": [],
   "author": "Jose D Benavides",

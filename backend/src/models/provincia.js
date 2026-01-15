@@ -7,6 +7,7 @@ export const Provincia = sequelize.define(
     id_provincia: {
       type: DataTypes.INTEGER,
       primaryKey: true,
+      references: { model: "provincia", key: "id_provincia" },
     },
     nombre: {
       type: DataTypes.STRING(80),
