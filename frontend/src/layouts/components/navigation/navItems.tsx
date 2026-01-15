@@ -85,10 +85,20 @@ export const NAV_MAIN: NavItem[] = [
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
   {
-    label: "Gestión de Horas Extra",
+    label: "Horas Extra",
     icon: <PiCalendarPlus />,
     path: "/horas-extra",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    children: [
+      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+    ],
+    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/horas-extra/solicitud",
+      },
+    },
   },
   {
     label: "Gestión de Liquidaciones",

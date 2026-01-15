@@ -7,7 +7,6 @@ export const Canton = sequelize.define(
     id_canton: {
       type: DataTypes.INTEGER,
       primaryKey: true,
-      autoIncrement: true,
     },
     id_provincia: {
       type: DataTypes.INTEGER,

@@ -20,6 +20,8 @@ import { Estados } from "../pages/Private/mantenimientos/estados/Estados";
 import { EstadosCiviles } from "../pages/Private/mantenimientos/estadosCiviles/EstadosCiviles";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
 import { Departamentos } from "../pages/Private/mantenimientos/departamentos/Departamentos";
+import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
+import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasExtra";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +49,14 @@ export const router = createBrowserRouter([
       {
         path: "/asistencia/gestion",
         element: <GestionarAsistencias />
+      },
+      {
+        path: "/horas-extra/solicitud",
+        element: <SolicitudHorasExtra />
+      },
+      {
+        path: "/horas-extra/gestion",
+        element: <GestionSolicitudes />
       },
       {
         path: "/asistencia/gestion/colaborador/:id",

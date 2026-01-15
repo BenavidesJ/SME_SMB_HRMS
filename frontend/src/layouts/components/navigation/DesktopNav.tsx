@@ -20,7 +20,7 @@ export const DesktopNav = () => {
   const debounceRef = useRef<number | null>(null);
   const { user } = useAuth();
 
-  const userRoles = user?.usuario.roles || [];
+  const userRoles = user?.usuario?.roles || [];
 
   const filteredMainNav = useMemo(() => {
     return NAV_MAIN.filter(item => {

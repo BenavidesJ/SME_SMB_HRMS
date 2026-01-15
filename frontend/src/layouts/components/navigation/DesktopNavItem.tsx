@@ -10,7 +10,7 @@ import { hasAnyRole } from "./helpers/hasAnyRole";
 
 export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: boolean }) => {
   const { user } = useAuth();
-  const userRoles = user?.usuario.roles ?? [];
+  const userRoles = user?.usuario?.roles ?? [];
 
   const [open, setOpen] = useState(false);
 
