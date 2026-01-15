@@ -1,11 +1,25 @@
 import express from 'express';
 import { crearEmpleado, obtenerColaboradorPorUserId, obtenerTodosColaboradores } from '../controllers/empleados/empleados.controller.js';
 import {
-  crearCanton,
-  crearDistrito,
-  crearProvincia,
+  actualizarCantonController,
+  actualizarDireccionController,
+  actualizarDistritoController,
+  actualizarProvinciaController,
+  crearCantonController,
+  crearDireccionController,
+  crearDistritoController,
+  crearProvinciaController,
+  desactivarDireccionController,
+  eliminarCantonController,
+  eliminarDistritoController,
+  eliminarProvinciaController,
+  obtenerCanton,
   obtenerCantonesPorProvincia,
-  obtenerDistritoPorCanton,
+  obtenerDireccionesPorColaboradorController,
+  obtenerDireccionPrincipalController,
+  obtenerDistrito,
+  obtenerDistritosController,
+  obtenerDistritosPorCanton,
   obtenerProvincia,
   obtenerProvincias
 } from '../controllers/empleados/direcciones.controller.js';
@@ -36,16 +50,31 @@ router.patch('/estado_civil/:id', authorization, patchEstadoCivil);
 router.delete('/estado_civil/:id', authorization, borrarEstadoCivil);
 
 // Direcciones
+router.post('/direccion', authorization, crearDireccionController);
+router.get('/direccion/principal', authorization, obtenerDireccionPrincipalController);
+router.get('/colaboradores/:id/direcciones', authorization, obtenerDireccionesPorColaboradorController);
+router.patch('/direcciones/:id', authorization, actualizarDireccionController);
+router.patch('/direcciones/:id/desactivar', authorization, desactivarDireccionController);
 // - Provincias
-router.post('/provincias', authorization, crearProvincia);
+router.post('/provincias', authorization, crearProvinciaController);
 router.get('/provincias', authorization, obtenerProvincias);
 router.get('/provincias/:id', authorization, obtenerProvincia);
+router.patch('/provincias/:id', authorization, actualizarProvinciaController);
+router.delete('/provincias/:id', authorization, eliminarProvinciaController);
 // - Cantones
-router.post('/cantones', authorization, crearCanton);
+router.post('/cantones', authorization, crearCantonController);
 router.get('/cantones', authorization, obtenerCantonesPorProvincia);
+router.get('/cantones/:id', authorization, obtenerCanton);
+router.get('/provincias/:id_provincia/cantones', authorization, obtenerCantonesPorProvincia);
+router.patch('/cantones/:id', authorization, actualizarCantonController);
+router.delete('/cantones/:id', authorization, eliminarCantonController);
 // - Distritos
-router.post('/distritos', authorization, crearDistrito);
-router.get('/distritos', authorization, obtenerDistritoPorCanton);
+router.post('/distritos', authorization, crearDistritoController);
+router.get('/distritos', authorization, obtenerDistritosController);
+router.get('/distritos/:id', authorization, obtenerDistrito);
+router.get('/cantones/:id_canton/distritos', authorization, obtenerDistritosPorCanton);
+router.patch('/distritos/:id', authorization, actualizarDistritoController);
+router.delete('/distritos/:id', authorization, eliminarDistritoController);
 
 // Vínculo Laboral
 // - Departamentos

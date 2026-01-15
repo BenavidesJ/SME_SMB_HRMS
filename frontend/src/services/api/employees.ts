@@ -1,5 +1,6 @@
 import api from './api';
 import type { ApiResponse, ContractPayload, Contrato, Employee, EmployeeRow, Puesto, TipoJornada } from '../../types';
+import type { CantonesPorProvinciaResponse, DistritosPorCantonResponse } from '../../types/Address';
 
 export const getEmployees = () => {
   return api.get<ApiResponse<EmployeeRow[]>>("empleados");
@@ -17,25 +18,33 @@ export const getAllGenders = () => {
 };
 
 export const getAllMaritalStatuses = () => {
-  return api.get<ApiResponse<string[]>>("estado_civil"); 
+  return api.get<ApiResponse<string[]>>("estado_civil");
 };
 
 export const getAllScheduleTypes = () => {
-  return api.get<ApiResponse<TipoJornada[]>>("tipos_jornada"); 
+  return api.get<ApiResponse<TipoJornada[]>>("tipos_jornada");
 };
 
-export const getAllJobPositions= () => {
-  return api.get<ApiResponse<Puesto[]>>("puestos"); 
+export const getAllJobPositions = () => {
+  return api.get<ApiResponse<Puesto[]>>("puestos");
 };
 
-export const getAllContractTypes= () => {
-  return api.get<ApiResponse<string[]>>("tipos_contrato"); 
+export const getAllContractTypes = () => {
+  return api.get<ApiResponse<string[]>>("tipos_contrato");
 };
 
-export const createAndAssignContract= (contract: ContractPayload) => {
-  return api.post("contratos", contract); 
+export const createAndAssignContract = (contract: ContractPayload) => {
+  return api.post("contratos", contract);
 };
 
-export const getAllContractsByEmployee= (id: number) => {
+export const getAllContractsByEmployee = (id: number) => {
   return api.get<ApiResponse<Contrato[]>>(`contratos/colaborador/${id}`);
+};
+
+export const getCantonesPorProvincia = (id_provincia: number) => {
+  return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`provincias/${id_provincia}/cantones`);
+};
+
+export const getDistritosPorCanton = (id_provincia: number) => {
+  return api.get<ApiResponse<DistritosPorCantonResponse>>(`cantones/${id_provincia}/distritos`);
 };

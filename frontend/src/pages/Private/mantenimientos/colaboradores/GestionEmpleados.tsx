@@ -11,12 +11,15 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { GestionEmpleadosTabla } from "./GestionEmpleadosTabla";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import type { MaritalStatus } from "../../../../types/MaritalStatus";
+import type { Provincia } from "../../../../types/Address";
+import { DireccionFields } from "./CamposDireccion";
 
 const GestionEmpleados = () => {
   const { data: genders = [] } = useApiQuery<Gender[]>({ url: "/generos" });
   const { data: maritalStatuses = [] } = useApiQuery<MaritalStatus[]>({ url: "/estado_civil" });
   const { data: roles = [] } = useApiQuery<Roles[]>({ url: "/auth/roles" });
   const { data: employees = [], isLoading: isTableLoading, refetch: refetchEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const { data: provincias = [], refetch: refetchProvincias } = useApiQuery<Provincia[]>({ url: "/provincias" });
   const { mutate: createEmployee, isLoading: isSubmitting } = useApiMutation<Employee, void>({ url: "/empleados", method: "POST" });
   const [openModal, setOpenModal] = useState(false);
 
@@ -55,6 +58,7 @@ const GestionEmpleados = () => {
       setSelection([]);
       setPage(1);
       await refetchEmployees();
+      await refetchProvincias();
 
       return true;
     } catch (error) {
@@ -148,7 +152,7 @@ const GestionEmpleados = () => {
                 disableSelectPortal
                 placeholder={genders.length ? "Seleccione una opción" : "Cargando..."}
                 options={genderOptions}
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
                 selectRootProps={{ disabled: genders.length === 0 }}
               />
               <InputField
@@ -161,7 +165,8 @@ const GestionEmpleados = () => {
                   pattern: {
                     value: /^\d+$/,
                     message: "Solo se permiten números."
-                  }
+                  },
+                  setValueAs: (v) => String(v ?? "").trim(),
                 }}
               />
               <InputField
@@ -169,7 +174,7 @@ const GestionEmpleados = () => {
                 label="Correo Eletrónico"
                 name="correo_electronico"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
               />
               <InputField
                 fieldType="text"
@@ -206,7 +211,7 @@ const GestionEmpleados = () => {
                 required
                 placeholder={maritalStatuses.length ? "Seleccione una opción" : "Cargando..."}
                 options={marStatsOptions}
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
                 selectRootProps={{ disabled: maritalStatuses.length === 0 }}
               />
               <InputField
@@ -217,7 +222,7 @@ const GestionEmpleados = () => {
                 disableSelectPortal
                 placeholder={roles.length ? "Seleccione una opción" : "Cargando..."}
                 options={rolesOptions}
-                rules={{ required: "El campo es obligatorio" }}
+                rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
                 selectRootProps={{ disabled: roles.length === 0 }}
               />
               <InputField
@@ -230,51 +235,8 @@ const GestionEmpleados = () => {
                 }}
               />
             </SimpleGrid>
-            {/* <Heading as="h3" size="md">Dirección</Heading>
-            <SimpleGrid columns={{ base: 2, md: 3 }} gap={2}>
-              <InputField
-                fieldType="select"
-                label="Provincia"
-                name="provincia"
-                disableSelectPortal
-                required
-                placeholder={maritalStatuses.length ? "Seleccione una opción" : "Cargando..."}
-                options={marStatsOptions}
-                rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: maritalStatuses.length === 0 }}
-              />
-              <InputField
-                fieldType="select"
-                label="Cantón"
-                name="canton"
-                disableSelectPortal
-                required
-                placeholder={maritalStatuses.length ? "Seleccione una opción" : "Cargando..."}
-                options={marStatsOptions}
-                rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: maritalStatuses.length === 0 }}
-              />
-              <InputField
-                fieldType="select"
-                label="Distrito"
-                name="distrito"
-                disableSelectPortal
-                required
-                placeholder={maritalStatuses.length ? "Seleccione una opción" : "Cargando..."}
-                options={marStatsOptions}
-                rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: maritalStatuses.length === 0 }}
-              />
-            </SimpleGrid>
-            <InputField
-              fieldType="text"
-              label="Otras señas"
-              name="otros_datos"
-              required
-              rules={{
-                required: "El campo es obligatorio",
-              }}
-            /> */}
+            <Heading as="h3" size="md">Dirección</Heading>
+            <DireccionFields provincias={provincias} />
 
             <Box w="250px" alignContent="center">
               <Button

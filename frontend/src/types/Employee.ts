@@ -11,6 +11,10 @@ export interface Employee {
   cantidad_hijos: number;
   estado_civil: string;
   rol: string;
+  id_provincia?: number;
+  id_canton?: number,
+  id_distrito?: number,
+  otros_datos?: string,
 }
 
 /* Genero */
