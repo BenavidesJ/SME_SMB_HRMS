@@ -9,6 +9,9 @@ import {
   MarcaAsistencia,
   JornadaDiaria,
   TipoJornada,
+  SolicitudHoraExtra,
+  Feriado,
+  Incapacidad,
 } from "../../../../models/index.js";
 
 import { isAfterWithTolerance, isBeforeWithTolerance } from "../helpers/checkTolerances.js";
@@ -16,6 +19,10 @@ import { buildScheduleTemplateFromHorario } from "../../../../services/scheduleE
 import { classifyWorkedIntervalForDay } from "../../../../services/scheduleEngine/attendanceClassifier.js";
 import { resolveWorkWindowForTimestamp } from "../../../../services/scheduleEngine/workWindowResolver.js";
 import { validateMaxDailyMinutesForInterval } from "../../../../services/scheduleEngine/realLimits.js";
+import { applyOvertimeApprovalPolicy } from "../../../../services/scheduleEngine/overtimePolicy.js";
+import { loadApprovedOvertimeHoursForDate } from "../../../../services/scheduleEngine/sequelizeOvertimeProvider.js";
+import { isMandatoryHolidayByDate } from "../../../../services/scheduleEngine/sequelizeHolidayProvider.js";
+import { assertNoIncapacityCoveringDate } from "../../../../services/scheduleEngine/incapacityGuard.js";
 
 /**
  * Registrar marca de asistencia
@@ -126,6 +133,13 @@ export const registrarMarcaAsistencia = async ({
 
     const todayDate = windowDateStr;
 
+    await assertNoIncapacityCoveringDate({
+      models: { Incapacidad },
+      idColaborador: colaborador.id_colaborador,
+      dateStr: todayDate,
+      transaction: tx,
+    });
+
     const tiposMarca = await TipoMarca.findAll({
       where: {
         nombre: {
@@ -147,7 +161,7 @@ export const registrarMarcaAsistencia = async ({
     );
 
     if (!tipoEntradaDb || !tipoSalidaDb) {
-      throw new Error('No existe ENTRADA y/o SALIDA en el catálogo tipo_marca');
+      throw new Error("No existe ENTRADA y/o SALIDA en el catálogo tipo_marca");
     }
 
     if (!tipoMarcaDb) {
@@ -193,6 +207,7 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("Ya existe una marca de SALIDA para esta jornada");
     }
 
+    // Límite real: no permitir más del máximo diario permitido (MVP: 12h)
     if (tipoTxt === "SALIDA") {
       const entradaExistente = marcasVentana.find(
         (m) => String(m.tipo_marca?.nombre ?? "").toUpperCase() === "ENTRADA"
@@ -265,6 +280,8 @@ export const registrarMarcaAsistencia = async ({
 
     let horasOrdinarias = 0.0;
     let horasExtra = 0.0;
+    let horasNocturnas = 0.0;
+    let overtimeResult = null;
 
     if (entrada && salida) {
       const classified = classifyWorkedIntervalForDay({
@@ -275,10 +292,31 @@ export const registrarMarcaAsistencia = async ({
       });
 
       horasOrdinarias = classified.ordinaryHours;
-      horasExtra = classified.extraHours;
+      const extraCandidate = classified.extraHours;
+
+      const approvedHoursAvailable = await loadApprovedOvertimeHoursForDate({
+        models: { SolicitudHoraExtra, Estado },
+        idColaborador: colaborador.id_colaborador,
+        dateStr: todayDate,
+        transaction: tx,
+      });
+
+      overtimeResult = applyOvertimeApprovalPolicy({
+        extraCandidateHours: extraCandidate,
+        approvedHoursAvailable,
+      });
+
+      horasExtra = overtimeResult.extraApprovedHours;
 
       warnings.push(...classified.warnings);
+      warnings.push(...overtimeResult.warnings);
     }
+
+    const feriadoObligatorio = await isMandatoryHolidayByDate({
+      models: { Feriado },
+      dateStr: todayDate,
+      transaction: tx,
+    });
 
     const jornadaExistente = await JornadaDiaria.findOne({
       where: {
@@ -295,8 +333,8 @@ export const registrarMarcaAsistencia = async ({
           fecha: todayDate,
           horas_trabajadas: horasOrdinarias,
           horas_extra: horasExtra,
-          horas_nocturnas: 0,
-          feriado_obligatorio: 0,
+          horas_nocturnas: horasNocturnas,
+          feriado_obligatorio: feriadoObligatorio,
         },
         { transaction: tx }
       );
@@ -305,6 +343,7 @@ export const registrarMarcaAsistencia = async ({
         {
           horas_trabajadas: horasOrdinarias,
           horas_extra: horasExtra,
+          feriado_obligatorio: feriadoObligatorio,
         },
         { transaction: tx }
       );
@@ -327,13 +366,18 @@ export const registrarMarcaAsistencia = async ({
       jornada: {
         fecha: todayDate,
         horas_trabajadas: horasOrdinarias,
+        feriado_obligatorio: feriadoObligatorio,
         horas_extra: horasExtra,
+        extra_candidata: overtimeResult?.extraCandidateHours ?? 0,
+        extra_no_aprobada: overtimeResult?.extraUnapprovedHours ?? 0,
         entrada: entrada?.timestamp ?? null,
         salida: salida?.timestamp ?? null,
       },
     };
   } catch (error) {
-    await tx.rollback();
+    if (!tx.finished) {
+      await tx.rollback();
+    }
     throw error;
   }
 };

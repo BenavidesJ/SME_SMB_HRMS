@@ -40,7 +40,7 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
     setSubmittingId(id);
     try {
       await modifyRequest(id,
-        { id_aprobador: user?.id, estado: "rechazado" },
+        { id_aprobador: user?.id, estado: "aprobado" },
       );
       await refetch();
     } catch (error) {
