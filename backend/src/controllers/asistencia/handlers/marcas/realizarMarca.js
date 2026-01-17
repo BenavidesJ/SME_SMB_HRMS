@@ -8,9 +8,14 @@ import {
   TipoMarca,
   MarcaAsistencia,
   JornadaDiaria,
+  TipoJornada,
 } from "../../../../models/index.js";
-import { getDayInitial } from "../helpers/getDayInitial.js";
-import { isAfterWithTolerance, isBeforeWithTolerance, round2 } from "../helpers/checkTolerances.js";
+
+import { isAfterWithTolerance, isBeforeWithTolerance } from "../helpers/checkTolerances.js";
+import { buildScheduleTemplateFromHorario } from "../../../../services/scheduleEngine/templateFromSchedule.js";
+import { classifyWorkedIntervalForDay } from "../../../../services/scheduleEngine/attendanceClassifier.js";
+import { resolveWorkWindowForTimestamp } from "../../../../services/scheduleEngine/workWindowResolver.js";
+import { validateMaxDailyMinutesForInterval } from "../../../../services/scheduleEngine/realLimits.js";
 
 /**
  * Registrar marca de asistencia
@@ -90,20 +95,60 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("El contrato activo no tiene un horario ACTIVO asignado");
     }
 
-    const todayDate = dayjs(timestamp).format("YYYY-MM-DD");
-    const dayLetter = getDayInitial(timestamp);
+    const tipoJornada = await TipoJornada.findByPk(horarioActivo.id_tipo_jornada, {
+      attributes: ["id_tipo_jornada", "tipo", "max_horas_diarias"],
+      transaction: tx,
+    });
 
-    const diasLaborales = String(horarioActivo.dias_laborales ?? "")
-      .trim()
-      .toUpperCase();
+    if (!tipoJornada) {
+      throw new Error("El horario activo no tiene un tipo de jornada válido");
+    }
 
-    const esDiaLaboral = diasLaborales.includes(dayLetter);
+    const cruzaMedianoche =
+      String(horarioActivo.hora_inicio ?? "") > String(horarioActivo.hora_fin ?? "");
 
-    const tipoMarcaDb = await TipoMarca.findOne({
-      where: { nombre: tipoTxt },
+    const template = buildScheduleTemplateFromHorario({
+      hora_inicio: horarioActivo.hora_inicio,
+      hora_fin: horarioActivo.hora_fin,
+      dias_laborales: horarioActivo.dias_laborales,
+      dias_libres: horarioActivo.dias_libres,
+      minutos_descanso: horarioActivo.minutos_descanso,
+      id_tipo_jornada: horarioActivo.id_tipo_jornada,
+      timezone: "America/Costa_Rica",
+      realEndMin: 1440,
+      max_horas_diarias: 12,
+    });
+
+    const { windowStart, windowEnd, windowDateStr } = resolveWorkWindowForTimestamp({
+      timestamp,
+      template,
+    });
+
+    const todayDate = windowDateStr;
+
+    const tiposMarca = await TipoMarca.findAll({
+      where: {
+        nombre: {
+          [sequelize.Sequelize.Op.in]: ["ENTRADA", "SALIDA"],
+        },
+      },
       attributes: ["id_tipo_marca", "nombre"],
       transaction: tx,
     });
+
+    const tipoEntradaDb = tiposMarca.find(
+      (t) => String(t.nombre).toUpperCase() === "ENTRADA"
+    );
+    const tipoSalidaDb = tiposMarca.find(
+      (t) => String(t.nombre).toUpperCase() === "SALIDA"
+    );
+    const tipoMarcaDb = tiposMarca.find(
+      (t) => String(t.nombre).toUpperCase() === tipoTxt
+    );
+
+    if (!tipoEntradaDb || !tipoSalidaDb) {
+      throw new Error('No existe ENTRADA y/o SALIDA en el catálogo tipo_marca');
+    }
 
     if (!tipoMarcaDb) {
       throw new Error(
@@ -111,10 +156,10 @@ export const registrarMarcaAsistencia = async ({
       );
     }
 
-    const startOfDay = dayjs(todayDate).startOf("day").toDate();
-    const endOfDay = dayjs(todayDate).endOf("day").toDate();
+    const startOfDay = windowStart.toDate();
+    const endOfDay = windowEnd.toDate();
 
-    const marcasHoy = await MarcaAsistencia.findAll({
+    const marcasVentana = await MarcaAsistencia.findAll({
       where: {
         id_colaborador: colaborador.id_colaborador,
         timestamp: {
@@ -131,21 +176,36 @@ export const registrarMarcaAsistencia = async ({
       transaction: tx,
     });
 
-    const hasEntrada = marcasHoy.some(
+    const hasEntrada = marcasVentana.some(
       (m) => String(m.tipo_marca?.nombre ?? "").toUpperCase() === "ENTRADA"
     );
-    const hasSalida = marcasHoy.some(
+    const hasSalida = marcasVentana.some(
       (m) => String(m.tipo_marca?.nombre ?? "").toUpperCase() === "SALIDA"
     );
 
     if (tipoTxt === "ENTRADA" && hasEntrada) {
-      throw new Error("Ya existe una marca de ENTRADA para hoy");
+      throw new Error("Ya existe una marca de ENTRADA para esta jornada");
     }
     if (tipoTxt === "SALIDA" && !hasEntrada) {
       throw new Error("No se puede registrar SALIDA sin una ENTRADA previa");
     }
     if (tipoTxt === "SALIDA" && hasSalida) {
-      throw new Error("Ya existe una marca de SALIDA para hoy");
+      throw new Error("Ya existe una marca de SALIDA para esta jornada");
+    }
+
+    if (tipoTxt === "SALIDA") {
+      const entradaExistente = marcasVentana.find(
+        (m) => String(m.tipo_marca?.nombre ?? "").toUpperCase() === "ENTRADA"
+      );
+
+      if (entradaExistente) {
+        validateMaxDailyMinutesForInterval({
+          entradaTs: entradaExistente.timestamp,
+          salidaTs: timestamp,
+          dateStr: todayDate,
+          template,
+        });
+      }
     }
 
     const marcaCreada = await MarcaAsistencia.create(
@@ -158,18 +218,7 @@ export const registrarMarcaAsistencia = async ({
       { transaction: tx }
     );
 
-    const tipoEntradaDb = await TipoMarca.findOne({
-      where: { nombre: "ENTRADA" },
-      attributes: ["id_tipo_marca"],
-      transaction: tx,
-    });
-    const tipoSalidaDb = await TipoMarca.findOne({
-      where: { nombre: "SALIDA" },
-      attributes: ["id_tipo_marca"],
-      transaction: tx,
-    });
-
-    const marcasDiaSimple = await MarcaAsistencia.findAll({
+    const marcasVentanaSimple = await MarcaAsistencia.findAll({
       where: {
         id_colaborador: colaborador.id_colaborador,
         timestamp: {
@@ -177,8 +226,8 @@ export const registrarMarcaAsistencia = async ({
         },
         id_tipo_marca: {
           [sequelize.Sequelize.Op.in]: [
-            tipoEntradaDb?.id_tipo_marca ?? -1,
-            tipoSalidaDb?.id_tipo_marca ?? -1,
+            tipoEntradaDb.id_tipo_marca,
+            tipoSalidaDb.id_tipo_marca,
           ],
         },
       },
@@ -186,19 +235,17 @@ export const registrarMarcaAsistencia = async ({
       transaction: tx,
     });
 
-    const entrada = marcasDiaSimple.find(
-      (m) => m.id_tipo_marca === tipoEntradaDb?.id_tipo_marca
+    const entrada = marcasVentanaSimple.find(
+      (m) => m.id_tipo_marca === tipoEntradaDb.id_tipo_marca
     );
-    const salida = [...marcasDiaSimple]
+    const salida = [...marcasVentanaSimple]
       .reverse()
-      .find((m) => m.id_tipo_marca === tipoSalidaDb?.id_tipo_marca);
+      .find((m) => m.id_tipo_marca === tipoSalidaDb.id_tipo_marca);
 
-    let horasTrabajadas = 0.0;
     const warnings = [];
-
     const toleranceMin = 5;
 
-    if (tipoTxt === "ENTRADA") {
+    if (!cruzaMedianoche && tipoTxt === "ENTRADA") {
       const late = isAfterWithTolerance(
         dayjs(timestamp),
         dayjs(`${todayDate} ${horarioActivo.hora_inicio}`),
@@ -207,7 +254,7 @@ export const registrarMarcaAsistencia = async ({
       if (late) warnings.push("ENTRADA_TARDE");
     }
 
-    if (tipoTxt === "SALIDA") {
+    if (!cruzaMedianoche && tipoTxt === "SALIDA") {
       const early = isBeforeWithTolerance(
         dayjs(timestamp),
         dayjs(`${todayDate} ${horarioActivo.hora_fin}`),
@@ -220,41 +267,17 @@ export const registrarMarcaAsistencia = async ({
     let horasExtra = 0.0;
 
     if (entrada && salida) {
-      const diffMinutes = dayjs(salida.timestamp).diff(dayjs(entrada.timestamp), "minute");
-      const descanso = Number(horarioActivo.minutos_descanso ?? 0);
+      const classified = classifyWorkedIntervalForDay({
+        entradaTs: entrada.timestamp,
+        salidaTs: salida.timestamp,
+        dateStr: todayDate,
+        template,
+      });
 
-      let workedMinutes = diffMinutes - (Number.isFinite(descanso) ? descanso : 0);
-      if (workedMinutes < 0) {
-        workedMinutes = 0;
-        warnings.push("MINUTOS_NEGATIVOS_POR_DESCANSO");
-      }
+      horasOrdinarias = classified.ordinaryHours;
+      horasExtra = classified.extraHours;
 
-      const workedHours = round2(workedMinutes / 60);
-
-      // --- CASO 1: No es día laboral => todo es extra
-      if (!esDiaLaboral) {
-        horasOrdinarias = 0.0;
-        horasExtra = workedHours;
-        warnings.push("DIA_NO_LABORAL_CARGADO_COMO_EXTRA");
-      } else {
-        // --- CASO 2: Día laboral
-        // Si la salida supera la hora_fin del horario: 8 ordinarias + extra
-        const salidaProgramada = dayjs(`${todayDate} ${horarioActivo.hora_fin}`);
-        const salidaReal = dayjs(salida.timestamp);
-
-        const salioTarde = salidaReal.isAfter(salidaProgramada);
-
-        if (salioTarde) {
-          // Extra = horas trabajadas - 8 
-          horasOrdinarias = Math.min(8, workedHours);
-          horasExtra = round2(Math.max(0, workedHours - 8));
-          if (horasExtra > 0) warnings.push("SALIDA_TARDE_EXTRA");
-        } else {
-          // Si no se pasó, todo ordinario
-          horasOrdinarias = Math.min(8, workedHours);
-          horasExtra = 0.0;
-        }
-      }
+      warnings.push(...classified.warnings);
     }
 
     const jornadaExistente = await JornadaDiaria.findOne({
@@ -314,5 +337,3 @@ export const registrarMarcaAsistencia = async ({
     throw error;
   }
 };
-
-
