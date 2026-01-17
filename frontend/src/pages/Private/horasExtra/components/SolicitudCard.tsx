@@ -39,11 +39,28 @@ const estadoBadgeProps = (estado: string) => {
     case "PENDIENTE":
       return { colorPalette: "yellow", variant: "subtle" as const };
     case "APROBADO":
-      return { colorPalette: "green", variant: "subtle" as const };
+      return { colorPalette: "blue", variant: "subtle" as const };
     case "CANCELADO":
+      return { colorPalette: "gray", variant: "subtle" as const };
+    case "RECHAZADO":
       return { colorPalette: "red", variant: "subtle" as const };
     default:
       return { colorPalette: "gray", variant: "subtle" as const };
+  }
+};
+const estadoBorderColor = (estado: string) => {
+  const key = estado.toUpperCase();
+  switch (key) {
+    case "PENDIENTE":
+      return "rgb(253, 224, 71)";
+    case "APROBADO":
+      return "rgb(59, 130, 246)"
+    case "CANCELADO":
+      return "rgb(161, 161, 170)";
+    case "RECHAZADO":
+      return "rgb(239, 68, 68)";
+    default:
+      return "rgb(161, 161, 170)"
   }
 };
 
@@ -67,11 +84,11 @@ export const SolicitudCard = ({
   const estado = item.estado.estado;
 
   return (
-    <Card.Root minW="300px" maxH="400px" overflow="hidden">
-      <Card.Body overflowY="auto">
+    <Card.Root borderLeftWidth={10} style={{ borderLeftColor: estadoBorderColor(estado) }}>
+      <Card.Body>
         <HStack justify="space-between" align="start" gap="4">
           <HStack gap="3" align="start">
-            <Avatar.Root size="md">
+            <Avatar.Root size="2xl">
               <Avatar.Fallback name={getNameInitials(item.colaborador.nombre_completo)} />
             </Avatar.Root>
 

@@ -19,6 +19,7 @@ const estadoOptions = [
   { label: "PENDIENTE", value: "PENDIENTE" },
   { label: "APROBADO", value: "APROBADO" },
   { label: "CANCELADO", value: "CANCELADO" },
+  { label: "RECHAZADO", value: "RECHAZADO" },
 ] as const;
 
 export const FiltrosSolicitudes = ({ value, onChange }: Props) => {

@@ -47,7 +47,7 @@ export const MarcasAsistencia = () => {
     )}&desde=${desde}&hasta=${hasta}`;
   }, [identificacionActual, desde, hasta]);
 
-  const { data: marcasApi, isLoading: asistenciaLoading } = useApiQuery<any>({
+  const { data: marcasApi, isLoading: asistenciaLoading, refetch } = useApiQuery<any>({
     url: marcasUrl,
     enabled: Boolean(marcasUrl),
   });
@@ -109,6 +109,7 @@ export const MarcasAsistencia = () => {
       };
 
       await makeCheck(payload);
+      await refetch();
       return true;
     } catch (error) {
       console.log(error);

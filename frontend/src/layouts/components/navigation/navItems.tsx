@@ -73,7 +73,7 @@ export const NAV_MAIN: NavItem[] = [
   }
   ,
   {
-    label: "Gestión de Vacaciones",
+    label: "Vacaciones",
     icon: <FiBatteryCharging />,
     path: "/vacaciones",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
@@ -119,7 +119,7 @@ export const NAV_MAIN: NavItem[] = [
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
   },
   {
-    label: "Gestión de Permisos",
+    label: "Permisos",
     icon: <FiUsers />,
     path: "/permisos",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]

@@ -10,13 +10,14 @@ import {
   type InputProps,
   type NumberInputRootProps,
   type SelectRootProps,
+  InputGroup,
 } from "@chakra-ui/react";
 import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
 
 type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
 
-export type SelectOption = { label: string; value: string; disabled?: boolean };
+export type SelectOption = { label: string; value: string | number; disabled?: boolean };
 
 interface FieldProps extends InputProps {
   fieldType: FieldType;
@@ -27,6 +28,8 @@ interface FieldProps extends InputProps {
   required?: boolean;
   noIndicator?: boolean;
   rules?: RegisterOptions;
+  startElement?: string;
+  endElement?: string;
 
   // number
   numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
@@ -66,6 +69,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     placeholder,
     rules,
     noIndicator = false,
+    startElement,
+    endElement,
 
     numberProps,
 
@@ -136,15 +141,17 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       </Field.Label>
 
       {(fieldType === "text" || fieldType === "email") && (
-        <TextField
-          type={fieldType}
-          placeholder={placeholder}
-          required={required}
-          {...restInputProps}
-          {...register(name, { required, ...rules })}
-          _focusVisible={focusStyles}
-          aria-invalid={isInvalid || undefined}
-        />
+        <InputGroup startElement={startElement} endElement={endElement}>
+          <TextField
+            type={fieldType}
+            placeholder={placeholder}
+            required={required}
+            {...restInputProps}
+            {...register(name, { required, ...rules })}
+            _focusVisible={focusStyles}
+            aria-invalid={isInvalid || undefined}
+          />
+        </InputGroup>
       )}
 
       {fieldType === "password" && (
@@ -215,7 +222,6 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
               >
                 <Select.HiddenSelect onBlur={field.onBlur} />
 
-                {/* ✅ Para el focus ring: aplica al Control/Trigger */}
                 <Select.Control _focusWithin={focusStyles}>
                   <Select.Trigger _focusVisible={focusStyles}>
                     <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />

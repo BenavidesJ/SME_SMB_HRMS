@@ -46,7 +46,7 @@ export const Estados = () => {
     return [
       {
         id: "id_estado",
-        header: "Id",
+        header: "ID",
         minW: "80px",
         textAlign: "center",
         cell: (r) => `${r.id}`,
