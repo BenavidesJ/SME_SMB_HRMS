@@ -26,11 +26,11 @@ export const SolicitudPermisosLicencias = sequelize.define(
       allowNull: false,
     },
     fecha_inicio: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.DATE,
       allowNull: false,
     },
     fecha_fin: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.DATE,
       allowNull: false,
     },
     con_goce_salarial: {

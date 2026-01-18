@@ -67,7 +67,7 @@ describe("incapacityPolicy", () => {
     const r = computeIncapacityPolicy({
       tipoNombre: "ENFERMEDAD",
       fecha_inicio: "2026-02-01",
-      fecha_fin: "2026-02-01",
+      fecha_fin: "2026-02-06",
     });
 
     const fields = toIncapacityDbFields(r);
