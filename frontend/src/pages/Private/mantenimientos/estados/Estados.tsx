@@ -184,7 +184,7 @@ export const Estados = () => {
         </section>
       </Stack>
       <Modal
-        title="Crear empleado"
+        title="Crear estado"
         isOpen={openModal}
         size="lg"
         onOpenChange={(e) => setOpenModal(e.open)}
