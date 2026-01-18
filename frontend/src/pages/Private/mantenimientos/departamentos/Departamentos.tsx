@@ -134,7 +134,7 @@ export const Departamentos = () => {
               marginBottom="5"
               onClick={() => setOpenModal(true)}
             >
-              Crear Departamento<FiPlus />
+              Crear Departamento <FiPlus />
             </Button>
           </Box>
         </section>
