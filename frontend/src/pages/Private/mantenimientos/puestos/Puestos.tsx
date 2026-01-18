@@ -445,7 +445,7 @@ export default function Puestos() {
               <Box w="250px" alignContent="center">
                 <Button
                   loading={isSubmitting}
-                  loadingText="Agregando"
+                  loadingText="Actualizando"
                   appearance="login"
                   type="submit"
                   mt="4"
