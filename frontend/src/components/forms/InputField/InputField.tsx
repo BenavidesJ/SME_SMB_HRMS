@@ -1,107 +1,284 @@
-import { Badge, Field, Input, NumberInput, type InputProps } from '@chakra-ui/react';
-import { forwardRef } from 'react';
-import { PasswordInput } from '../../ui/password-input';
-import { useFormContext, type RegisterOptions } from 'react-hook-form';
+import React, { forwardRef, useMemo } from "react";
+import {
+  Badge,
+  Field,
+  Input,
+  NumberInput,
+  Select,
+  Portal,
+  createListCollection,
+  type InputProps,
+  type NumberInputRootProps,
+  type SelectRootProps,
+  InputGroup,
+} from "@chakra-ui/react";
+import { PasswordInput } from "../../ui/password-input";
+import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
 
-type FieldType = 'text' | 'password' | 'email' | 'number';
+type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
 
-// tipos: Password, Texto, Numeros
+export type SelectOption = { label: string; value: string | number; disabled?: boolean };
+
 interface FieldProps extends InputProps {
-  /*
-  El tipo del campo input. Por defecto text.
-  */
   fieldType: FieldType;
-  /*
-  El label del campo input.
-  */
   label?: string;
-  /*
-  El nombre del campo input.
-  */
   name: string;
-  /*
-  El placeholder del campo input.
-  */
   placeholder?: string;
-  /*
-  El texto de instrucciones o ayuda del campo input.
-  */
   helperText?: React.ReactNode | string;
-  /*
-  Indica si el campo es requerido.
-  */
   required?: boolean;
-  /*
-  Reglas de validacion.
-  */
+  noIndicator?: boolean;
   rules?: RegisterOptions;
+  startElement?: string;
+  endElement?: string;
+
+  // number
+  numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
+
+  // select
+  options?: SelectOption[];
+  selectRootProps?: Omit<SelectRootProps, "collection" | "value" | "onValueChange" | "name">;
+  clearable?: boolean;
+  disableSelectPortal?: boolean;
 }
 
-const TextField = ({ ...props }: Omit<FieldProps, "fieldType">) => {
-  return <Input {...props} />;
-};
 
-const PasswordField = ({ ...props }: Omit<FieldProps, "fieldType">) => {
-  return <PasswordInput {...props} />;
-};
+function getFocusStyles(isInvalid: boolean) {
+  if (isInvalid) {
+    return {
+      outline: "2px solid",
+      outlineColor: "red.600",
+    } as const;
+  }
 
-const NumberField = () => {
-  return (
-    <NumberInput.Root>
-      <NumberInput.Control>
-        <NumberInput.IncrementTrigger />
-        <NumberInput.DecrementTrigger />
-      </NumberInput.Control>
-      <NumberInput.Input />
-    </NumberInput.Root>
+  return {
+    outline: "1px solid",
+    outlineColor: "brand.blue.100",
+  } as const;
+}
+
+const TextField = (props: Omit<FieldProps, "fieldType">) => <Input {...props} />;
+const PasswordField = (props: Omit<FieldProps, "fieldType">) => <PasswordInput {...props} />;
+
+export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputField(props, ref) {
+  const {
+    name,
+    fieldType = "text",
+    label,
+    helperText,
+    required,
+    placeholder,
+    rules,
+    noIndicator = false,
+    startElement,
+    endElement,
+
+    numberProps,
+
+    options = [],
+    selectRootProps,
+    clearable = true,
+    disableSelectPortal = false,
+
+    ...restInputProps
+  } = props;
+
+  const { register, control, getFieldState, formState } = useFormContext();
+
+  const { error } = getFieldState(name, formState);
+  const errorMessage = (error?.message as string | undefined) ?? undefined;
+  const isInvalid = Boolean(errorMessage);
+
+  const focusStyles = getFocusStyles(isInvalid);
+
+  const collection = useMemo(() => {
+    return createListCollection({
+      items: options.map((o) => ({
+        label: o.label,
+        value: o.value,
+        disabled: o.disabled,
+      })),
+    });
+  }, [options]);
+
+  const positioner = (
+    <Select.Positioner>
+      <Select.Content>
+        {collection.items.map((item) => (
+          <Select.Item item={item} key={item.value}>
+            {item.label}
+            <Select.ItemIndicator />
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select.Positioner>
   );
-};
 
-export const InputField = forwardRef<HTMLDivElement, FieldProps>(
-  function InputField(props, ref) {
-    const { name, fieldType, label, helperText, required, placeholder, rules } = props;
-    const {
-      register,
-      formState: { errors },
-    } = useFormContext();
+  return (
+    <Field.Root
+      minW="200px"
+      ref={ref}
+      required={required}
+      invalid={isInvalid}
+      minH="90px"
+    >
+      <Field.Label>
+        {label}
+        {!noIndicator && (
+          <>
+            {required ? (
+              <Field.RequiredIndicator />
+            ) : (
+              <Field.RequiredIndicator
+                fallback={
+                  <Badge size="sm" variant="subtle">
+                    Opcional
+                  </Badge>
+                }
+              />
+            )}
+          </>
+        )}
+      </Field.Label>
 
-    const error = errors[name]?.message as string | undefined;
-    const isInvalid = Boolean(error);
+      {(fieldType === "text" || fieldType === "email") && (
+        <InputGroup startElement={startElement} endElement={endElement}>
+          <TextField
+            type={fieldType}
+            placeholder={placeholder}
+            required={required}
+            {...restInputProps}
+            {...register(name, { required, ...rules })}
+            _focusVisible={focusStyles}
+            aria-invalid={isInvalid || undefined}
+          />
+        </InputGroup>
+      )}
 
-    const Component = {
-      text: TextField,
-      email: TextField,
-      password: PasswordField,
-      number: NumberField,
-    }[fieldType];
-
-
-    return (
-      <Field.Root minW="300px" ref={ref} required={required} invalid={isInvalid} minH="90px">
-        <Field.Label>
-          {label}
-          {required ? (
-            <Field.RequiredIndicator />
-          ) : (
-            <Field.RequiredIndicator
-              fallback={
-                <Badge size="sm" variant="subtle">
-                  Opcional
-                </Badge>
-              }
-            />
-          )}
-        </Field.Label>
-        <Component
-          label={label}
+      {fieldType === "password" && (
+        <PasswordField
           placeholder={placeholder}
           required={required}
+          {...restInputProps}
           {...register(name, { required, ...rules })}
-          _focus={{ outlineColor: !isInvalid ? "blue.600" : "red.600" }}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
         />
-        {error ? <Field.ErrorText>{error}</Field.ErrorText> : <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>}
-      </Field.Root>
-    );
-  }
-);
+      )}
 
+      {fieldType === "date" && (
+        <Input
+          type="date"
+          required={required}
+          {...restInputProps}
+          {...register(name, { required, ...rules })}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
+        />
+      )}
+
+      {fieldType === "time" && (
+        <Input
+          type="time"
+          required={required}
+          {...restInputProps}
+          {...register(name, { required, ...rules })}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
+        />
+      )}
+
+      {fieldType === "select" && (
+        <Controller
+          name={name}
+          control={control}
+          rules={{ required, ...rules }}
+          defaultValue={selectRootProps?.multiple ? [] : ""}
+          render={({ field }) => {
+            const isMultiple = Boolean(selectRootProps?.multiple);
+
+            const value = isMultiple
+              ? Array.isArray(field.value)
+                ? field.value.map(String)
+                : []
+              : field.value
+                ? [String(field.value)]
+                : [];
+
+            return (
+              <Select.Root
+                collection={collection}
+                value={value}
+                onValueChange={(details) => {
+                  if (isMultiple) {
+                    field.onChange(details.value ?? []);
+                  } else {
+                    const next = details.value?.[0] ?? "";
+                    field.onChange(next);
+                  }
+                }}
+                name={field.name}
+                disabled={field.disabled}
+                {...selectRootProps}
+              >
+                <Select.HiddenSelect onBlur={field.onBlur} />
+
+                <Select.Control _focusWithin={focusStyles}>
+                  <Select.Trigger _focusVisible={focusStyles}>
+                    <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />
+                  </Select.Trigger>
+
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                    {clearable && <Select.ClearTrigger />}
+                  </Select.IndicatorGroup>
+                </Select.Control>
+
+                {disableSelectPortal ? positioner : <Portal>{positioner}</Portal>}
+              </Select.Root>
+            );
+          }}
+        />
+      )}
+
+      {fieldType === "number" && (
+        <Controller
+          name={name}
+          control={control}
+          rules={{ required, ...rules }}
+          defaultValue={0}
+          render={({ field }) => (
+            <NumberInput.Root
+              {...numberProps}
+              disabled={field.disabled}
+              name={field.name}
+              value={field.value ?? ""}
+              onValueChange={({ value }) => {
+                const next = value === "" ? undefined : Number(value);
+                field.onChange(Number.isNaN(next as number) ? undefined : next);
+              }}
+              min={0}
+            >
+              <NumberInput.Control>
+                <NumberInput.IncrementTrigger />
+                <NumberInput.DecrementTrigger />
+              </NumberInput.Control>
+
+              <NumberInput.Input
+                placeholder={placeholder}
+                onBlur={field.onBlur}
+                _focusVisible={focusStyles}
+                aria-invalid={isInvalid || undefined}
+              />
+            </NumberInput.Root>
+          )}
+        />
+      )}
+
+      {errorMessage ? (
+        <Field.ErrorText>{errorMessage}</Field.ErrorText>
+      ) : (
+        <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>
+      )}
+    </Field.Root>
+  );
+});

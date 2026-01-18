@@ -1,4 +1,4 @@
-import { toaster } from '../../components/ui/toaster';
+import { toaster } from "../../components/ui/helpers/getToaster";
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
 

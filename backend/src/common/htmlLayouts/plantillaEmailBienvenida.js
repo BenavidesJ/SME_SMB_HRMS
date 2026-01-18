@@ -24,7 +24,7 @@ export const plantillaEmailBienvenida = ({
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Bienvenido a BioAlquimia</title>
     </head>
-    <body style="margin:0; padding:0; background-color:#515151; font-family:Arial, Helvetica, sans-serif; color:#DEDEDE;">
+    <body style="margin:0; padding:0; background-color:#515151; font-family:Arial, Helvetica, sans-serif; color:#DEDEDE; ">
       <table align="center" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; margin:auto; background-color:#E7E7E7; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05); overflow:hidden;">
         <tr>
           <td style="background-color:#319E3F; padding:20px 30px; text-align:center;">

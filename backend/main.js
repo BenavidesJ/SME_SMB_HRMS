@@ -6,6 +6,11 @@ import { TOO_MANY_REQUESTS } from "./src/common/strings.js";
 import { errorHandler } from "./src/middlewares/handleErrors.js";
 import securityRoutes from "./src/routes/security.route.js"
 import employeeRoutes from "./src/routes/employee.route.js"
+import planillasRoutes from "./src/routes/planillas.route.js"
+import asistenciaRoutes from "./src/routes/asistencia.route.js"
+import estadosRoutes from "./src/routes/estado.route.js"
+import horasExtraRoutes from "./src/routes/horasExtra.route.js"
+import incapacidadesRoutes from "./src/routes/incapacidades.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -36,6 +41,11 @@ app.use(rateLimiter);
 // API V1 Routes
 app.use(`/${API_VERSION}/auth`, securityRoutes);
 app.use(`/${API_VERSION}`, employeeRoutes);
+app.use(`/${API_VERSION}/planillas`, planillasRoutes);
+app.use(`/${API_VERSION}/asistencia`, asistenciaRoutes);
+app.use(`/${API_VERSION}/estados`, estadosRoutes);
+app.use(`/${API_VERSION}/horas-extra`, horasExtraRoutes);
+app.use(`/${API_VERSION}/incapacidades`, incapacidadesRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

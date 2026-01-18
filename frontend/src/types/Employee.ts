@@ -1,0 +1,166 @@
+/* Empleado */
+export interface Employee {
+  nombre: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  genero: string;
+  identificacion: number;
+  fecha_nacimiento: string;
+  correo_electronico: string;
+  fecha_ingreso: string;
+  cantidad_hijos: number;
+  estado_civil: string;
+  rol: string;
+  id_provincia?: number;
+  id_canton?: number,
+  id_distrito?: number,
+  otros_datos?: string,
+}
+
+/* Genero */
+export interface Genero {
+  data: string[]
+}
+/* Estado Civil */
+export interface EstadoCivil {
+  data: string[]
+}
+
+export interface EmployeeUserInfo {
+  id_usuario: number;
+  username: string;
+  activo: number;
+  requiere_cambio_contrasena: boolean;
+  ultimo_acceso: string;
+  roles: string[];
+  estado_usuario: string;
+}
+
+export interface EmployeeRow {
+  id: number;
+  nombre: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  correo_electronico: string;
+  identificacion: number | string;
+  genero: string;
+  estado_civil: string;
+  fecha_ingreso: string;
+  fecha_nacimiento: string;
+  estado: string;
+  telefono: number | string;
+  usuario: EmployeeUserInfo | null;
+}
+
+export interface TipoJornada {
+  id: number
+  tipo: string
+  max_horas_diarias: string
+  max_horas_semanales: string
+}
+
+export interface Puesto {
+  id: number
+  puesto: string
+  departamento: string
+  salario_ref_minimo: string
+  salario_ref_maximo: string
+  estado: string
+}
+
+export interface ContractPayload {
+  id_colaborador: number;
+  puesto: string;
+  fecha_inicio: string;
+  tipo_contrato: string;
+  tipo_jornada: string;
+  salario_base: number;
+  ciclo_pago: string;
+  horas_semanales: number;
+  horario: {
+    hora_inicio: string;
+    hora_fin: string;
+    minutos_descanso: number;
+    dias_laborales: string;
+    dias_libres: string;
+  };
+};
+
+export interface CreateContractForm {
+  puesto: string;
+  tipo_contrato: string;
+  tipo_jornada: string;
+  ciclo_pago: string;
+  salario_base: number | string;
+  fecha_ingreso: string;
+  horas_semanales: number | string;
+  hora_inicio: string;
+  hora_fin: string;
+  minutos_descanso: number | string;
+  dias_laborales: string[];
+  dias_libres: string[];
+};
+
+export interface Contrato {
+  id_contrato: number
+  id_colaborador: number
+  puesto: string
+  fecha_inicio: string
+  tipo_contrato: string
+  tipo_jornada: string
+  horas_semanales: string
+  salario_base: string
+  ciclo_pago: string
+  horarios: Horario[]
+}
+
+export interface Horario {
+  id_horario: number
+  hora_inicio: string
+  hora_fin: string
+  minutos_descanso: number
+  dias_laborales: string
+  dias_libres: string
+  estado: number
+  fecha_actualizacion: string
+}
+
+// Asistencia
+
+interface ColaboradorAsistencia {
+  id_colaborador: number
+  identificacion: number
+  nombre: string
+  primer_apellido: string
+  segundo_apellido: string
+}
+
+export interface Filtro {
+  desde: string
+  hasta: string
+  tipo_marca: "ENTRADA" | "SALIDA"
+}
+
+export interface Marca {
+  dia: string
+  asistencia: AsistenciaResumen[]
+}
+
+export interface AsistenciaResumen {
+  id_marca: number
+  tipo_marca: string
+  timestamp: string
+  observaciones: string
+}
+
+export interface Asistencia {
+  colaborador: ColaboradorAsistencia
+  filtro: Filtro
+  total: number
+  marcas: Marca[]
+}
+
+export interface Roles {
+  id: number,
+  nombre: string
+}

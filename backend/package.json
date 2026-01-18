@@ -4,9 +4,10 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "start": "",
-    "dev": "node --watch --env-file=.env main.js"
+    "dev": "node --watch --env-file=.env main.js",
+    "seed:ubicaciones": "node --env-file=.env src/seeds/run-seeds.js"
   },
   "keywords": [],
   "author": "Jose D Benavides",
@@ -23,5 +24,8 @@
     "nodemailer": "^7.0.6",
     "otp-generator": "^4.0.1",
     "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }

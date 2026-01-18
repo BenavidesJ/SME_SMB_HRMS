@@ -1,28 +1,52 @@
+/* eslint-disable no-unused-vars */
 import type { ReactNode } from "react";
-import { useForm, FormProvider, type FieldValues, type DefaultValues, type SubmitHandler } from "react-hook-form";
+import {
+  useForm,
+  FormProvider,
+  type DefaultValues,
+  type FieldValues,
+} from "react-hook-form";
 
+type SubmitResult = boolean | void;
 
 interface FormProps<T extends FieldValues> {
-  /*
-   * Los inputs del formulario.
-   */
   readonly children: ReactNode;
-  /*
-   * El método para enviar datos al servidor.
-   */
-  readonly onSubmit: SubmitHandler<T>
-  /*
-   * Los valores por defecto.
-   */
-  readonly defaultValues?: DefaultValues<T>
+  readonly onSubmit: (data: T) => Promise<SubmitResult> | SubmitResult;
+  readonly defaultValues?: DefaultValues<T>;
+  readonly resetOnSuccess?: boolean;
 }
 
-export function Form<T extends FieldValues>({ children, onSubmit, defaultValues }: FormProps<T>) {
+export function Form<T extends FieldValues>({
+  children,
+  onSubmit,
+  defaultValues,
+  resetOnSuccess = false,
+}: FormProps<T>) {
   const methods = useForm<T>({ defaultValues });
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
+      <form
+        noValidate
+        onSubmit={methods.handleSubmit(async (data) => {
+          try {
+            const result = await onSubmit(data);
+            const success = result === undefined ? true : Boolean(result);
+
+            if (resetOnSuccess && success) {
+              methods.reset(defaultValues, {
+                keepErrors: false,
+                keepDirty: false,
+                keepTouched: false,
+                keepIsSubmitted: false,
+                keepSubmitCount: false,
+              });
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        })}
+      >
         {children}
       </form>
     </FormProvider>

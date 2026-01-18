@@ -1,3 +1,5 @@
+export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
 // Estructura de la respuesta de un request al API
 export interface ApiResponse<T> {
   // Estado.

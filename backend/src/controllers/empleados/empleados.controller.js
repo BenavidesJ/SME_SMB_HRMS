@@ -1,6 +1,6 @@
 import { HTTP_CODES } from "../../common/strings.js";
-import { crearColaborador } from "./handlers/crearColaborador.js";
-import { obtenerColaboradorPorIdUsuario } from "./handlers/obtenerColaborador.js";
+import { crearColaborador } from "./handlers/empleados/crearColaborador.js";
+import { obtenerColaboradores, obtenerColaboradorPorIdUsuario } from "./handlers/empleados/obtenerColaborador.js";
 
 export const crearEmpleado = async (req, res, next) => {
   const {
@@ -14,6 +14,7 @@ export const crearEmpleado = async (req, res, next) => {
     fecha_ingreso,
     cantidad_hijos,
     estado_civil,
+    telefono,
     rol
   } = req.body;
   try {
@@ -29,11 +30,12 @@ export const crearEmpleado = async (req, res, next) => {
       "fecha_ingreso",
       "cantidad_hijos",
       "estado_civil",
+      "telefono",
       "rol"
     ];
 
     for (const field of requiredFields) {
-      if (!req.body[field]) {
+      if (req.body[field] === undefined || req.body[field] === null) {
         throw new Error(`El campo ${field} es obligatorio`);
       }
     }
@@ -49,6 +51,7 @@ export const crearEmpleado = async (req, res, next) => {
       fecha_ingreso,
       cantidad_hijos,
       estado_civil,
+      telefono,
       rol
     })
 
@@ -74,6 +77,21 @@ export const obtenerColaboradorPorUserId = async (req, res, next) => {
   try {
 
     const data = await obtenerColaboradorPorIdUsuario({ id })
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerTodosColaboradores = async (_req, res, next) => {
+  try {
+    const data = await obtenerColaboradores();
 
     return res.status(HTTP_CODES.SUCCESS.OK).json({
       success: true,

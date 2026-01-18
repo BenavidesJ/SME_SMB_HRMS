@@ -1,18 +1,21 @@
+/* eslint-disable no-unused-vars */
 import { type ReactNode } from "react"
 import { CloseButton, Dialog, Portal, type ConditionalValue } from "@chakra-ui/react"
 
 interface ModalProps {
-  readonly content: ReactNode | string;
+  readonly content?: ReactNode | string;
+  readonly children?: ReactNode | string;
   readonly verticalPlacement?: "top" | "center" | "bottom";
   readonly size?: ConditionalValue<"sm" | "md" | "lg" | "xl" | "xs" | "cover" | "full" | undefined>;
   readonly title: string;
   readonly footerContent?: ReactNode;
   readonly isOpen?: boolean;
   readonly onOpenChange: (e: { open: boolean }) => void;
+
 }
 
 export const Modal = (props: ModalProps) => {
-  const { content, verticalPlacement = "center", footerContent, title, size = "md", isOpen, onOpenChange } = props;
+  const { content, children, verticalPlacement = "center", footerContent, title, size = "md", isOpen, onOpenChange } = props;
 
   return (
     <Dialog.Root
@@ -30,7 +33,7 @@ export const Modal = (props: ModalProps) => {
               <Dialog.Title>{title}</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              {content}
+              {content || children}
             </Dialog.Body>
             <Dialog.Footer>
               {footerContent}
