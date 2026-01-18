@@ -22,7 +22,7 @@ export const TableEmptyState = ({ isLoading }: TableEmptyStateProps) => {
           <VStack textAlign="center">
             <EmptyState.Title>No hay elementos disponibles para mostrar</EmptyState.Title>
             <EmptyState.Description>
-              Empiece a agregar nuevos registros, recarge la página o contacte a administración.
+              Empiece a agregar nuevos registros, recargue la página o contacte a administración.
             </EmptyState.Description>
           </VStack>
         </EmptyState.Content>
