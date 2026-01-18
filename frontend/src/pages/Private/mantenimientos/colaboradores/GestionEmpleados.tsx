@@ -171,7 +171,7 @@ const GestionEmpleados = () => {
               />
               <InputField
                 fieldType="email"
-                label="Correo Eletrónico"
+                label="Correo Electrónico"
                 name="correo_electronico"
                 required
                 rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
