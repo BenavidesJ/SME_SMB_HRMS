@@ -12,6 +12,7 @@ import estadosRoutes from "./src/routes/estado.route.js"
 import horasExtraRoutes from "./src/routes/horasExtra.route.js"
 import incapacidadesRoutes from "./src/routes/incapacidades.route.js"
 import permisosRoutes from "./src/routes/permisos.route.js"
+import vacacionesRoutes from "./src/routes/vacaciones.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -48,6 +49,7 @@ app.use(`/${API_VERSION}/estados`, estadosRoutes);
 app.use(`/${API_VERSION}/horas-extra`, horasExtraRoutes);
 app.use(`/${API_VERSION}/incapacidades`, incapacidadesRoutes);
 app.use(`/${API_VERSION}/permisos`, permisosRoutes);
+app.use(`/${API_VERSION}/vacaciones`, vacacionesRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

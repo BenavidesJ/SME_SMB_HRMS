@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import { sendEmail } from "../../../../services/mail.js";
-import { Usuario, Rol, Colaborador, Telefono, sequelize, Genero, EstadoCivil } from "../../../../models/index.js";
+import { Usuario, Rol, Colaborador, Telefono, sequelize, Genero, EstadoCivil, Direccion, Provincia, Canton, Distrito, Estado } from "../../../../models/index.js";
 import { plantillaEmailBienvenida } from "../../../../common/htmlLayouts/plantillaEmailBienvenida.js";
 import { generateTempPassword } from "../../../../common/genTempPassword.js";
 import { generateUsername } from "../../../../common/genUsername.js";
@@ -22,6 +22,7 @@ import { generateUsername } from "../../../../common/genUsername.js";
  *      estado_civil,
  *      telefono, 
  *      rol,
+ *      direccion
  *  }
  * @returns {Promise<{ colaborador }>}
  */
@@ -38,7 +39,8 @@ export const crearColaborador = async (
     cantidad_hijos,
     estado_civil,
     telefono,
-    rol
+    rol,
+    direccion,
   }) => {
 
   const tx = await sequelize.transaction();
@@ -71,8 +73,9 @@ export const crearColaborador = async (
     const genderValue = genero?.trim().toUpperCase();
     const maritalStatusValue = estado_civil?.trim().toUpperCase();
     const roleValue = rol?.trim().toUpperCase();
+    const { provincia, canton, distrito, otros_datos } = direccion;
 
-    const [gender, maritalStatus, foundRole] = await Promise.all([
+    const [gender, maritalStatus, foundRole, foundProv, foundCant, foundDist, activeStatus] = await Promise.all([
       Genero.findOne({
         where: { genero: genderValue },
         transaction: tx
@@ -81,7 +84,11 @@ export const crearColaborador = async (
       Rol.findOne({
         where: { nombre: roleValue },
         transaction: tx
-      })
+      }),
+      Provincia.findOne({ where: { nombre: provincia }, transaction: tx }),
+      Canton.findOne({ where: { nombre: canton }, transaction: tx }),
+      Distrito.findOne({ where: { nombre: distrito }, transaction: tx }),
+      Estado.findOne({ where: { estado: "ACTIVO" }, transaction: tx }),
     ])
 
     if (!gender) {
@@ -96,6 +103,18 @@ export const crearColaborador = async (
       throw new Error(`El rol '${rol}' no existe.`);
     }
 
+    if (!foundProv) {
+      throw new Error(`La provincia '${direccion.provincia}' no existe.`);
+    }
+
+    if (!foundCant) {
+      throw new Error(`El cantón '${direccion.canton}' no existe.`);
+    }
+
+    if (!foundDist) {
+      throw new Error(`El distrito '${direccion.distrito}' no existe.`);
+    }
+
     const employee = await Colaborador.create({
       nombre,
       primer_apellido,
@@ -107,7 +126,7 @@ export const crearColaborador = async (
       fecha_ingreso,
       cantidad_hijos,
       estado_civil: maritalStatus.id_estado_civil,
-      estado: 1
+      estado: activeStatus.id_estado,
     }, { transaction: tx });
 
     if (telefono != null && String(telefono).trim() !== "") {
@@ -116,6 +135,22 @@ export const crearColaborador = async (
           id_colaborador: employee.id_colaborador,
           numero: Number(telefono),
           es_principal: true,
+        },
+        { transaction: tx }
+      );
+    }
+
+    if (direccion != null ) {
+
+      await Direccion.create(
+        {
+          id_colaborador: employee.id_colaborador,
+          id_provincia: foundProv.id_provincia,
+          id_canton: foundCant.id_canton,
+          id_distrito: foundDist.id_distrito,
+          otros_datos: otros_datos,
+          es_principal: true,
+          estado: activeStatus.id_estado,
         },
         { transaction: tx }
       );
@@ -131,7 +166,7 @@ export const crearColaborador = async (
       requiere_cambio_contrasena: true,
       ultimo_acceso_en: dayjs().toDate(),
       id_colaborador: employee.id_colaborador,
-      estado: 1,
+      estado: activeStatus.id_estado,
     }, { transaction: tx })
 
     await user.addRol(foundRole, { transaction: tx });

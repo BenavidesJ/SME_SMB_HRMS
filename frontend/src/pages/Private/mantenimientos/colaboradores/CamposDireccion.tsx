@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { SimpleGrid, Heading } from "@chakra-ui/react";
 import { InputField } from "../../../../components/forms";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -8,10 +8,14 @@ import { getCantonesPorProvincia, getDistritosPorCanton } from "../../../../serv
 
 type SelectOption = { label: string; value: string };
 
-export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
-  const { setValue } = useFormContext();
+type DireccionFieldsProps = {
+  provincias: Provincia[];
+  mode?: "create" | "edit";
+};
 
-  // valores seleccionados en el form
+export function DireccionFields({ provincias, mode = "create" }: DireccionFieldsProps) {
+  const { setValue, getValues } = useFormContext();
+
   const provinciaNombre = useWatch({ name: "provincia" }) as string;
   const cantonNombre = useWatch({ name: "canton" }) as string;
 
@@ -19,6 +23,11 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
   const [distritos, setDistritos] = useState<Distrito[]>([]);
   const [loadingCantones, setLoadingCantones] = useState(false);
   const [loadingDistritos, setLoadingDistritos] = useState(false);
+
+
+  const hydratedRef = useRef(false);
+  const prevProvinciaRef = useRef<string>("");
+  const prevCantonRef = useRef<string>("");
 
   const provinciaOptions = useMemo(
     () => provincias.map((p) => ({ label: toTitleCase(p.nombre), value: p.nombre })),
@@ -45,40 +54,83 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
     [cantones],
   );
 
-  // Cuando cambia provincia → reset cantón/distrito y cargar cantones
   useEffect(() => {
     const run = async () => {
-      // reset dependientes
-      setCantones([]);
-      setDistritos([]);
-      setValue("canton", "");
-      setValue("distrito", "");
-
-      if (!provinciaNombre) return;
+      if (!provinciaNombre) {
+        setCantones([]);
+        setDistritos([]);
+        setValue("canton", "");
+        setValue("distrito", "");
+        prevProvinciaRef.current = "";
+        prevCantonRef.current = "";
+        hydratedRef.current = mode !== "edit" ? false : hydratedRef.current;
+        return;
+      }
 
       const provinciaId = findProvinciaIdByNombre(provinciaNombre);
       if (!provinciaId) return;
 
+      const prevProvincia = prevProvinciaRef.current;
+      const provinciaChanged = prevProvincia && prevProvincia !== provinciaNombre;
+
+      const shouldResetDependents =
+        mode === "create"
+          ? true
+          : hydratedRef.current && provinciaChanged;
+
+      if (shouldResetDependents) {
+        setCantones([]);
+        setDistritos([]);
+        setValue("canton", "");
+        setValue("distrito", "");
+      } else {
+        setCantones([]);
+        setDistritos([]);
+      }
+
       setLoadingCantones(true);
       try {
         const resp = await getCantonesPorProvincia(provinciaId);
-        const cantones = resp.data.data.cantones;
-        setCantones(cantones);
+        const nextCantones = resp.data.data.cantones as Canton[];
+        setCantones(nextCantones);
       } finally {
         setLoadingCantones(false);
       }
+
+      prevProvinciaRef.current = provinciaNombre;
     };
 
     run();
-  }, [provinciaNombre, findProvinciaIdByNombre, setValue]);
+  }, [provinciaNombre, findProvinciaIdByNombre, setValue, mode]);
 
-  // Cuando cambia cantón → reset distrito y cargar distritos
+  /**
+   * Carga distritos por cantón.
+   * - create: resetea distrito al cambiar cantón
+   * - edit: NO resetea si es hidratación inicial; solo asegura lista
+   */
   useEffect(() => {
     const run = async () => {
-      setDistritos([]);
-      setValue("distrito", "");
+      if (!cantonNombre) {
+        setDistritos([]);
+        setValue("distrito", "");
+        prevCantonRef.current = "";
+        return;
+      }
 
-      if (!cantonNombre) return;
+      const prevCanton = prevCantonRef.current;
+      const cantonChanged = prevCanton && prevCanton !== cantonNombre;
+
+      const shouldResetDistrito =
+        mode === "create"
+          ? true
+          : hydratedRef.current && cantonChanged;
+
+      if (shouldResetDistrito) {
+        setDistritos([]);
+        setValue("distrito", "");
+      } else {
+        setDistritos([]);
+      }
 
       const cantonId = findCantonIdByNombre(cantonNombre);
       if (!cantonId) return;
@@ -86,22 +138,42 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
       setLoadingDistritos(true);
       try {
         const resp = await getDistritosPorCanton(cantonId);
-        const distritos = resp.data.data.distritos;
-        setDistritos(distritos);
+        const nextDistritos = resp.data.data.distritos as Distrito[];
+        setDistritos(nextDistritos);
       } finally {
         setLoadingDistritos(false);
       }
+
+      prevCantonRef.current = cantonNombre;
     };
 
     run();
-  }, [cantonNombre, findCantonIdByNombre, setValue]);
+  }, [cantonNombre, findCantonIdByNombre, setValue, mode]);
+
+  /**
+   * ✅ “Hidratación” para edit:
+   * Cuando el form ya trae defaults (provincia/canton/distrito),
+   * marcamos hydratedRef = true para que después sí haga cascada
+   * si el usuario cambia provincia/canton manualmente.
+   */
+  useEffect(() => {
+    if (mode !== "edit") return;
+
+    // si ya hay valores iniciales, marcamos como hidratado
+    const prov = getValues("provincia") as string;
+    const cant = getValues("canton") as string;
+
+    if (prov || cant) hydratedRef.current = true;
+  }, [mode, getValues]);
 
   const cantonDisabled = !provinciaNombre || loadingCantones || cantones.length === 0;
   const distritoDisabled = !cantonNombre || loadingDistritos || distritos.length === 0;
 
   return (
     <>
-      <Heading as="h3" size="md">Dirección</Heading>
+      <Heading as="h3" size="md">
+        Dirección
+      </Heading>
 
       <SimpleGrid columns={{ base: 2, md: 3 }} gap={2}>
         <InputField
@@ -112,9 +184,8 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
           required
           placeholder={provincias.length ? "Seleccione una opción" : "Cargando..."}
           options={provinciaOptions}
-          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
+          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim() }}
           selectRootProps={{ disabled: provincias.length === 0 }}
-
         />
 
         <InputField
@@ -125,7 +196,7 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
           required
           placeholder={loadingCantones ? "Cargando..." : "Seleccione una opción"}
           options={cantonOptions}
-          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
+          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim() }}
           selectRootProps={{ disabled: cantonDisabled }}
         />
 
@@ -137,7 +208,7 @@ export function DireccionFields({ provincias }: { provincias: Provincia[] }) {
           required
           placeholder={loadingDistritos ? "Cargando..." : "Seleccione una opción"}
           options={distritoOptions}
-          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
+          rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim() }}
           selectRootProps={{ disabled: distritoDisabled }}
         />
       </SimpleGrid>

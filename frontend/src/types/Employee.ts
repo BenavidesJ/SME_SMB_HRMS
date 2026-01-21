@@ -4,17 +4,19 @@ export interface Employee {
   primer_apellido: string;
   segundo_apellido: string;
   genero: string;
-  identificacion: number;
+  identificacion: string | number;
   fecha_nacimiento: string;
   correo_electronico: string;
+  telefono?: number | string;
   fecha_ingreso: string;
   cantidad_hijos: number;
   estado_civil: string;
   rol: string;
-  id_provincia?: number;
-  id_canton?: number,
-  id_distrito?: number,
+  provincia?: string;
+  canton?: string,
+  distrito?: string,
   otros_datos?: string,
+  direccion?: object
 }
 
 /* Genero */
@@ -43,6 +45,7 @@ export interface EmployeeRow {
   segundo_apellido: string;
   correo_electronico: string;
   identificacion: number | string;
+  cantidad_hijos?: number;
   genero: string;
   estado_civil: string;
   fecha_ingreso: string;
@@ -164,3 +167,29 @@ export interface Roles {
   id: number,
   nombre: string
 }
+
+export type EmployeeFullApi = {
+  id: number;
+  nombre: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  correo_electronico: string;
+  identificacion: number;
+  genero: string;
+  fecha_ingreso: string;
+  fecha_nacimiento: string;
+  estado_civil: string;
+  telefono: number | string;
+  cantidad_hijos?: number;
+
+  usuario?: {
+    roles?: string[];
+  } | null;
+
+  direccion?: {
+    provincia?: string | null;
+    canton?: string | null;
+    distrito?: string | null;
+    otros_datos?: string | null;
+  } | null;
+};

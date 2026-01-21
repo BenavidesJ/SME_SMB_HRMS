@@ -1,5 +1,5 @@
 import express from 'express';
-import { crearEmpleado, obtenerColaboradorPorUserId, obtenerTodosColaboradores } from '../controllers/empleados/empleados.controller.js';
+import { crearEmpleado, obtenerColaboradorPorUserId, obtenerFullColaborador, obtenerTodosColaboradores, patchColaborador } from '../controllers/empleados/empleados.controller.js';
 import {
   actualizarCantonController,
   actualizarDireccionController,
@@ -36,6 +36,8 @@ const router = express.Router();
 router.post('/empleados', authorization, crearEmpleado);
 router.get('/empleados', authorization, obtenerTodosColaboradores);
 router.get('/empleados/:id', authorization, obtenerColaboradorPorUserId);
+router.get('/empleados/:id/full', authorization, obtenerFullColaborador);
+router.patch('/empleados/:id', authorization, patchColaborador);
 // - Generos
 router.post('/generos', authorization, crearGenero);
 router.get('/generos', authorization, obtenerTodosGeneros);

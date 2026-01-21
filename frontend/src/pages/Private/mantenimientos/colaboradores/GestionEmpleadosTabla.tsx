@@ -1,6 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
-import { DataTable } from "../../../../components/general/table/DataTable"
-import type { EmployeeRow } from "../../../../types"
+import { DataTable } from "../../../../components/general/table/DataTable";
+import type { EmployeeRow } from "../../../../types";
 import type { DataTableColumn, DataTablePagination } from "../../../../components/general/table/types";
 import { Badge, Button as ChakraButton, HStack } from "@chakra-ui/react";
 import { toTitleCase } from "../../../../utils";
@@ -12,16 +12,27 @@ interface GestionEmpleadosTablaProps {
   selection: string[];
   tablePagination?: DataTablePagination;
   page: number;
-  setSelection: Dispatch<SetStateAction<string[]>>
+  setSelection: Dispatch<SetStateAction<string[]>>;
+  edit?: () => void;
 }
 
-export const GestionEmpleadosTabla = ({ employees, loading, selection, tablePagination, page, setSelection }: GestionEmpleadosTablaProps) => {
+export const GestionEmpleadosTabla = ({
+  employees,
+  loading,
+  selection,
+  tablePagination,
+  page,
+  setSelection,
+  edit,
+}: GestionEmpleadosTablaProps) => {
   const nav = useNavigate();
-    const pageSize = 10;
-    const pagedEmployees = useMemo(() => {
+  const pageSize = 10;
+
+  const pagedEmployees = useMemo(() => {
     const start = (page - 1) * pageSize;
     return employees.slice(start, start + pageSize);
   }, [employees, page]);
+
   const columns = useMemo<DataTableColumn<EmployeeRow>[]>(() => {
     return [
       {
@@ -88,15 +99,25 @@ export const GestionEmpleadosTabla = ({ employees, loading, selection, tablePagi
         textAlign: "center",
         cell: (r) => {
           if (r.estado === "ACTIVO") {
-            return (<Badge backgroundColor="blue.600" color="white">{toTitleCase(r.estado)}</Badge>)
-          } else if (r.estado === "INACTIVO") {
-            return (<Badge backgroundColor="red.600" color="white">{toTitleCase(r.estado)}</Badge>)
+            return (
+              <Badge backgroundColor="blue.600" color="white">
+                {toTitleCase(r.estado)}
+              </Badge>
+            );
           }
+          if (r.estado === "INACTIVO") {
+            return (
+              <Badge backgroundColor="red.600" color="white">
+                {toTitleCase(r.estado)}
+              </Badge>
+            );
+          }
+          return null;
         },
       },
-
     ];
   }, []);
+
   return (
     <DataTable<EmployeeRow>
       data={loading ? [] : pagedEmployees}
@@ -107,7 +128,9 @@ export const GestionEmpleadosTabla = ({ employees, loading, selection, tablePagi
         enabled: true,
         selectedKeys: selection,
         onChange: setSelection,
-        getRowKey: (r) => String(r.usuario?.id_usuario),
+
+        // ✅ ahora selección es id_colaborador
+        getRowKey: (r) => String(r.id),
       }}
       actionBar={{
         enabled: true,
@@ -121,21 +144,23 @@ export const GestionEmpleadosTabla = ({ employees, loading, selection, tablePagi
             >
               Desactivar
             </ChakraButton>
+
             <ChakraButton
               variant="solid"
               colorPalette="yellow"
               size="sm"
               disabled={selection.length !== 1}
-              onClick={() => console.log("Exportar", selection)}
+              onClick={() => edit?.()}
             >
               Editar
             </ChakraButton>
+
             <ChakraButton
               variant="solid"
               colorPalette="teal"
               size="sm"
               disabled={selection.length !== 1}
-              onClick={() => nav(`/mantenimientos-consultas/colaboradores/${selection}`)}
+              onClick={() => nav(`/mantenimientos-consultas/colaboradores/${selection[0]}`)}
             >
               Administrar Vínculo Laboral
             </ChakraButton>
@@ -144,5 +169,5 @@ export const GestionEmpleadosTabla = ({ employees, loading, selection, tablePagi
       }}
       pagination={tablePagination}
     />
-  )
-}
+  );
+};

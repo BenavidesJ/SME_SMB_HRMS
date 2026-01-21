@@ -1,6 +1,8 @@
 import { HTTP_CODES } from "../../common/strings.js";
 import { crearColaborador } from "./handlers/empleados/crearColaborador.js";
+import { modificarColaborador } from "./handlers/empleados/modificarColaborador.js";
 import { obtenerColaboradores, obtenerColaboradorPorIdUsuario } from "./handlers/empleados/obtenerColaborador.js";
+import { obtenerFullEmpleadoPorIdColaborador } from "./handlers/empleados/obtenerColaboradorFull.js";
 
 export const crearEmpleado = async (req, res, next) => {
   const {
@@ -15,7 +17,8 @@ export const crearEmpleado = async (req, res, next) => {
     cantidad_hijos,
     estado_civil,
     telefono,
-    rol
+    rol,
+    direccion
   } = req.body;
   try {
 
@@ -31,7 +34,8 @@ export const crearEmpleado = async (req, res, next) => {
       "cantidad_hijos",
       "estado_civil",
       "telefono",
-      "rol"
+      "rol",
+      "direccion"
     ];
 
     for (const field of requiredFields) {
@@ -52,7 +56,8 @@ export const crearEmpleado = async (req, res, next) => {
       cantidad_hijos,
       estado_civil,
       telefono,
-      rol
+      rol,
+      direccion
     })
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
@@ -92,6 +97,45 @@ export const obtenerColaboradorPorUserId = async (req, res, next) => {
 export const obtenerTodosColaboradores = async (_req, res, next) => {
   try {
     const data = await obtenerColaboradores();
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const patchColaborador = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const patch = req.body;
+
+    const data = await modificarColaborador({
+      id_colaborador: id,
+      patch,
+    });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Colaborador actualizado correctamente",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerFullColaborador = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const data = await obtenerFullEmpleadoPorIdColaborador({ id_colaborador: id });
 
     return res.status(HTTP_CODES.SUCCESS.OK).json({
       success: true,

@@ -23,6 +23,7 @@ import { Departamentos } from "../pages/Private/mantenimientos/departamentos/Dep
 import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
 import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasExtra";
 import Puestos from "../pages/Private/mantenimientos/puestos/Puestos";
+import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIncapacidades";
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,10 @@ export const router = createBrowserRouter([
       {
         path: "/horas-extra/gestion",
         element: <GestionSolicitudes />
+      },
+      {
+        path: "/incapacidades",
+        element: <RegistroIncapacidades />
       },
       {
         path: "/asistencia/gestion/colaborador/:id",
