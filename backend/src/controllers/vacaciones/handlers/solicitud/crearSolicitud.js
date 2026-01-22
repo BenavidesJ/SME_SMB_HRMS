@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
+import { UniqueConstraintError } from "sequelize";
 
 import {
   sequelize,
@@ -20,6 +21,8 @@ import { computeDiasGanadosVacaciones } from "../../../../services/scheduleEngin
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+const TZ = "America/Costa_Rica";
 
 async function resolveEstadoIdByName({ nombre, transaction }) {
   const estado = await Estado.findOne({
@@ -50,6 +53,7 @@ async function getContratoActivo({ id_colaborador, ESTADO_ACTIVO_ID, transaction
     },
     order: [["fecha_inicio", "DESC"]],
     transaction,
+    lock: transaction?.LOCK?.UPDATE,
   });
 
   if (!contrato) {
@@ -60,6 +64,59 @@ async function getContratoActivo({ id_colaborador, ESTADO_ACTIVO_ID, transaction
 }
 
 /**
+ * Obtiene o crea el saldo de vacaciones del colaborador de forma segura ante concurrencia.
+ */
+async function getOrCreateSaldoVacaciones({
+  id_colaborador,
+  ESTADO_ACTIVO_ID,
+  transaction,
+}) {
+  let saldo = await SaldoVacaciones.findOne({
+    where: { id_colaborador: Number(id_colaborador) },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  if (saldo) return saldo;
+
+  const contrato = await getContratoActivo({
+    id_colaborador: Number(id_colaborador),
+    ESTADO_ACTIVO_ID,
+    transaction,
+  });
+
+  const todayDate = dayjs().tz(TZ).format("YYYY-MM-DD");
+  const earned = computeDiasGanadosVacaciones({
+    contratoFechaInicio: String(contrato.fecha_inicio),
+    todayDate,
+    tz: TZ,
+  });
+
+  try {
+    saldo = await SaldoVacaciones.create(
+      {
+        id_colaborador: Number(id_colaborador),
+        dias_ganados: Number(earned.dias_ganados),
+        dias_tomados: 0,
+      },
+      { transaction }
+    );
+
+    return saldo;
+  } catch (err) {
+    if (err instanceof UniqueConstraintError) {
+      const existing = await SaldoVacaciones.findOne({
+        where: { id_colaborador: Number(id_colaborador) },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (existing) return existing;
+    }
+    throw err;
+  }
+}
+
+/**
  * POST Vacaciones
  */
 export const crearSolicitudVacaciones = async ({
@@ -67,7 +124,6 @@ export const crearSolicitudVacaciones = async ({
   id_aprobador,
   fecha_inicio,
   fecha_fin,
-  id_saldo_vacaciones = null, // opcional
 }) => {
   const tx = await sequelize.transaction();
   try {
@@ -85,49 +141,24 @@ export const crearSolicitudVacaciones = async ({
     const ESTADO_PENDIENTE_ID = await resolveEstadoIdByName({ nombre: "PENDIENTE", transaction: tx });
     const ESTADO_APROBADO_ID = await resolveEstadoIdByName({ nombre: "APROBADO", transaction: tx });
 
-    // Validar colaborador
     const colaborador = await Colaborador.findByPk(Number(id_colaborador), {
-      attributes: ["id_colaborador", "id_saldo_vacaciones"],
+      attributes: ["id_colaborador"],
       transaction: tx,
+      lock: tx.LOCK.UPDATE,
     });
     if (!colaborador) throw new Error("No existe el colaborador");
 
-    // Resolver o crear saldo
-    let idSaldo =
-      Number(colaborador.id_saldo_vacaciones) ||
-      (Number.isFinite(Number(id_saldo_vacaciones)) ? Number(id_saldo_vacaciones) : null);
+    const saldo = await getOrCreateSaldoVacaciones({
+      id_colaborador: Number(id_colaborador),
+      ESTADO_ACTIVO_ID,
+      transaction: tx,
+    });
 
-    let saldo = null;
+    const idSaldo = Number(saldo.id_saldo_vac);
 
-    if (idSaldo) {
-      saldo = await SaldoVacaciones.findByPk(Number(idSaldo), { transaction: tx });
-      if (!saldo) throw new Error("No existe el saldo_vacaciones indicado");
-    } else {
-      const contrato = await getContratoActivo({
-        id_colaborador: Number(id_colaborador),
-        ESTADO_ACTIVO_ID,
-        transaction: tx,
-      });
-
-      const todayDate = dayjs().tz("America/Costa_Rica").format("YYYY-MM-DD");
-      const earned = computeDiasGanadosVacaciones({
-        contratoFechaInicio: String(contrato.fecha_inicio),
-        todayDate,
-        tz: "America/Costa_Rica",
-      });
-
-      saldo = await SaldoVacaciones.create(
-        {
-          dias_ganados: Number(earned.dias_ganados),
-          dias_tomados: 0,
-        },
-        { transaction: tx }
-      );
-
-      idSaldo = Number(saldo.id_saldo_vac);
-
+    if (colaborador.id_saldo_vacaciones !== idSaldo) {
       await colaborador.update(
-        { id_saldo_vacaciones: Number(idSaldo) },
+        { id_saldo_vacaciones: idSaldo },
         { transaction: tx }
       );
     }
@@ -177,7 +208,7 @@ export const crearSolicitudVacaciones = async ({
         estado_solicitud: Number(ESTADO_PENDIENTE_ID),
         fecha_inicio: startDate,
         fecha_fin: endDate,
-        id_saldo_vacaciones: Number(idSaldo),
+        id_saldo_vacaciones: idSaldo,
       },
       { transaction: tx }
     );
@@ -192,7 +223,7 @@ export const crearSolicitudVacaciones = async ({
         skippedDates: computed.charge.skippedDates,
         dias_ganados_recalculados: Number(computed.earned.dias_ganados),
         disponibles: computed.disponibles,
-        id_saldo_vacaciones: Number(idSaldo),
+        id_saldo_vacaciones: idSaldo,
       },
     };
   } catch (error) {

@@ -11,6 +11,5 @@ export const obtenerTiposIncapacidad = async () => {
   return rows.map((r) => ({
     id: r.id_tipo_incap,
     nombre: r.nombre,
-    descripcion: r.descripcion,
   }));
 };

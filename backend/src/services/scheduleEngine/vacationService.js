@@ -54,8 +54,8 @@ export async function validateVacationRequestAndCompute({
   await assertNoLeaveOverlapRange({
     models: { SolicitudPermisosLicencias: models.SolicitudPermisosLicencias, Estado: models.Estado },
     idColaborador: Number(idColaborador),
-    startTs: dayjs.tz(startDate, tz).startOf("day").toDate(),
-    endTs: dayjs.tz(endDate, tz).endOf("day").toDate(),
+    fecha_inicio: dayjs.tz(startDate, tz).startOf("day").toDate(),
+    fecha_fin: dayjs.tz(endDate, tz).endOf("day").toDate(),
     transaction,
   });
 

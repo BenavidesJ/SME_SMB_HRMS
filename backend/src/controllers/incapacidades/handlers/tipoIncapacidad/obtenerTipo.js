@@ -6,7 +6,6 @@ export const obtenerTipoIncapacidadPorId = async ({ id_tipo_incap }) => {
 
   return {
     id: row.id_tipo_incap,
-    nombre: row.nombre,
-    descripcion: row.descripcion,
+    nombre: row.nombre
   };
 };

@@ -105,9 +105,8 @@ const sanitizeText = (value, maxLen, fieldName) => {
 export const crearTipoIncapacidadController = async (req, res, next) => {
   try {
     const nombre = sanitizeText(req.body?.nombre, 40, "nombre");
-    const descripcion = sanitizeText(req.body?.descripcion, 150, "descripcion");
 
-    const data = await crearTipoIncapacidad({ nombre, descripcion });
+    const data = await crearTipoIncapacidad({ nombre });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({
       success: true,
@@ -157,7 +156,6 @@ export const actualizarTipoIncapacidadController = async (req, res, next) => {
 
     const payload = {};
     if (req.body?.nombre !== undefined) payload.nombre = sanitizeText(req.body?.nombre, 40, "nombre");
-    if (req.body?.descripcion !== undefined) payload.descripcion = sanitizeText(req.body?.descripcion, 150, "descripcion");
 
     if (Object.keys(payload).length === 0) {
       throw new Error("Debe enviar al menos un campo para actualizar");

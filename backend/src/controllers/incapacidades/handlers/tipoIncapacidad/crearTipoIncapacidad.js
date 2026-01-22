@@ -3,7 +3,7 @@ import { sequelize, TipoIncapacidad } from "../../../../models/index.js";
 /**
  * Crea un TipoIncapacidad
  */
-export const crearTipoIncapacidad = async ({ nombre, descripcion }) => {
+export const crearTipoIncapacidad = async ({ nombre }) => {
   const tx = await sequelize.transaction();
   try {
     const exists = await TipoIncapacidad.findOne({
@@ -19,7 +19,6 @@ export const crearTipoIncapacidad = async ({ nombre, descripcion }) => {
     const created = await TipoIncapacidad.create(
       {
         nombre: String(nombre).trim().toUpperCase(),
-        descripcion: String(descripcion).trim(),
       },
       { transaction: tx }
     );
@@ -29,7 +28,6 @@ export const crearTipoIncapacidad = async ({ nombre, descripcion }) => {
     return {
       id: created.id_tipo_incap,
       nombre: created.nombre,
-      descripcion: created.descripcion,
     };
   } catch (error) {
     await tx.rollback();

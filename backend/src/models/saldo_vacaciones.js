@@ -9,6 +9,10 @@ export const SaldoVacaciones = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+    id_colaborador: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     dias_ganados: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,

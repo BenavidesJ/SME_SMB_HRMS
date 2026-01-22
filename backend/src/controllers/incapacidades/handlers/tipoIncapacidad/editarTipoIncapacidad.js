@@ -6,11 +6,10 @@ import { sequelize, TipoIncapacidad } from "../../../../models/index.js";
  * @param {{
  *   id_tipo_incap: number|string,
  *   nombre?: string,
- *   descripcion?: string
  * }} payload
- * @returns {Promise<{id:number, nombre:string, descripcion:string}>}
+ * @returns {Promise<{id:number, nombre:string }>}
  */
-export const actualizarTipoIncapacidad = async ({ id_tipo_incap, nombre, descripcion }) => {
+export const actualizarTipoIncapacidad = async ({ id_tipo_incap, nombre  }) => {
   const tx = await sequelize.transaction();
 
   try {
@@ -42,11 +41,6 @@ export const actualizarTipoIncapacidad = async ({ id_tipo_incap, nombre, descrip
       updates.nombre = nuevoNombre;
     }
 
-    if (descripcion !== undefined) {
-      const desc = String(descripcion).trim();
-      if (!desc) throw new Error("descripcion no puede ser vacía");
-      updates.descripcion = desc;
-    }
 
     if (Object.keys(updates).length === 0) {
       throw new Error("Debe enviar al menos un campo para actualizar");
@@ -59,7 +53,6 @@ export const actualizarTipoIncapacidad = async ({ id_tipo_incap, nombre, descrip
     return {
       id: current.id_tipo_incap,
       nombre: current.nombre,
-      descripcion: current.descripcion,
     };
   } catch (error) {
     if (!tx.finished) await tx.rollback();
