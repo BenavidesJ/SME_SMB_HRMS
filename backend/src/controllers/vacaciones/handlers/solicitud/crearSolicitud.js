@@ -190,7 +190,7 @@ export const crearSolicitudVacaciones = async ({
 
     if (!computed.allowed) {
       throw new Error(
-        computed.reason === "INSUFFICIENT_BALANCE"
+        computed.reason === "BALANCE_INSUFICIENTE"
           ? `SALDO_INSUFICIENTE: disponibles=${computed.available}, requerido=${computed.required}`
           : "VACACIONES_INVALIDAS"
       );
