@@ -1,6 +1,6 @@
-import type { ContractPayload, CreateContractForm } from "../../../../types";
-import { normalizeDaysString } from "../../../../utils/time/normalizeDaysString";
-import { normalizeTimeToHHMMSS } from "../../../../utils/time/normalizeTime";
+import type { ContractPayload, CreateContractForm } from "../../../../../types";
+import { normalizeDaysString } from "../../../../../utils/time/normalizeDaysString";
+import { normalizeTimeToHHMMSS } from "../../../../../utils/time/normalizeTime";
 
 export const mapFormToPayload = (form: CreateContractForm, idColaborador: number): ContractPayload => {
   const salario = Number(form.salario_base);

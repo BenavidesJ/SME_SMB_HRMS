@@ -1,9 +1,9 @@
 import { useMemo, type Dispatch, type SetStateAction } from "react";
-import { DataTable } from "../../../../components/general/table/DataTable";
-import type { EmployeeRow } from "../../../../types";
-import type { DataTableColumn, DataTablePagination } from "../../../../components/general/table/types";
+import { DataTable } from "../../../../../components/general/table/DataTable";
+import type { EmployeeRow } from "../../../../../types";
+import type { DataTableColumn, DataTablePagination } from "../../../../../components/general/table/types";
 import { Badge, Button as ChakraButton, HStack } from "@chakra-ui/react";
-import { toTitleCase } from "../../../../utils";
+import { toTitleCase } from "../../../../../utils";
 import { useNavigate } from "react-router";
 
 interface GestionEmpleadosTablaProps {
@@ -128,8 +128,6 @@ export const GestionEmpleadosTabla = ({
         enabled: true,
         selectedKeys: selection,
         onChange: setSelection,
-
-        // ✅ ahora selección es id_colaborador
         getRowKey: (r) => String(r.id),
       }}
       actionBar={{

@@ -12,8 +12,8 @@ import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasE
 import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
 import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIncapacidades";
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
-import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/GestionEmpleados";
-import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/ColaboradorDetalle";
+import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/page/GestionEmpleados";
+import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/page/ColaboradorDetalle";
 import Generos from "../pages/Private/mantenimientos/generos/Generos";
 import { Estados } from "../pages/Private/mantenimientos/estados/Estados";
 import Puestos from "../pages/Private/mantenimientos/puestos/Puestos";
