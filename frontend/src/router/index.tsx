@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router";
-import { PrivateRoute } from "./PrivateRoute";
-import { PublicRoute } from "./PublicRoute";
+import { Route } from "./Route";
+
 import UIdocs from "../pages/Private/UIdocs";
 import LoginPage from "../pages/Public/LoginPage";
 import Main from "../pages/Private/Main";
@@ -27,99 +27,54 @@ import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIn
 
 export const router = createBrowserRouter([
   {
-    element: <PublicRoute />,
+    element: (
+      <Route
+        mode="public"
+        authenticatedRedirectTo="/"
+      />
+    ),
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/forgot-password", element: <ForgotPasswordPage /> },
-    ]
+    ],
   },
   {
-    element: <PrivateRoute />,
+    element: (
+      <Route
+        mode="private"
+        unauthenticatedRedirectTo="/login"
+      />
+    ),
     children: [
-      {
-        path: "/",
-        element: <Main />
-      },
-      {
-        path: "/perfil",
-        element: <Perfil />
-      },
-      {
-        path: "/asistencia/marca",
-        element: <MarcasAsistencia />
-      },
-      {
-        path: "/asistencia/gestion",
-        element: <GestionarAsistencias />
-      },
-      {
-        path: "/horas-extra/solicitud",
-        element: <SolicitudHorasExtra />
-      },
-      {
-        path: "/horas-extra/gestion",
-        element: <GestionSolicitudes />
-      },
-      {
-        path: "/incapacidades",
-        element: <RegistroIncapacidades />
-      },
-      {
-        path: "/asistencia/gestion/colaborador/:id",
-        element: <MarcasAsistenciaColaborador />
-      },
-      {
-        path: "/mantenimientos-consultas",
-        element: <Mantenimientos />,
-      },
-      {
-        path: "/mantenimientos-consultas/colaboradores",
-        element: <GestionEmpleados />,
-      },
-      {
-        path: "/mantenimientos-consultas/colaboradores/:id",
-        element: <ColaboradorDetalle />,
-      },
-      {
-        path: "/mantenimientos-consultas/generos",
-        element: <Generos />,
-      },
-      {
-        path: "/mantenimientos-consultas/estados",
-        element: <Estados />,
-      },
-      {
-        path: "/mantenimientos-consultas/puestos",
-        element: <Puestos />,
-      },
-      {
-        path: "/mantenimientos-consultas/estados_civiles",
-        element: <EstadosCiviles />,
-      },
-      {
-        path: "/mantenimientos-consultas/departamentos",
-        element: <Departamentos />,
-      },
-      {
-        path: "/mantenimientos-consultas/roles",
-        element: <RolesPage />,
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_contrato",
-        element: <TiposContrato />,
-      },
-      {
-        path: "/mantenimientos-consultas/ciclos_pago",
-        element: <CiclosPago />,
-      },
-      {
-        path: "/ui-docs",
-        element: <UIdocs />
-      }
-    ]
+      { path: "/", element: <Main /> },
+      { path: "/perfil", element: <Perfil /> },
+
+      { path: "/asistencia/marca", element: <MarcasAsistencia /> },
+      { path: "/asistencia/gestion", element: <GestionarAsistencias /> },
+      { path: "/asistencia/gestion/colaborador/:id", element: <MarcasAsistenciaColaborador /> },
+
+      { path: "/horas-extra/solicitud", element: <SolicitudHorasExtra /> },
+      { path: "/horas-extra/gestion", element: <GestionSolicitudes /> },
+
+      { path: "/incapacidades", element: <RegistroIncapacidades /> },
+
+      { path: "/mantenimientos-consultas", element: <Mantenimientos /> },
+      { path: "/mantenimientos-consultas/colaboradores", element: <GestionEmpleados /> },
+      { path: "/mantenimientos-consultas/colaboradores/:id", element: <ColaboradorDetalle /> },
+      { path: "/mantenimientos-consultas/generos", element: <Generos /> },
+      { path: "/mantenimientos-consultas/estados", element: <Estados /> },
+      { path: "/mantenimientos-consultas/puestos", element: <Puestos /> },
+      { path: "/mantenimientos-consultas/estados_civiles", element: <EstadosCiviles /> },
+      { path: "/mantenimientos-consultas/departamentos", element: <Departamentos /> },
+      { path: "/mantenimientos-consultas/roles", element: <RolesPage /> },
+      { path: "/mantenimientos-consultas/tipos_contrato", element: <TiposContrato /> },
+      { path: "/mantenimientos-consultas/ciclos_pago", element: <CiclosPago /> },
+
+      { path: "/ui-docs", element: <UIdocs /> },
+    ],
   },
   {
     path: "*",
-    element: <NotFoundPage />
-  }
+    element: <NotFoundPage />,
+  },
 ]);

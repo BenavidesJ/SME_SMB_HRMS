@@ -1,5 +1,4 @@
 import { useParams } from "react-router";
-import { Layout } from "../../../../layouts";
 import { useCallback, useMemo, useState } from "react";
 import type {
   Contrato,
@@ -31,6 +30,7 @@ import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { type TipoContratoRow } from "../../../../services/api/tiposContrato";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
+import { Layout } from "../../../../components/layout";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();

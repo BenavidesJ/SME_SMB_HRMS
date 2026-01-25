@@ -6,7 +6,7 @@ import {
   BreadcrumbLink,
   BreadcrumbCurrentLink,
 } from "../../../components/ui/breadcrumb";
-import { NAV_MAIN, NAV_SETTINGS } from "../../components/navigation/navItems";
+import { NAV_MAIN, NAV_SETTINGS } from "../navigation/navItems";
 import { useAuth } from "../../../context/AuthContext";
 
 import { buildNavIndex } from "./helpers/buildNavIndex";

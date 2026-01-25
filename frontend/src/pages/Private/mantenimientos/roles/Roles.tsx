@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layout } from "../../../../layouts";
+import { Layout } from "../../../../components/layout";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";

@@ -1,5 +1,5 @@
 import { Card, Grid, GridItem, Text } from "@chakra-ui/react";
-import { Layout } from "../../../layouts";
+import { Layout } from "../../../components/layout/Layout";
 import { Button } from "../../../components/general/button/Button";
 import { Form, InputField } from "../../../components/forms";
 import { useAuth } from "../../../context/AuthContext";
@@ -32,7 +32,7 @@ const Perfil = () => {
               </Card.Header>
               <Card.Body>
                 <Text>Cambiar la contraseña</Text>
-                <Form onSubmit={() => console.log("hello")} defaultValues={{ password: user?.usuario.username }}>
+                <Form onSubmit={() => console.log("hello")} defaultValues={{ password: user?.usuario?.username }}>
                   <InputField
                     fieldType="password"
                     name="password"

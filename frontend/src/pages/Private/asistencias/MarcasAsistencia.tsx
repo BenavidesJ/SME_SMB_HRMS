@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Badge, Button as ChakraButton, HStack, Text, Wrap } from "@chakra-ui/react";
-import { Layout } from "../../../layouts";
+import { Layout } from "../../../components/layout";
 import { Form, InputField } from "../../../components/forms";
 import { Button } from "../../../components/general/button/Button";
 import { DataTable } from "../../../components/general/table/DataTable";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, HStack, SimpleGrid, Stack } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
-import { Layout } from "../../../../layouts";
+import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { Modal } from "../../../../components/general";
@@ -192,7 +192,7 @@ const TiposContrato = () => {
               page: 1,
               pageSize: 10,
               totalCount: rows.length,
-              onPageChange: () => {},
+              onPageChange: () => { },
             }}
           />
         </section>

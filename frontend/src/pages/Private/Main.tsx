@@ -1,4 +1,5 @@
-import { Layout } from "../../layouts";
+import { Layout } from "../../components/layout"
+
 
 
 const Main = () => {

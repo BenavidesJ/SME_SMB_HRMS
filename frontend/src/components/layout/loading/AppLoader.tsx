@@ -1,4 +1,3 @@
-// src/components/feedback/AppLoader.tsx
 import { Portal, Spinner, Text, VStack, Box } from "@chakra-ui/react";
 
 type AppLoaderProps = {

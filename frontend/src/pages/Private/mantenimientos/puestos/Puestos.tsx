@@ -1,5 +1,5 @@
 import { Box, Stack, Button as ChakraButton, Badge } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
+import { Layout } from "../../../../components/layout";
 import { useMemo, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";
@@ -11,7 +11,7 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import type { Department, JobPosition } from "../../../../types/Company";
 import { toTitleCase } from "../../../../utils";
-import { formatCRC } from "../../../../utils/money/formatCRC";
+import { formatCRC } from "../../../../utils";
 import type { Status } from "../../../../types";
 
 interface CreateJobPositionPayload {

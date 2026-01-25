@@ -2,7 +2,6 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useCallback, useMemo, useState } from "react";
 import { Box, SimpleGrid, Stack, Heading } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
 import { Form, InputField } from "../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
 import { Button } from "../../../../components/general/button/Button";
@@ -15,6 +14,7 @@ import { useApiMutation } from "../../../../hooks/useApiMutations";
 import type { MaritalStatus } from "../../../../types/MaritalStatus";
 import type { Provincia } from "../../../../types/Address";
 import { DireccionFields } from "./CamposDireccion";
+import { Layout } from "../../../../components/layout";
 
 dayjs.extend(customParseFormat);
 
