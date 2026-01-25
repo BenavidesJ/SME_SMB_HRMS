@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Layout } from "../../../../layouts";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
 import type { MaritalStatus } from "../../../../types/MaritalStatus";
 import type { DataTableColumn } from "../../../../components/general/table/types";
@@ -11,6 +10,7 @@ import { Modal } from "../../../../components/general";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { deleteMaritalStatus } from "../../../../services/api/estadoCivil";
 import { Form, InputField } from "../../../../components/forms";
+import { Layout } from "../../../../components/layout";
 
 export const EstadosCiviles = () => {
   const [openModal, setOpenModal] = useState(false);

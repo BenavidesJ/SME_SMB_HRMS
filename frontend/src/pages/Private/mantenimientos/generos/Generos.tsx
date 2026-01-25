@@ -1,5 +1,5 @@
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { Layout } from "../../../../layouts";
+import { Layout } from "../../../../components/layout";
 import { useMemo, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";

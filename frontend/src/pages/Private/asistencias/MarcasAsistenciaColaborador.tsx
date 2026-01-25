@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import { useApiQuery } from '../../../hooks/useApiQuery';
-import { Layout } from '../../../layouts'
+import { Layout } from "../../../components/layout";
 import { DataTable } from '../../../components/general/table/DataTable';
 import { useMemo } from 'react';
 import type { DataTableColumn } from '../../../components/general/table/types';
@@ -8,11 +8,11 @@ import { Badge, HStack, Text, Button as ChakraButton } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import { useWeekPager } from '../../../hooks/useWeekPager';
 
-interface MarcaAsistencia {
-  identificacion: string,
-  tipo_marca: string,
-  timestamp: string
-}
+// interface MarcaAsistencia {
+//   identificacion: string,
+//   tipo_marca: string,
+//   timestamp: string
+// }
 
 type MarcaEventoRow = {
   key: string;

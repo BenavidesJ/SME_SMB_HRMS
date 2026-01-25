@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
-import { DATE_FMT, formatRangeLabel, getWeekRangeSundayToSaturday, now } from "../lib/fechas/dates"
+import { DATE_FMT, formatRangeLabel, getWeekRangeSundayToSaturday, now } from "../utils/dates";
 
 export function useWeekPager(initial?: Dayjs) {
   const [ancho, setAncho] = useState<Dayjs>(() => initial ?? now());

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Layout } from '../../../layouts';
+import { Layout } from "../../../components/layout";
 import { ListaSolicitudes } from './components';
 import type { SolicitudesQuery } from '../../../types/Overtime';
 import { Stack } from '@chakra-ui/react';

@@ -1,5 +1,5 @@
 import { Grid, GridItem, VStack, IconButton, Text, InputGroup, Input, Center } from '@chakra-ui/react';
-import { Layout } from '../../../layouts';
+import { Layout } from "../../../components/layout";
 import { useNavigate } from 'react-router';
 import { modules } from './modulesList';
 import { FiSearch } from 'react-icons/fi';

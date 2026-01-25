@@ -277,7 +277,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       {errorMessage ? (
         <Field.ErrorText>{errorMessage}</Field.ErrorText>
       ) : (
-        <Field.HelperText fontSize="medium">{helperText}</Field.HelperText>
+        <Field.HelperText fontSize="small">{helperText}</Field.HelperText>
       )}
     </Field.Root>
   );

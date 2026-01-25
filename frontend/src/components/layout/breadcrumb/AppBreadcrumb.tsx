@@ -1,17 +1,22 @@
 import { Button, HStack, Text } from "@chakra-ui/react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, Link as RouterLink } from "react-router";
 import { FiArrowLeft } from "react-icons/fi";
 import {
   BreadcrumbRoot,
   BreadcrumbLink,
   BreadcrumbCurrentLink,
 } from "../../../components/ui/breadcrumb";
-import { NAV_MAIN, NAV_SETTINGS } from "../../components/navigation/navItems";
+import { NAV_MAIN, NAV_SETTINGS } from "../navigation/navItems";
 import { useAuth } from "../../../context/AuthContext";
 
 import { buildNavIndex } from "./helpers/buildNavIndex";
 import { resolveBreadcrumb, type Crumb } from "./helpers/breadCrumbResolve";
 import { useMemo } from "react";
+
+const PARENTS_THAT_REDIRECT: Record<string, string> = {
+  "/asistencia": "/asistencia/marca",
+  "/horas-extra": "/horas-extra/solicitud",
+};
 
 export function AppBreadcrumb() {
   const { pathname } = useLocation();
@@ -35,11 +40,19 @@ export function AppBreadcrumb() {
   }, [pathname, index]);
 
   const backTo = useMemo(() => {
+    const current = pathname;
+
     for (let i = crumbs.length - 2; i >= 0; i--) {
-      if (crumbs[i].to) return crumbs[i].to!;
+      const candidate = crumbs[i].to;
+      if (!candidate) continue;
+
+      const redirectsTo = PARENTS_THAT_REDIRECT[candidate];
+      if (redirectsTo && redirectsTo === current) continue;
+
+      return candidate;
     }
     return "/";
-  }, [crumbs]);
+  }, [crumbs, pathname]);
 
   if (crumbs.length === 0) return null;
 
@@ -60,8 +73,10 @@ export function AppBreadcrumb() {
               return <BreadcrumbCurrentLink key={key}>{c.label}</BreadcrumbCurrentLink>;
             }
             return (
-              <BreadcrumbLink key={key} href={c.to}>
-                {c.label}
+              <BreadcrumbLink key={key} asChild>
+                <RouterLink to={c.to!}>
+                  {c.label}
+                </RouterLink>
               </BreadcrumbLink>
             );
           })}

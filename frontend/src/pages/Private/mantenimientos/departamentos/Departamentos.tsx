@@ -3,7 +3,6 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { DataTable } from "../../../../components/general/table/DataTable";
-import { Layout } from "../../../../layouts";
 import { Box, Button as ChakraButton, Stack, } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
 import { Modal } from "../../../../components/general";
@@ -11,6 +10,7 @@ import { Form, InputField } from "../../../../components/forms";
 import { Button } from "../../../../components/general/button/Button";
 import type { Department } from "../../../../types/Company";
 import { deleteDepartment } from "../../../../services/api/empresa";
+import { Layout } from "../../../../components/layout";
 
 
 export const Departamentos = () => {

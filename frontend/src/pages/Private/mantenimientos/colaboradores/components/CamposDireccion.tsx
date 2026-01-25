@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { SimpleGrid, Heading } from "@chakra-ui/react";
-import { InputField } from "../../../../components/forms";
+import { InputField } from "../../../../../components/forms";
 import { useFormContext, useWatch } from "react-hook-form";
-import type { Canton, Distrito, Provincia } from "../../../../types/Address";
-import { toTitleCase } from "../../../../utils";
-import { getCantonesPorProvincia, getDistritosPorCanton } from "../../../../services/api/employees";
+import type { Canton, Distrito, Provincia } from "../../../../../types/Address";
+import { toTitleCase } from "../../../../../utils";
+import { getCantonesPorProvincia, getDistritosPorCanton } from "../../../../../services/api/employees";
 
 type SelectOption = { label: string; value: string };
 

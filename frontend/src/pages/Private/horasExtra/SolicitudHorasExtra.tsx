@@ -1,12 +1,13 @@
 import { Box, SimpleGrid } from '@chakra-ui/react';
 import { Form, InputField } from '../../../components/forms'
-import { Layout } from '../../../layouts'
+
 import { Button } from '../../../components/general/button/Button';
 import { useApiQuery } from '../../../hooks/useApiQuery';
 import { useCallback, useMemo } from 'react';
 import { toTitleCase } from '../../../utils';
 import { useApiMutation } from '../../../hooks/useApiMutations';
 import { useAuth } from '../../../context/AuthContext';
+import { Layout } from '../../../components/layout';
 
 interface TipoHx {
   id: number;

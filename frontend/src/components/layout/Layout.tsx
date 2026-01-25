@@ -1,13 +1,13 @@
 import { Box, Button, Flex, Heading, Image } from "@chakra-ui/react";
 
-import logo from "../assets/logo.jpg"
-import css from "../styles/global.module.css"
-import { TopNavBar } from "./components/navigation/TopNavBar";
+import logo from "../../assets/LogoColor.svg";
+import css from "../../styles/global.module.css";
+import { TopNavBar } from "./navigation/TopNavBar";
 import { FiLogOut } from "react-icons/fi";
-import { useAuth } from "../context/AuthContext";
 
-import { AppBreadcrumb } from "./components/breadcrumb/AppBreadcrumb";
-import { DesktopNav } from "./components";
+import { AppBreadcrumb } from "./breadcrumb/AppBreadcrumb";
+import { DesktopNav } from "./navigation";
+import { useAuth } from "../../context/AuthContext";
 
 interface LayoutProps {
   pageTitle: string;

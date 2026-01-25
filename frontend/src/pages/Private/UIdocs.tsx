@@ -1,7 +1,7 @@
 import { Button, Stack } from '@chakra-ui/react';
 import { Form, InputField } from '../../components/forms';
-import { Layout } from '../../layouts';
 import { login } from '../../services/api/auth';
+import { Layout } from '../../components/layout';
 
 
 function UIdocs() {

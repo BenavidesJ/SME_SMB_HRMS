@@ -1,6 +1,6 @@
 import { Box, SimpleGrid } from "@chakra-ui/react";
 import { Form, InputField } from "../../../components/forms";
-import { Layout } from "../../../layouts";
+import { Layout } from "../../../components/layout";
 import { Button } from "../../../components/general/button/Button";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";

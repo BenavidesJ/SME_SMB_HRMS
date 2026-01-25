@@ -1,5 +1,4 @@
 import { useParams } from "react-router";
-import { Layout } from "../../../../layouts";
 import { useCallback, useMemo, useState } from "react";
 import type {
   Contrato,
@@ -7,10 +6,10 @@ import type {
   EmployeeRow,
   Puesto,
   TipoJornada,
-} from "../../../../types";
+} from "../../../../../types";
 import {
   createAndAssignContract,
-} from "../../../../services/api/employees";
+} from "../../../../../services/api/employees";
 import {
   Badge,
   Button,
@@ -22,15 +21,16 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { FiFilePlus, FiFileText } from "react-icons/fi";
-import { Form, InputField } from "../../../../components/forms";
-import { toTitleCase } from "../../../../utils";
-import { showToast } from "../../../../services/toast/toastService";
-import { Modal } from "../../../../components/general";
-import { mapFormToPayload } from "./mapContractFormToPayload";
-import { DataTable } from "../../../../components/general/table/DataTable";
-import type { DataTableColumn } from "../../../../components/general/table/types";
-import { type TipoContratoRow } from "../../../../services/api/tiposContrato";
-import { useApiQuery } from "../../../../hooks/useApiQuery";
+import { Form, InputField } from "../../../../../components/forms";
+import { toTitleCase } from "../../../../../utils";
+import { showToast } from "../../../../../services/toast/toastService";
+import { Modal } from "../../../../../components/general";
+import { mapFormToPayload } from "../components/mapContractFormToPayload";
+import { DataTable } from "../../../../../components/general/table/DataTable";
+import type { DataTableColumn } from "../../../../../components/general/table/types";
+import { type TipoContratoRow } from "../../../../../services/api/tiposContrato";
+import { useApiQuery } from "../../../../../hooks/useApiQuery";
+import { Layout } from "../../../../../components/layout";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
