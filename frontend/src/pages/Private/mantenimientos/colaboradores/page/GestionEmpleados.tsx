@@ -203,6 +203,15 @@ const GestionEmpleados = () => {
             setSelection={setSelection}
             page={page}
             edit={onClickEdit}
+            tablePagination={
+              {
+                enabled: true,
+                page,
+                pageSize: 10,
+                totalCount: employees.length,
+                onPageChange: setPage,
+              }
+            }
           />
         </section>
       </Stack>
