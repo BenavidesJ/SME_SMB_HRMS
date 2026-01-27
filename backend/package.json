@@ -7,7 +7,7 @@
     "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "start": "",
     "dev": "node --watch --env-file=.env main.js",
-    "seed:ubicaciones": "node --env-file=.env src/seeds/run-seeds.js"
+    "seeds": "node --env-file=.env src/seeds/run-seeds.js"
   },
   "keywords": [],
   "author": "Jose D Benavides",

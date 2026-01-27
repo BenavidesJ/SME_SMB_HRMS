@@ -1,5 +1,17 @@
 import { sequelize } from "../config/db.js";
-import { Colaborador, Usuario, UsuarioRol, Rol, Genero, Estado, EstadoCivil } from "../models/index.js";
+import {
+  Colaborador,
+  Usuario,
+  UsuarioRol,
+  Rol,
+  Genero,
+  Estado,
+  EstadoCivil,
+  Contrato,
+  HorarioLaboral,
+  Direccion,
+  Telefono,
+} from "../models/index.js";
 
 export async function seedSuperAdmin() {
   const t = await sequelize.transaction();
@@ -91,6 +103,78 @@ export async function seedSuperAdmin() {
         { transaction: t },
       );
     }
+
+    await Direccion.upsert(
+      {
+        id_direccion: 2,
+        id_colaborador: colab.id_colaborador,
+        id_provincia: 1,
+        id_canton: 115,
+        id_distrito: 10203,
+        otros_datos: "Cerro Vista Ap 4A",
+        es_principal: 1,
+        estado: estadoActivo.id_estado,
+      },
+      { transaction: t },
+    );
+
+    const [contrato] = await Contrato.findOrCreate({
+      where: { id_contrato: 5 },
+      defaults: {
+        id_contrato: 5,
+        id_colaborador: colab.id_colaborador,
+        id_puesto: 2,
+        fecha_inicio: "2026-01-04",
+        id_tipo_contrato: 1,
+        id_tipo_jornada: 1,
+        horas_semanales: "40.00",
+        salario_base: "1300000.00",
+        id_ciclo_pago: 1,
+        estado: estadoActivo.id_estado,
+      },
+      transaction: t,
+    });
+
+    await contrato.update(
+      {
+        id_colaborador: colab.id_colaborador,
+        id_puesto: 2,
+        fecha_inicio: "2026-01-04",
+        id_tipo_contrato: 1,
+        id_tipo_jornada: 1,
+        horas_semanales: "40.00",
+        salario_base: "1300000.00",
+        id_ciclo_pago: 1,
+        estado: estadoActivo.id_estado,
+      },
+      { transaction: t },
+    );
+
+    await HorarioLaboral.upsert(
+      {
+        id_horario: 2,
+        id_contrato: contrato.id_contrato,
+        hora_inicio: "08:00:00",
+        hora_fin: "17:00:00",
+        minutos_descanso: 60,
+        dias_laborales: "LKMJV",
+        dias_libres: "SD",
+        estado: estadoActivo.id_estado,
+        fecha_actualizacion: "2026-01-04",
+        id_tipo_jornada: 1,
+      },
+      { transaction: t },
+    );
+
+    await Telefono.upsert(
+      {
+        id_telefono: 8,
+        id_colaborador: colab.id_colaborador,
+        numero: 70192643,
+        es_principal: 1,
+      },
+      { transaction: t },
+    );
 
     await t.commit();
     console.log("[seed] Super admin OK");

@@ -34,7 +34,7 @@ import { Layout } from "../../../../../components/layout";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
-  const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
+  const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}/full` });
   const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `contratos/colaborador/${employee?.id}`, enabled: Boolean(employee?.id) });
   const { data: ciclosPago = [] } = useApiQuery<string[]>({ url: "planillas/ciclos_pago" });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "tipos_jornada" });

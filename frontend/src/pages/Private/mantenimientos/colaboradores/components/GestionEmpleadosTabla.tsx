@@ -28,6 +28,8 @@ export const GestionEmpleadosTabla = ({
   const nav = useNavigate();
   const pageSize = 10;
 
+  console.log(selection)
+
   const pagedEmployees = useMemo(() => {
     const start = (page - 1) * pageSize;
     return employees.slice(start, start + pageSize);
