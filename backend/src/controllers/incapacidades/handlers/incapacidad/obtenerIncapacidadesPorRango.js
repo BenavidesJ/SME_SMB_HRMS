@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import { Incapacidad, TipoIncapacidad } from "../../../../models/index.js";
-import { mapIncapacitiesToCalendarEvents } from "../../../../services/scheduleEngine/sequelizeIncapacityProvider.js";
+import { mapIncapacitiesToCalendarEvents } from "../../../../services/scheduleEngine/providers/sequelizeIncapacityProvider.js";
 
 export const obtenerIncapacidadesPorRango = async ({ fromDateStr, toDateStr }) => {
   if (!fromDateStr || !toDateStr) {

@@ -1,4 +1,4 @@
-import { hasLeaveOverlap } from "./sequelizeLeaveProvider.js";
+import { hasLeaveOverlap } from "./providers/sequelizeLeaveProvider.js";
 
 export class LeaveBlockedError extends Error {
   constructor(message = "BLOQUEADO_POR_TRASLAPE_PERMISO") {

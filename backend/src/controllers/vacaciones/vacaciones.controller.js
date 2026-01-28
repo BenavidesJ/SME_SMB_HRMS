@@ -5,7 +5,7 @@ import { crearSolicitudVacaciones } from "./handlers/solicitud/crearSolicitud.js
 import {
   getVacacionesByColaborador,
   getVacacionesByDateRange,
-} from "../../services/scheduleEngine/sequelizeVacationProvider.js";
+} from "../../services/scheduleEngine/providers/sequelizeVacationProvider.js";
 
 import { SolicitudVacaciones } from "../../models/index.js";
 import { cambiarEstadoSolicitudVacaciones } from "./handlers/solicitud/cambioEstadoSolicitud.js";

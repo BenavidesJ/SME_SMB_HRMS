@@ -1,4 +1,4 @@
-import { hasVacationOverlapByDateRange } from "./sequelizeVacationProvider.js";
+import { hasVacationOverlapByDateRange } from "./providers/sequelizeVacationProvider.js";
 
 export class VacationBlockedError extends Error {
   constructor(message = "BLOQUEADO_POR_VACACIONES") {

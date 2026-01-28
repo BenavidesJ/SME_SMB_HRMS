@@ -70,6 +70,7 @@ export async function getVacacionesByColaborador({
 
 export async function getVacacionesByDateRange({
   models,
+  idColaborador,
   startDate,
   endDate,
   transaction,
@@ -81,6 +82,7 @@ export async function getVacacionesByDateRange({
 
   const rows = await models.SolicitudVacaciones.findAll({
     where: {
+      id_colaborador: Number(idColaborador),
       fecha_inicio: { [Op.lte]: endDate },
       fecha_fin: { [Op.gte]: startDate },
     },

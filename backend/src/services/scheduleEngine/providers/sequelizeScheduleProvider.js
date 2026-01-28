@@ -1,5 +1,5 @@
 import { Op } from "sequelize";
-import { buildScheduleTemplateFromHorario } from "./templateFromSchedule.js";
+import { buildScheduleTemplateFromHorario } from "../templateFromSchedule.js";
 
 /**
  * Carga contrato activo + horario activo y genera el template.

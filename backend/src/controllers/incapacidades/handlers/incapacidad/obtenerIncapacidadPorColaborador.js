@@ -2,7 +2,7 @@ import { Incapacidad, TipoIncapacidad } from "../../../../models/index.js";
 import {
   loadIncapacityBlocksByDateRange,
   mapIncapacitiesToCalendarEvents,
-} from "../../../../services/scheduleEngine/sequelizeIncapacityProvider.js";
+} from "../../../../services/scheduleEngine/providers/sequelizeIncapacityProvider.js";
 
 export const obtenerIncapacidadesPorColaborador = async ({
   id_colaborador,

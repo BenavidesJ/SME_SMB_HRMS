@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 
-import { loadActiveContractAndTemplate, loadHolidaysMap } from "./sequelizeScheduleProvider.js";
+import { loadActiveContractAndTemplate, loadHolidaysMap } from "./providers/sequelizeScheduleProvider.js";
 import { computeChargeableVacationDays } from "./vacationsChargeableDays.js";
 import { assertNoIncapacityOverlapRange } from "./incapacityGuard.js";
 import { assertNoLeaveOverlapRange } from "./leaveGuard.js";

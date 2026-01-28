@@ -20,8 +20,8 @@ import { classifyWorkedIntervalForDay } from "../../../../services/scheduleEngin
 import { resolveWorkWindowForTimestamp } from "../../../../services/scheduleEngine/workWindowResolver.js";
 import { validateMaxDailyMinutesForInterval } from "../../../../services/scheduleEngine/realLimits.js";
 import { applyOvertimeApprovalPolicy } from "../../../../services/scheduleEngine/overtimePolicy.js";
-import { loadApprovedOvertimeHoursForDate } from "../../../../services/scheduleEngine/sequelizeOvertimeProvider.js";
-import { isMandatoryHolidayByDate } from "../../../../services/scheduleEngine/sequelizeHolidayProvider.js";
+import { loadApprovedOvertimeHoursForDate } from "../../../../services/scheduleEngine/providers/sequelizeOvertimeProvider.js";
+import { isMandatoryHolidayByDate } from "../../../../services/scheduleEngine/providers/sequelizeHolidayProvider.js";
 import { assertNoIncapacityCoveringDate } from "../../../../services/scheduleEngine/incapacityGuard.js";
 
 /**

@@ -1,4 +1,4 @@
-import { existsIncapacityCoveringDate, hasIncapacityOverlap } from "./sequelizeIncapacityProvider.js";
+import { existsIncapacityCoveringDate, hasIncapacityOverlap } from "./providers/sequelizeIncapacityProvider.js";
 
 /**
  * Error estándar del engine para bloqueo por incapacidad.

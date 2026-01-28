@@ -16,7 +16,7 @@ import {
 import { assertNoLeaveOverlapRange } from "../../../../services/scheduleEngine/leaveGuard.js";
 import { assertNoIncapacityOverlapRange } from "../../../../services/scheduleEngine/incapacityGuard.js";
 import { validateLeaveByDateRange } from "../../../../services/scheduleEngine/leavesByDateRange.js";
-import { loadActiveContractAndTemplate, loadHolidaysMap } from "../../../../services/scheduleEngine/sequelizeScheduleProvider.js";
+import { loadActiveContractAndTemplate, loadHolidaysMap } from "../../../../services/scheduleEngine/providers/sequelizeScheduleProvider.js";
 
 // import { assertNoIncapacityOverlapRange } from "../../../services/scheduleEngine/incapacityGuard.js";
 // import { assertNoLeaveOverlapRange } from "../../../services/scheduleEngine/leaveGuard.js"; // (el guard que acordamos)
