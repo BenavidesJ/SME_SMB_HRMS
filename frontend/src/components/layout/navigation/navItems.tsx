@@ -50,7 +50,7 @@ export const NAV_MAIN: NavItem[] = [
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
   {
-    label: "Gestión de Planillas",
+    label: "Planillas",
     icon: <PiMoney />,
     path: "/planillas",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
@@ -76,10 +76,20 @@ export const NAV_MAIN: NavItem[] = [
     label: "Vacaciones",
     icon: <FiBatteryCharging />,
     path: "/vacaciones",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    children: [
+      { label: "Solicitud", path: "/vacaciones/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Gestionar Solcitudes", path: "/vacaciones/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+    ],
+    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/vacaciones/solicitud",
+      },
+    },
   },
   {
-    label: "Gestión de Aguinaldos",
+    label: "Aguinaldos",
     icon: <PiBank />,
     path: "/aguinaldos",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
@@ -101,7 +111,7 @@ export const NAV_MAIN: NavItem[] = [
     },
   },
   {
-    label: "Gestión de Liquidaciones",
+    label: "Liquidaciones",
     icon: <FiScissors />,
     path: "/liquidaciones",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
@@ -113,7 +123,7 @@ export const NAV_MAIN: NavItem[] = [
     roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
   },
   {
-    label: "Gestión de Incapacidades",
+    label: "Incapacidades",
     icon: <PiHospital />,
     path: "/incapacidades",
     roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
@@ -122,7 +132,17 @@ export const NAV_MAIN: NavItem[] = [
     label: "Permisos",
     icon: <FiUsers />,
     path: "/permisos",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    children: [
+      { label: "Solicitud", path: "/permisos/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+    ],
+    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/permisos/solicitud",
+      },
+    },
   },
 ];
 

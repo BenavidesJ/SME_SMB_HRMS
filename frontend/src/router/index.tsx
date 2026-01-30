@@ -24,6 +24,11 @@ import CiclosPago from "../pages/Private/mantenimientos/ciclosPago/CiclosPago";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
 import UIdocs from "../pages/Private/UIdocs";
 import NotFoundPage from "../pages/Public/NotFoundPage";
+import { SolicitudVacaciones } from "../pages/Private/vacaciones/SolicitudVacaciones";
+import { GestionVacaciones } from "../pages/Private/vacaciones/GestionVacaciones";
+import { SolicitudPermisos } from "../pages/Private/permisos/SolicitudPermisos";
+import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
+import { Planillas } from "../pages/Private/planillas/Planillas";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -99,7 +104,45 @@ export const router = createBrowserRouter([
           {
             path: "gestion",
             element: <GestionSolicitudes />,
-            handle: { crumb: "Gestionar solicitudes" },
+            handle: { crumb: "Gestión Solicitudes" },
+          },
+        ],
+      },
+
+      {
+        path: "/vacaciones",
+        handle: { crumb: "Vacaciones" },
+        children: [
+          { index: true, element: <Navigate to="/vacaciones/solicitud" replace /> },
+
+          {
+            path: "solicitud",
+            element: <SolicitudVacaciones />,
+            handle: { crumb: "Solicitud" },
+          },
+          {
+            path: "gestion",
+            element: <GestionVacaciones />,
+            handle: { crumb: "Gestión Vacaciones" },
+          },
+        ],
+      },
+
+      {
+        path: "/permisos",
+        handle: { crumb: "Permisos" },
+        children: [
+          { index: true, element: <Navigate to="/permisos/solicitud" replace /> },
+
+          {
+            path: "solicitud",
+            element: <SolicitudPermisos />,
+            handle: { crumb: "Solicitud" },
+          },
+          {
+            path: "gestion",
+            element: <GestionPermisos />,
+            handle: { crumb: "Gestión Permisos" },
           },
         ],
       },
@@ -108,6 +151,12 @@ export const router = createBrowserRouter([
         path: "/incapacidades",
         element: <RegistroIncapacidades />,
         handle: { crumb: "Incapacidades" },
+      },
+
+      {
+        path: "/planillas",
+        element: <Planillas />,
+        handle: { crumb: "Generación y gestión de planillas" },
       },
 
       {

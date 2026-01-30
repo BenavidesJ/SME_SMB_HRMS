@@ -16,6 +16,8 @@ import { useMemo } from "react";
 const PARENTS_THAT_REDIRECT: Record<string, string> = {
   "/asistencia": "/asistencia/marca",
   "/horas-extra": "/horas-extra/solicitud",
+  "/vacaciones": "/vacaciones/solicitud",
+  "/permisos": "/permisos/solicitud",
 };
 
 export function AppBreadcrumb() {

@@ -5,7 +5,7 @@ import { getVacacionesPorColaborador, postVacaciones } from "../controllers/vaca
 const router = Router();
 
 router.post("/", authorization, postVacaciones);
-router.get("/colaborador", authorization, getVacacionesPorColaborador);
+router.get("/colaborador/:id_colaborador", authorization, getVacacionesPorColaborador);
 // router.patch("/solicitud/:id", authorization, );
 
 export default router;

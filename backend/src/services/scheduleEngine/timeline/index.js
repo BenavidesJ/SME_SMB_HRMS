@@ -1,6 +1,6 @@
 export { buildPayrollTimeline } from "./payrollTimelineBuilder.js";
 
-export { resolveDayEvent } from "./dayResolver.js";
+export { resolveDay } from "./dayResolver.js";
 export { buildEpisodes } from "./episodeTracker.js";
 
 export { TIMELINE_EVENT_TYPES } from "./timelineTypes.js";
