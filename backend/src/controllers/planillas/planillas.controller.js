@@ -23,6 +23,7 @@ import {
   Incapacidad,
   SolicitudVacaciones,
 } from "../../models/index.js";
+import { obtenerDetallesPlanilla } from "./handlers/planilla/obtenerDetallesPlanillaPorColaboradores.js";
 
 const models = {
   sequelize,
@@ -110,6 +111,31 @@ export const generarDetallePlanillaController = async (req, res, next) => {
     });
   } catch (err) {
     next(err);
+  }
+};
+
+export const obtenerDetallesPlanillaController = async (req, res, next) => {
+  try {
+    const { id_periodo, colaboradores } = req.body;
+
+    const payload = {
+      id_periodo_planilla: id_periodo,
+      id_colaboradores: colaboradores,
+    };
+
+    const data = await obtenerDetallesPlanilla({
+      models,
+      payload,
+    });
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Detalle de planilla consultado correctamente",
+      data,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 

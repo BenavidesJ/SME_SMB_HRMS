@@ -175,7 +175,7 @@ export const Planillas = () => {
                 cursor="pointer"
                 transition="transform 150ms ease"
                 _hover={{ transform: "scale(1.01)" }}
-                onClick={() => navigate(`planillas/periodo_planilla/${period.id}`)}
+                onClick={() => navigate(`/planillas/periodo_planilla/${period.id}`)}
               >
                 <Card.Header>
                   <Card.Title>Periodo planilla de {renderDate(period.fecha_inicio)} - {renderDate(period.fecha_fin)}</Card.Title>

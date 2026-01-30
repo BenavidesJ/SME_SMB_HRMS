@@ -29,6 +29,7 @@ import { GestionVacaciones } from "../pages/Private/vacaciones/GestionVacaciones
 import { SolicitudPermisos } from "../pages/Private/permisos/SolicitudPermisos";
 import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
+import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -157,6 +158,14 @@ export const router = createBrowserRouter([
         path: "/planillas",
         element: <Planillas />,
         handle: { crumb: "Generación y gestión de planillas" },
+      },
+      {
+        path: "/planillas/periodo_planilla/:id",
+        element: <DetallePlanilla />,
+        handle: {
+          crumb: ({ params }: { params: Record<string, string> }) =>
+            `Periodo (${shortId(params.id)})`,
+        },
       },
 
       {

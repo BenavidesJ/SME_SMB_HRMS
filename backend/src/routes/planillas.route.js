@@ -1,6 +1,6 @@
 import express from 'express';
 import { authorization } from '../middlewares/authorization.js';
-import { actualizarPeriodoController, crearCicloPago, crearPeriodoController, desactivarPeriodoController, generarDetallePlanillaController, obtenerPeriodoController, obtenerPeriodosController, obtenerTodosCiclos } from '../controllers/planillas/planillas.controller.js';
+import { actualizarPeriodoController, crearCicloPago, crearPeriodoController, desactivarPeriodoController, generarDetallePlanillaController, obtenerDetallesPlanillaController, obtenerPeriodoController, obtenerPeriodosController, obtenerTodosCiclos } from '../controllers/planillas/planillas.controller.js';
 
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post('/ciclos_pago', authorization, crearCicloPago);
 router.get('/ciclos_pago', authorization, obtenerTodosCiclos);
 // Generar Planillas
 router.post('/', authorization, generarDetallePlanillaController);
+router.post('/detalle', authorization, obtenerDetallesPlanillaController);
 
 // Generar Periodo de planillas
 router.post('/periodo_planilla', authorization, crearPeriodoController);

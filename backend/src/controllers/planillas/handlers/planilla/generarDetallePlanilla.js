@@ -162,7 +162,17 @@ export async function generarDetallePlanilla({ models, payload, config }) {
       const deducciones = 0;
       const neto = round2(bruto - deducciones);
 
-      const row = await models.DetallePlanilla.create({
+      const existing = await models.DetallePlanilla.findOne({
+        where: {
+          id_periodo,
+          id_colaborador: idColaborador,
+          id_contrato,
+        },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE,
+      });
+
+      const payloadRow = {
         id_periodo,
         id_colaborador: idColaborador,
         id_contrato,
@@ -174,7 +184,15 @@ export async function generarDetallePlanilla({ models, payload, config }) {
         deducciones,
         neto,
         generado_por: Number(generado_por),
-      }, { transaction: tx });
+      };
+
+      let row;
+      if (existing) {
+        await existing.update(payloadRow, { transaction: tx });
+        row = existing;
+      } else {
+        row = await models.DetallePlanilla.create(payloadRow, { transaction: tx });
+      }
 
       await tx.commit();
 
