@@ -22,7 +22,7 @@ interface VacacionPayload {
 
 interface VacacionListItem extends VacacionPayload {
   id_solicitud_vacaciones: number;
-  estado_solicitud?: number;
+  estado_solicitud?: string;
   dias_aprobados?: string;
   dias_solicitados?: string;
   estadoSolicitudVacaciones?: {
@@ -155,8 +155,8 @@ export const SolicitudVacaciones = () => {
                     <Text fontWeight="semibold">{item.fecha_inicio} → {item.fecha_fin}</Text>
                     <Text fontSize="xs" color="gray.500" mt={1}>
                       Estado:{" "}
-                      <Badge {...estadoBadgeProps(item.estadoSolicitudVacaciones?.estado)}>
-                        {toTitleCase(item.estadoSolicitudVacaciones?.estado ?? "Desconocido")}
+                      <Badge {...estadoBadgeProps(item.estado_solicitud)}>
+                        {toTitleCase(item.estado_solicitud ?? "Desconocido")}
                       </Badge>
                     </Text>
                     <Text fontSize="xs" color="gray.500" mt={1}>

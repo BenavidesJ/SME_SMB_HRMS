@@ -1,6 +1,7 @@
 import { HTTP_CODES } from "../../common/strings.js";
 
 import { crearSolicitudVacaciones } from "./handlers/solicitud/crearSolicitud.js";
+import { obtenerSolicitudes } from "./handlers/solicitud/obtenerSolicitudesPorColaborador.js";
 
 import {
   getVacacionesByColaborador,
@@ -52,9 +53,8 @@ export const getVacacionesPorColaborador = async (req, res, next) => {
     const limit = Number(req.query.limit ?? 50);
     const offset = Number(req.query.offset ?? 0);
 
-    const data = await getVacacionesByColaborador({
-      models: { SolicitudVacaciones },
-      idColaborador: id_colaborador,
+    const data = await obtenerSolicitudes({
+      id_colaborador,
       limit,
       offset,
     });

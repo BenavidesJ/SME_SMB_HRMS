@@ -65,6 +65,7 @@ export async function getVacacionesByColaborador({
     transaction,
   });
 
+  console.log("debug",rows);
   return rows;
 }
 
