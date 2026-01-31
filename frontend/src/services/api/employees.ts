@@ -48,3 +48,7 @@ export const getCantonesPorProvincia = (id_provincia: number) => {
 export const getDistritosPorCanton = (id_provincia: number) => {
   return api.get<ApiResponse<DistritosPorCantonResponse>>(`cantones/${id_provincia}/distritos`);
 };
+
+export const deleteJornada = (id: number) => {
+  return api.delete(`tipos_jornada/${id}`);
+};

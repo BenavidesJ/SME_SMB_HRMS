@@ -12,16 +12,15 @@ import {
   HorarioLaboral,
   Feriado,
   Incapacidad,
+  Usuario,
+  Rol
 } from "../../../../models/index.js";
 import { assertNoLeaveOverlapRange } from "../../../../services/scheduleEngine/leaveGuard.js";
 import { assertNoIncapacityOverlapRange } from "../../../../services/scheduleEngine/incapacityGuard.js";
 import { validateLeaveByDateRange } from "../../../../services/scheduleEngine/leavesByDateRange.js";
 import { loadActiveContractAndTemplate, loadHolidaysMap } from "../../../../services/scheduleEngine/providers/sequelizeScheduleProvider.js";
-
-// import { assertNoIncapacityOverlapRange } from "../../../services/scheduleEngine/incapacityGuard.js";
-// import { assertNoLeaveOverlapRange } from "../../../services/scheduleEngine/leaveGuard.js"; // (el guard que acordamos)
-// import { loadActiveContractAndTemplate, loadHolidaysMap } from "../../../services/scheduleEngine/sequelizeScheduleProvider.js";
-// import { validateLeaveByDateRange } from "../../../services/scheduleEngine/leavesByDateRange.js";
+import { plantillaSolicitudPermisos } from "../../../../common/htmlLayouts/plantillaSolicitudPermisos.js";
+import { sendEmail } from "../../../../services/mail.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -192,7 +191,56 @@ export const crearSolicitudPermisoLicencia = async ({
       { transaction: tx }
     );
 
+    const solicitante = await Colaborador.findByPk(id_colaborador, {
+      attributes: ["id_colaborador", "identificacion", "nombre", "primer_apellido", "segundo_apellido"],
+      transaction: tx,
+    });
+
     await tx.commit();
+
+    let emailsSent = 0;
+
+    try {
+      const adminUsers = await Usuario.findAll({
+        include: [
+          {
+            model: Rol,
+            attributes: ["nombre"],
+            through: { attributes: [] },
+            where: { nombre: "ADMINISTRADOR" },
+            required: true,
+          },
+          {
+            model: Colaborador,
+            attributes: ["correo_electronico", "nombre", "primer_apellido", "segundo_apellido"],
+            required: true,
+          },
+        ],
+        attributes: ["id_usuario", "id_colaborador"],
+      });
+
+      const recipients = adminUsers
+        .map((u) => u?.colaborador?.correo_electronico)
+        .filter(Boolean);
+
+      for (const recipient of recipients) {
+        await sendEmail({
+          recipient,
+          subject: "Nueva solicitud de permisos",
+          message: plantillaSolicitudPermisos({
+            solicitanteNombre: `${solicitante.nombre} ${solicitante.primer_apellido} ${solicitante.segundo_apellido}`,
+            tipo: tipo.tipo_solicitud,
+            fechaInicio: startDateStr,
+            fechaFin: endDateStr,
+            cantidadDias: days,
+            cantidadHoras: hours
+          }),
+        });
+        emailsSent++;
+      }
+    } catch (mailErr) {
+      console.log("No se pudo enviar correo de notificación:", mailErr);
+    }
 
     return {
       ...row.toJSON(),

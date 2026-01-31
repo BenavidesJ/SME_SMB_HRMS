@@ -403,7 +403,7 @@ export async function seed1AñoDatos() {
     // - María (id 2) y Laura (id 4) quedan como ADMINISTRADOR
     const colaboradoresPayload = [
       {
-        id_colaborador: 1,
+        id_colaborador: 2,
         nombre: "Carlos",
         primer_apellido: "Vargas",
         segundo_apellido: "Solano",
@@ -425,7 +425,7 @@ export async function seed1AñoDatos() {
         },
       },
       {
-        id_colaborador: 2,
+        id_colaborador: 3,
         nombre: "María",
         primer_apellido: "Hernández",
         segundo_apellido: "Rojas",
@@ -447,7 +447,7 @@ export async function seed1AñoDatos() {
         },
       },
       {
-        id_colaborador: 3,
+        id_colaborador: 4,
         nombre: "Andrés",
         primer_apellido: "Chaves",
         segundo_apellido: "Mora",
@@ -469,7 +469,7 @@ export async function seed1AñoDatos() {
         },
       },
       {
-        id_colaborador: 4,
+        id_colaborador: 5,
         nombre: "Laura",
         primer_apellido: "Gómez",
         segundo_apellido: "Jiménez",
@@ -491,7 +491,7 @@ export async function seed1AñoDatos() {
         },
       },
       {
-        id_colaborador: 5,
+        id_colaborador: 6,
         nombre: "Diego",
         primer_apellido: "Araya",
         segundo_apellido: "Sibaja",

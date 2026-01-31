@@ -30,6 +30,7 @@ import { SolicitudPermisos } from "../pages/Private/permisos/SolicitudPermisos";
 import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
 import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
+import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -224,6 +225,11 @@ export const router = createBrowserRouter([
         path: "/mantenimientos-consultas/ciclos_pago",
         element: <CiclosPago />,
         handle: { crumb: "Ciclos de pago" },
+      },
+      {
+        path: "/mantenimientos-consultas/tipos_jornada",
+        element: <TiposJornada />,
+        handle: { crumb: "Tipos de Jornada" },
       },
 
       {

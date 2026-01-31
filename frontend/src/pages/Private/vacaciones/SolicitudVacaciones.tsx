@@ -31,10 +31,6 @@ interface VacacionListItem extends VacacionPayload {
   };
 }
 
-interface VacacionesResponse {
-  data: VacacionListItem[];
-}
-
 type CreateVacacionFormValues = Pick<VacacionPayload, "fecha_inicio" | "fecha_fin" | "observaciones">;
 
 const estadoBadgeProps = (estado?: string) => {
@@ -63,10 +59,10 @@ export const SolicitudVacaciones = () => {
   );
 
   const {
-    data: vacacionesResponse = { data: [] },
+    data: vacacionesResponse = [],
     isLoading: isLoadingMyVacaciones,
     refetch: refetchMyVacaciones,
-  } = useApiQuery<VacacionesResponse>({
+  } = useApiQuery<VacacionListItem[]>({
     url: `vacaciones/colaborador/${userID}`,
     enabled: Boolean(userID),
   });
@@ -107,10 +103,10 @@ export const SolicitudVacaciones = () => {
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
 
   const {
-    data: otherVacacionesResponse = { data: [] },
+    data: otherVacacionesResponse = [],
     isLoading: isLoadingOtherVacaciones,
     refetch: refetchOtherVacaciones,
-  } = useApiQuery<VacacionesResponse>({
+  } = useApiQuery<VacacionListItem[]>({
     url: selectedCollaboratorId ? `vacaciones/colaborador/${selectedCollaboratorId}` : "",
     enabled: hasAdminPermission && Boolean(selectedCollaboratorId),
   });
@@ -145,41 +141,46 @@ export const SolicitudVacaciones = () => {
   }, []);
 
   const renderVacacionesList = useCallback(
-    (items: VacacionListItem[], isLoading: boolean, emptyMessage: string) => (
-      <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
-        <ScrollArea.Viewport>
-          <Stack gap={4}>
-            {isLoading && <AppLoader />}
-            {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
-            {items.map((item) => (
-              <Box key={item.id_solicitud_vacaciones} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
-                <Text fontWeight="semibold">{item.fecha_inicio} → {item.fecha_fin}</Text>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Estado:{" "}
-                  <Badge {...estadoBadgeProps(item.estadoSolicitudVacaciones?.estado)}>
-                    {toTitleCase(item.estadoSolicitudVacaciones?.estado ?? "Desconocido")}
-                  </Badge>
-                </Text>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
-                </Text>
-                {item.dias_aprobados && (
-                  <Text fontSize="xs" color="gray.500" mt={1}>
-                    Días aprobados: {item.dias_aprobados}
-                  </Text>
-                )}
-                {item.observaciones && (
-                  <Text fontSize="xs" color="gray.500" mt={1}>
-                    Observaciones: {item.observaciones}
-                  </Text>
-                )}
-              </Box>
-            ))}
-          </Stack>
-        </ScrollArea.Viewport>
-        <ScrollArea.Scrollbar orientation="vertical" />
-      </ScrollArea.Root>
-    ),
+    (items: VacacionListItem[], isLoading: boolean, emptyMessage: string) => {
+      console.log(items)
+      return (
+        (
+          <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
+            <ScrollArea.Viewport>
+              <Stack gap={4}>
+                {isLoading && <AppLoader />}
+                {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
+                {items.map((item) => (
+                  <Box key={item.id_solicitud_vacaciones} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
+                    <Text fontWeight="semibold">{item.fecha_inicio} → {item.fecha_fin}</Text>
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Estado:{" "}
+                      <Badge {...estadoBadgeProps(item.estadoSolicitudVacaciones?.estado)}>
+                        {toTitleCase(item.estadoSolicitudVacaciones?.estado ?? "Desconocido")}
+                      </Badge>
+                    </Text>
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
+                    </Text>
+                    {item.dias_aprobados && (
+                      <Text fontSize="xs" color="gray.500" mt={1}>
+                        Días aprobados: {item.dias_aprobados}
+                      </Text>
+                    )}
+                    {item.observaciones && (
+                      <Text fontSize="xs" color="gray.500" mt={1}>
+                        Observaciones: {item.observaciones}
+                      </Text>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </ScrollArea.Viewport>
+            <ScrollArea.Scrollbar orientation="vertical" />
+          </ScrollArea.Root>
+        )
+      )
+    },
     [getDurationLabel],
   );
 
@@ -192,7 +193,7 @@ export const SolicitudVacaciones = () => {
     const payload: VacacionPayload = {
       ...formValues,
       id_colaborador: Number(userID),
-      id_aprobador: 99,
+      id_aprobador: 1,
     };
 
     try {
@@ -213,8 +214,8 @@ export const SolicitudVacaciones = () => {
     return true;
   };
 
-  const myVacaciones = vacacionesResponse?.data ?? [];
-  const otherVacaciones = otherVacacionesResponse?.data ?? [];
+  const myVacaciones = vacacionesResponse;
+  const otherVacaciones = otherVacacionesResponse;
 
   console.log(myVacaciones)
 

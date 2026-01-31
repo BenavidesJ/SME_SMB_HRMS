@@ -1,11 +1,13 @@
 import { Layout } from "../../components/layout"
+import { useAuth } from "../../context/AuthContext";
 
 
 
 const Main = () => {
+  const { user } = useAuth();
   return (
-    <Layout pageTitle="Página Principal">
-      <h1>Página Principal</h1>
+    <Layout pageTitle={`Bienvenido de vuelta ${user?.nombre}`}>
+      <h1>Sistema de Gestión de Recursos Humanos de BioAlquimia</h1>
     </Layout>
   )
 }
