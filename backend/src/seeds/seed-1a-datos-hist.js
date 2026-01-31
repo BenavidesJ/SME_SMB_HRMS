@@ -352,14 +352,17 @@ function resolveAddressFromIndex(geo, input) {
   };
 }
 
-function generateUsername(nombre, primer_apellido, identificacion) {
-  const base =
-    `${String(nombre || "").trim().split(" ")[0]}.${String(primer_apellido || "").trim()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9.]/g, "") || "user";
-  const last4 = String(identificacion).slice(-4);
-  return `${base}.${last4}`;
-}
+export const generateUsername = (nombre, primer_apellido, identificacion) => {
+  if (!nombre || !primer_apellido || !identificacion) {
+    throw new Error("Faltan datos para generar el nombre de usuario");
+  }
+
+  const inicial = nombre.trim().charAt(0).toUpperCase();
+  const apellido = primer_apellido.trim().replace(/\s+/g, '');
+  const ultimos4 = identificacion.slice(-4);
+
+  return `${inicial}${apellido}${ultimos4}`;
+};
 
 function* iterDaysInclusive(start, end) {
   let d = start.startOf("day");
@@ -387,6 +390,8 @@ export async function seed1AñoDatos() {
     const ids = await getCatalogIds(tx);
     const tipoSolicitudId = await getTipoSolicitudMap(tx);
     const geo = await buildGeoIndex(tx);
+    const correo = "jbenavideso_emc@uia.ac.cr";
+    const inicioContrato = "2025-04-01";
 
     // Password fija para todos
     const FIXED_PASSWORD = "pAssword123*";
@@ -410,13 +415,13 @@ export async function seed1AñoDatos() {
         id_genero: 1,
         identificacion: 101010101,
         fecha_nacimiento: "1992-03-12",
-        correo_electronico: "carlos.vargas@bioalquimia.cr",
-        fecha_ingreso: "2024-06-03",
+        correo_electronico: correo,
+        fecha_ingreso: inicioContrato,
         cantidad_hijos: 1,
         estado_civil: 2,
         estado: ids.estado.ACTIVO,
         telefono: 88881111,
-        rol: "ADMIN", // si existe usuario/rol en otros seeds, aquí no duplicamos; solo aseguramos si faltara
+        rol: "ADMIN",
         direccion: {
           provincia: "SAN JOSÉ",
           canton: "SAN JOSÉ",
@@ -432,8 +437,8 @@ export async function seed1AñoDatos() {
         id_genero: 2,
         identificacion: 202020202,
         fecha_nacimiento: "1995-11-25",
-        correo_electronico: "maria.hernandez@bioalquimia.cr",
-        fecha_ingreso: "2025-01-15",
+        correo_electronico: correo,
+        fecha_ingreso: inicioContrato,
         cantidad_hijos: 0,
         estado_civil: 1,
         estado: ids.estado.ACTIVO,
@@ -453,8 +458,8 @@ export async function seed1AñoDatos() {
         segundo_apellido: "Mora",
         id_genero: 1,
         identificacion: 303030303,
-        fecha_nacimiento: "1988-08-04",
-        correo_electronico: "andres.chaves@bioalquimia.cr",
+        correo_electronico: correo,
+        fecha_nacimiento: inicioContrato,
         fecha_ingreso: "2023-09-01",
         cantidad_hijos: 2,
         estado_civil: 2,
@@ -476,8 +481,8 @@ export async function seed1AñoDatos() {
         id_genero: 2,
         identificacion: 404040404,
         fecha_nacimiento: "1999-02-18",
-        correo_electronico: "laura.gomez@bioalquimia.cr",
-        fecha_ingreso: "2025-10-07",
+        correo_electronico: correo,
+        fecha_ingreso: inicioContrato,
         cantidad_hijos: 0,
         estado_civil: 1,
         estado: ids.estado.ACTIVO,
@@ -498,8 +503,8 @@ export async function seed1AñoDatos() {
         id_genero: 1,
         identificacion: 505050505,
         fecha_nacimiento: "1990-06-30",
-        correo_electronico: "diego.araya@bioalquimia.cr",
-        fecha_ingreso: "2022-04-11",
+        correo_electronico: correo,
+        fecha_ingreso: inicioContrato,
         cantidad_hijos: 1,
         estado_civil: 2,
         estado: ids.estado.ACTIVO,
@@ -588,7 +593,7 @@ export async function seed1AñoDatos() {
       const desiredRoleId = String(c.rol || "").toUpperCase() === "ADMIN" ? ids.roles.ADMIN : ids.roles.EMPLEADO;
 
       if (!userExists) {
-        const username = generateUsername(c.nombre, c.primer_apellido, c.identificacion);
+        const username = generateUsername(c.nombre, c.primer_apellido, String(c.identificacion));
 
         const user = await Usuario.create(
           {
@@ -638,7 +643,7 @@ export async function seed1AñoDatos() {
         id_contrato: nextContratoId++,
         id_colaborador: c.id_colaborador,
         id_puesto: c.puesto.id,
-        fecha_inicio: "2025-04-01",
+        fecha_inicio: inicioContrato,
         id_tipo_contrato: ids.contrato.TIPO_CONTRATO_INDEFINIDO,
         id_tipo_jornada: ids.contrato.TIPO_JORNADA_DIURNA,
         horas_semanales: HORAS_SEMANALES,

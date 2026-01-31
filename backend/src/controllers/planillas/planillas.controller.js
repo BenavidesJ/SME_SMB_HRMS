@@ -7,6 +7,11 @@ import { obtenerPeriodos } from "./handlers/periodos/obtenerPeriodos.js";
 import { obtenerPeriodoPorId } from "./handlers/periodos/obtenerPeriodo.js";
 import { actualizarPeriodo } from "./handlers/periodos/actualizarPeriodo.js";
 import { desactivarPeriodo } from "./handlers/periodos/desactivarPeriodo.js";
+import { crearTipoDeduccion } from "./handlers/deducciones/crearTipoDeduccion.js";
+import { actualizarTipoDeduccion } from "./handlers/deducciones/actualizarTipoDeduccion.js";
+import { obtenerTipoDeduccionPorId } from "./handlers/deducciones/obtenerTipoDeduccionPorId.js";
+import { obtenerTiposDeduccion } from "./handlers/deducciones/obtenerTiposDeduccion.js";
+import { eliminarTipoDeduccion } from "./handlers/deducciones/eliminarTipoDeduccion.js";
 
 import {
   sequelize,
@@ -265,6 +270,140 @@ export const desactivarPeriodoController = async (req, res, next) => {
       success: true,
       status_code: HTTP_CODES.SUCCESS.OK,
       message: "Periodo de planilla desactivado correctamente",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const crearTipoDeduccionController = async (req, res, next) => {
+  try {
+    const nombre = sanitizeText(req.body?.nombre, "nombre", 45);
+    const esVoluntaria = parseBoolean(
+      req.body?.es_voluntaria ?? req.body?.esVoluntaria,
+      "es_voluntaria",
+      { required: true }
+    );
+    const esPorcentaje = parseBoolean(
+      req.body?.es_porcentaje ?? req.body?.esPorcentaje,
+      "es_porcentaje"
+    );
+    const esMonto = parseBoolean(
+      req.body?.es_monto ?? req.body?.esMonto,
+      "es_monto"
+    );
+    const fechaUltimoAjuste = sanitizeDate(
+      req.body?.fecha_ultimo_ajuste ?? req.body?.fechaUltimoAjuste,
+      "fecha_ultimo_ajuste"
+    );
+
+    const data = await crearTipoDeduccion({
+      nombre,
+      esPorcentaje,
+      esMonto,
+      esVoluntaria,
+      fechaUltimoAjuste,
+    });
+
+    return res.status(HTTP_CODES.SUCCESS.CREATED).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.CREATED,
+      message: "Tipo de deducción creado correctamente",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerTiposDeduccionController = async (_req, res, next) => {
+  try {
+    const data = await obtenerTiposDeduccion();
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const obtenerTipoDeduccionController = async (req, res, next) => {
+  try {
+    const id_tipo_deduccion = toNumberId(req.params?.id);
+    const data = await obtenerTipoDeduccionPorId(id_tipo_deduccion);
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Consulta exitosa",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const actualizarTipoDeduccionController = async (req, res, next) => {
+  try {
+    const id_tipo_deduccion = toNumberId(req.params?.id);
+    const payload = {};
+
+    if (req.body?.nombre !== undefined) {
+      payload.nombre = sanitizeText(req.body?.nombre, "nombre", 45);
+    }
+    if (req.body?.es_porcentaje !== undefined || req.body?.esPorcentaje !== undefined) {
+      payload.esPorcentaje = parseBoolean(
+        req.body?.es_porcentaje ?? req.body?.esPorcentaje,
+        "es_porcentaje"
+      );
+    }
+    if (req.body?.es_monto !== undefined || req.body?.esMonto !== undefined) {
+      payload.esMonto = parseBoolean(
+        req.body?.es_monto ?? req.body?.esMonto,
+        "es_monto"
+      );
+    }
+    if (req.body?.es_voluntaria !== undefined || req.body?.esVoluntaria !== undefined) {
+      payload.esVoluntaria = parseBoolean(
+        req.body?.es_voluntaria ?? req.body?.esVoluntaria,
+        "es_voluntaria"
+      );
+    }
+    if (
+      req.body?.fecha_ultimo_ajuste !== undefined ||
+      req.body?.fechaUltimoAjuste !== undefined
+    ) {
+      payload.fechaUltimoAjuste = sanitizeDate(
+        req.body?.fecha_ultimo_ajuste ?? req.body?.fechaUltimoAjuste,
+        "fecha_ultimo_ajuste"
+      );
+    }
+
+    const data = await actualizarTipoDeduccion(id_tipo_deduccion, payload);
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Tipo de deducción actualizado correctamente",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const eliminarTipoDeduccionController = async (req, res, next) => {
+  try {
+    const id_tipo_deduccion = toNumberId(req.params?.id);
+    const data = await eliminarTipoDeduccion(id_tipo_deduccion);
+
+    return res.status(HTTP_CODES.SUCCESS.OK).json({
+      success: true,
+      status_code: HTTP_CODES.SUCCESS.OK,
+      message: "Tipo de deducción eliminado correctamente",
       data,
     });
   } catch (error) {
