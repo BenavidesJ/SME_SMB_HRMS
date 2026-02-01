@@ -1,362 +1,280 @@
+// src/models/index.js
 import { sequelize } from "../config/db.js";
 
-// ========================================
-//  MODELOS
-// ========================================
-import { Colaborador } from "./colaborador.js";
-import { Usuario } from "./usuario.js";
-import { Genero } from "./genero.js";
-import { EstadoCivil } from "./estado_civil.js";
-import { Estado } from "./estado.js";
-import { Rol } from "./rol.js";
-import { UsuarioRol } from "./usuario_rol.js";
-import { BitacoraAuditoria } from "./bitacora_auditoria.js";
+import { Aguinaldo } from "./definitions/aguinaldo.js";
+import { BitacoraAuditoria } from "./definitions/bitacora_auditoria.js";
+import { Canton } from "./definitions/canton.js";
+import { CausaLiquidacion } from "./definitions/causa_liquidacion.js";
+import { CicloPago } from "./definitions/ciclo_pago.js";
+import { Colaborador } from "./definitions/colaborador.js";
+import { Contrato } from "./definitions/contrato.js";
+import { Deduccion } from "./definitions/deduccion.js";
+import { DeduccionPlanilla } from "./definitions/deduccion_planilla.js";
+import { Departamento } from "./definitions/departamento.js";
+import { Direccion } from "./definitions/direccion.js";
+import { Distrito } from "./definitions/distrito.js";
+import { Estado } from "./definitions/estado.js";
+import { EstadoCivil } from "./definitions/estadoCivil.js";
+import { Evaluacion } from "./definitions/evaluacion.js";
+import { EvaluacionRubro } from "./definitions/evaluacion_rubro.js";
+import { Feriado } from "./definitions/feriado.js";
+import { HorarioLaboral } from "./definitions/horarioLaboral.js";
+import { Incapacidad } from "./definitions/incapacidad.js";
+import { JornadaDiaria } from "./definitions/jornadaDiaria.js";
+import { Liquidacion } from "./definitions/liquidacion.js";
+import { MarcaAsistencia } from "./definitions/marcaAsistencia.js";
+import { PeriodoPlanilla } from "./definitions/periodoPlanilla.js";
+import { Planilla } from "./definitions/planilla.js";
+import { Provincia } from "./definitions/provincia.js";
+import { Puesto } from "./definitions/puesto.js";
+import { Rol } from "./definitions/rol.js";
+import { RubroEvaluacion } from "./definitions/rubro_evaluacion.js";
+import { SaldoVacaciones } from "./definitions/saldo_vacaciones.js";
+import { SolicitudHoraExtra } from "./definitions/solicitud_hora_extra.js";
+import { SolicitudPermisos } from "./definitions/solicitud_permisos.js";
+import { SolicitudVacaciones } from "./definitions/solicitud_vacaciones.js";
+import { TipoContrato } from "./definitions/tipo_contrato.js";
+import { TipoHoraExtra } from "./definitions/tipo_hora_extra.js";
+import { TipoIncapacidad } from "./definitions/tipo_incapacidad.js";
+import { TipoJornada } from "./definitions/tipo_jornada.js";
+import { TipoMarca } from "./definitions/tipo_marca.js";
+import { Usuario } from "./definitions/usuario.js";
+
+// init
+export const models = {};
+models.Estado = Estado(sequelize);
+models.EstadoCivil = EstadoCivil(sequelize);
+models.Provincia = Provincia(sequelize);
+models.Canton = Canton(sequelize);
+models.Distrito = Distrito(sequelize);
+models.Direccion = Direccion(sequelize);
+
+models.Colaborador = Colaborador(sequelize);
+models.Usuario = Usuario(sequelize);
+models.BitacoraAuditoria = BitacoraAuditoria(sequelize);
+models.Rol = Rol(sequelize);
+
+models.Departamento = Departamento(sequelize);
+models.Puesto = Puesto(sequelize);
+models.TipoContrato = TipoContrato(sequelize);
+models.TipoJornada = TipoJornada(sequelize);
+models.Contrato = Contrato(sequelize);
+models.HorarioLaboral = HorarioLaboral(sequelize);
+
+models.TipoIncapacidad = TipoIncapacidad(sequelize);
+models.Incapacidad = Incapacidad(sequelize);
+models.Feriado = Feriado(sequelize);
+models.JornadaDiaria = JornadaDiaria(sequelize);
+
+models.Aguinaldo = Aguinaldo(sequelize);
+models.CausaLiquidacion = CausaLiquidacion(sequelize);
+models.Liquidacion = Liquidacion(sequelize);
+models.SaldoVacaciones = SaldoVacaciones(sequelize);
+
+models.Evaluacion = Evaluacion(sequelize);
+models.RubroEvaluacion = RubroEvaluacion(sequelize);
+models.EvaluacionRubro = EvaluacionRubro(sequelize);
+
+models.MarcaAsistencia = MarcaAsistencia(sequelize);
+models.TipoMarca = TipoMarca(sequelize);
+
+models.CicloPago = CicloPago(sequelize);
+models.PeriodoPlanilla = PeriodoPlanilla(sequelize);
+models.Planilla = Planilla(sequelize);
+models.Deduccion = Deduccion(sequelize);
+models.DeduccionPlanilla = DeduccionPlanilla(sequelize);
+
+models.SolicitudVacaciones = SolicitudVacaciones(sequelize);
+models.SolicitudPermisos = SolicitudPermisos(sequelize);
+models.TipoHoraExtra = TipoHoraExtra(sequelize);
+models.SolicitudHoraExtra = SolicitudHoraExtra(sequelize);
+
+/**
+ * Associations
+ */
+
+// Estados y catálogos
+models.Colaborador.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.Colaborador, { foreignKey: "estado", as: "colaboradores" });
+
+models.Contrato.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.Contrato, { foreignKey: "estado", as: "contratos" });
+
+models.HorarioLaboral.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.HorarioLaboral, { foreignKey: "estado", as: "horariosLaborales" });
+
+models.PeriodoPlanilla.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.PeriodoPlanilla, { foreignKey: "estado", as: "periodosPlanilla" });
+
+models.Puesto.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.Puesto, { foreignKey: "estado", as: "puestos" });
+
+models.SolicitudPermisos.belongsTo(models.Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitud" });
+models.Estado.hasMany(models.SolicitudPermisos, { foreignKey: "estado_solicitud", as: "solicitudesPermiso" });
+
+models.SolicitudVacaciones.belongsTo(models.Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitud" });
+models.Estado.hasMany(models.SolicitudVacaciones, { foreignKey: "estado_solicitud", as: "solicitudesVacaciones" });
+
+models.SolicitudHoraExtra.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.SolicitudHoraExtra, { foreignKey: "estado", as: "solicitudesHoraExtra" });
+
+models.Usuario.belongsTo(models.Estado, { foreignKey: "estado", as: "estadoRef" });
+models.Estado.hasMany(models.Usuario, { foreignKey: "estado", as: "usuarios" });
+
+// Estado civil
+models.Colaborador.belongsTo(models.EstadoCivil, { foreignKey: "estado_civil", as: "estadoCivilRef" });
+models.EstadoCivil.hasMany(models.Colaborador, { foreignKey: "estado_civil", as: "colaboradores" });
+
+// Geografía
+models.Canton.belongsTo(models.Provincia, { foreignKey: "id_provincia", as: "provincia" });
+models.Provincia.hasMany(models.Canton, { foreignKey: "id_provincia", as: "cantones" });
+
+models.Distrito.belongsTo(models.Canton, { foreignKey: "id_canton", as: "canton" });
+models.Canton.hasMany(models.Distrito, { foreignKey: "id_canton", as: "distritos" });
+
+models.Direccion.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.Direccion, { foreignKey: "id_colaborador", as: "direcciones" });
+
+models.Direccion.belongsTo(models.Provincia, { foreignKey: "id_provincia", as: "provincia" });
+models.Provincia.hasMany(models.Direccion, { foreignKey: "id_provincia", as: "direcciones" });
+
+models.Direccion.belongsTo(models.Canton, { foreignKey: "id_canton", as: "canton" });
+models.Canton.hasMany(models.Direccion, { foreignKey: "id_canton", as: "direcciones" });
+
+models.Direccion.belongsTo(models.Distrito, { foreignKey: "id_distrito", as: "distrito" });
+models.Distrito.hasMany(models.Direccion, { foreignKey: "id_distrito", as: "direcciones" });
 
 // Organización
-import { Departamento } from "./departamento.js";
-import { Puesto } from "./puesto.js";
-import { TipoContrato } from "./tipo_contrato.js";
-import { TipoJornada } from "./tipo_jornada.js";
-import { CicloPago } from "./ciclo_pago.js";
-import { Contrato } from "./contrato.js";
-import { HorarioLaboral } from "./horario_laboral.js";
-import { AjusteSalarial } from "./ajuste_salarial.js";
+models.Departamento.hasMany(models.Puesto, { foreignKey: "id_departamento", as: "puestos" });
+models.Puesto.belongsTo(models.Departamento, { foreignKey: "id_departamento", as: "departamento" });
+
+models.Colaborador.hasMany(models.Contrato, { foreignKey: "id_colaborador", as: "contratos" });
+models.Contrato.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+
+models.Contrato.belongsTo(models.Puesto, { foreignKey: "id_puesto", as: "puesto" });
+models.Puesto.hasMany(models.Contrato, { foreignKey: "id_puesto", as: "contratos" });
+
+models.Contrato.belongsTo(models.TipoContrato, { foreignKey: "id_tipo_contrato", as: "tipoContrato" });
+models.TipoContrato.hasMany(models.Contrato, { foreignKey: "id_tipo_contrato", as: "contratos" });
+
+models.Contrato.belongsTo(models.TipoJornada, { foreignKey: "id_tipo_jornada", as: "tipoJornada" });
+models.TipoJornada.hasMany(models.Contrato, { foreignKey: "id_tipo_jornada", as: "contratos" });
+
+models.HorarioLaboral.belongsTo(models.Contrato, { foreignKey: "id_contrato", as: "contrato" });
+models.Contrato.hasMany(models.HorarioLaboral, { foreignKey: "id_contrato", as: "horarios" });
+
+models.HorarioLaboral.belongsTo(models.TipoJornada, { foreignKey: "id_tipo_jornada", as: "tipoJornada" });
+models.TipoJornada.hasMany(models.HorarioLaboral, { foreignKey: "id_tipo_jornada", as: "horarios" });
+
+// Usuarios y seguridad
+models.Usuario.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.Usuario, { foreignKey: "id_colaborador", as: "usuarios" });
+
+models.BitacoraAuditoria.belongsTo(models.Usuario, { foreignKey: "actor_id", as: "actor" });
+models.Usuario.hasMany(models.BitacoraAuditoria, { foreignKey: "actor_id", as: "bitacoras" });
+
+models.Rol.belongsTo(models.Usuario, { foreignKey: "id_usuario", as: "usuario" });
+models.Usuario.hasMany(models.Rol, { foreignKey: "id_usuario", as: "roles" });
+
+// Aguinaldos
+models.Aguinaldo.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Aguinaldo.belongsTo(models.Colaborador, { foreignKey: "registrado_por", as: "registradoPor" });
+models.Colaborador.hasMany(models.Aguinaldo, { foreignKey: "id_colaborador", as: "aguinaldos" });
+models.Colaborador.hasMany(models.Aguinaldo, { foreignKey: "registrado_por", as: "aguinaldosRegistrados" });
+
+// Vacaciones y liquidaciones
+models.SaldoVacaciones.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasOne(models.SaldoVacaciones, { foreignKey: "id_colaborador", as: "saldoVacaciones" });
+
+models.Liquidacion.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.Liquidacion, { foreignKey: "id_colaborador", as: "liquidaciones" });
+
+models.Liquidacion.belongsTo(models.Colaborador, { foreignKey: "id_aprobador", as: "aprobador" });
+models.Colaborador.hasMany(models.Liquidacion, { foreignKey: "id_aprobador", as: "liquidacionesAprobadas" });
+
+models.Liquidacion.belongsTo(models.CausaLiquidacion, { foreignKey: "causa", as: "causaRef" });
+models.CausaLiquidacion.hasMany(models.Liquidacion, { foreignKey: "causa", as: "liquidaciones" });
+
+models.Liquidacion.belongsTo(models.SaldoVacaciones, { foreignKey: "saldo_vacaciones", as: "saldoVacaciones" });
+models.SaldoVacaciones.hasMany(models.Liquidacion, { foreignKey: "saldo_vacaciones", as: "liquidaciones" });
+
+models.SolicitudVacaciones.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.SolicitudVacaciones, { foreignKey: "id_colaborador", as: "solicitudesVacaciones" });
+
+models.SolicitudVacaciones.belongsTo(models.Colaborador, { foreignKey: "id_aprobador", as: "aprobador" });
+models.Colaborador.hasMany(models.SolicitudVacaciones, { foreignKey: "id_aprobador", as: "vacacionesAprobadas" });
+
+models.SolicitudVacaciones.belongsTo(models.SaldoVacaciones, { foreignKey: "id_saldo_vacaciones", as: "saldoVacaciones" });
+models.SaldoVacaciones.hasMany(models.SolicitudVacaciones, { foreignKey: "id_saldo_vacaciones", as: "solicitudes" });
+
+models.SolicitudPermisos.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.SolicitudPermisos, { foreignKey: "id_colaborador", as: "solicitudesPermisos" });
+
+models.SolicitudPermisos.belongsTo(models.Colaborador, { foreignKey: "id_aprobador", as: "aprobador" });
+models.Colaborador.hasMany(models.SolicitudPermisos, { foreignKey: "id_aprobador", as: "permisosAprobados" });
+
+// Jornadas y asistencia
+models.JornadaDiaria.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.JornadaDiaria, { foreignKey: "id_colaborador", as: "jornadasDiarias" });
+
+models.JornadaDiaria.belongsTo(models.Feriado, { foreignKey: "feriado", as: "feriadoRef" });
+models.Feriado.hasMany(models.JornadaDiaria, { foreignKey: "feriado", as: "jornadas" });
+
+models.JornadaDiaria.belongsTo(models.Incapacidad, { foreignKey: "incapacidad", as: "incapacidadRef" });
+models.Incapacidad.hasMany(models.JornadaDiaria, { foreignKey: "incapacidad", as: "jornadas" });
+
+models.JornadaDiaria.belongsTo(models.SolicitudVacaciones, { foreignKey: "vacaciones", as: "vacacionesRef" });
+models.SolicitudVacaciones.hasMany(models.JornadaDiaria, { foreignKey: "vacaciones", as: "jornadas" });
+
+models.JornadaDiaria.belongsTo(models.SolicitudPermisos, { foreignKey: "permiso", as: "permisoRef" });
+models.SolicitudPermisos.hasMany(models.JornadaDiaria, { foreignKey: "permiso", as: "jornadas" });
+
+models.SolicitudHoraExtra.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.SolicitudHoraExtra, { foreignKey: "id_colaborador", as: "solicitudesHoraExtra" });
+
+models.SolicitudHoraExtra.belongsTo(models.TipoHoraExtra, { foreignKey: "id_tipo_hx", as: "tipoHoraExtra" });
+models.TipoHoraExtra.hasMany(models.SolicitudHoraExtra, { foreignKey: "id_tipo_hx", as: "solicitudes" });
+
+models.MarcaAsistencia.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.MarcaAsistencia, { foreignKey: "id_colaborador", as: "marcasAsistencia" });
+
+models.MarcaAsistencia.belongsTo(models.TipoMarca, { foreignKey: "id_tipo_marca", as: "tipoMarca" });
+models.TipoMarca.hasMany(models.MarcaAsistencia, { foreignKey: "id_tipo_marca", as: "marcas" });
+
+// Incapacidades
+models.Incapacidad.belongsTo(models.TipoIncapacidad, { foreignKey: "id_tipo_incap", as: "tipo" });
+models.TipoIncapacidad.hasMany(models.Incapacidad, { foreignKey: "id_tipo_incap", as: "incapacidades" });
 
 // Evaluaciones
-import { Evaluacion } from "./evaluacion.js";
-import { RubroEvaluacion } from "./rubro_evaluacion.js";
-import { EvaluacionRubro } from "./evaluacion_rubro.js";
+models.Evaluacion.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.Evaluacion, { foreignKey: "id_colaborador", as: "evaluacionesRecibidas" });
+
+models.Evaluacion.belongsTo(models.Colaborador, { foreignKey: "id_evaluador", as: "evaluador" });
+models.Colaborador.hasMany(models.Evaluacion, { foreignKey: "id_evaluador", as: "evaluacionesRealizadas" });
+
+models.EvaluacionRubro.belongsTo(models.Evaluacion, { foreignKey: "id_evaluacion", as: "evaluacion" });
+models.Evaluacion.hasMany(models.EvaluacionRubro, { foreignKey: "id_evaluacion", as: "rubros" });
+
+models.EvaluacionRubro.belongsTo(models.RubroEvaluacion, { foreignKey: "id_rubro_evaluacion", as: "rubro" });
+models.RubroEvaluacion.hasMany(models.EvaluacionRubro, { foreignKey: "id_rubro_evaluacion", as: "evaluaciones" });
 
 // Planillas
-import { PeriodoPlanilla } from "./periodo_planilla.js";
-import { DetallePlanilla } from "./detalle_planilla.js";
-import { TipoDeduccion } from "./tipo_deduccion.js";
-import { DeduccionPlanilla } from "./deduccion_planilla.js";
-import { Aguinaldo } from "./aguinaldo.js";
+models.CicloPago.hasMany(models.PeriodoPlanilla, { foreignKey: "ciclo_pago", as: "periodos" });
+models.PeriodoPlanilla.belongsTo(models.CicloPago, { foreignKey: "ciclo_pago", as: "cicloPago" });
 
-// Ubicación
-import { Provincia } from "./provincia.js";
-import { Canton } from "./canton.js";
-import { Distrito } from "./distrito.js";
-import { Direccion } from "./direccion.js";
+models.PeriodoPlanilla.hasMany(models.Planilla, { foreignKey: "id_periodo", as: "detalles" });
+models.Planilla.belongsTo(models.PeriodoPlanilla, { foreignKey: "id_periodo", as: "periodo" });
 
-// Asistencia / Incapacidades
-import { TipoMarca } from "./tipo_marca.js";
-import { MarcaAsistencia } from "./marca_asistencia.js";
-import { TipoIncapacidad } from "./tipo_incapacidad.js";
-import { Incapacidad } from "./incapacidad.js";
-import { JornadaDiaria } from "./jornada_diaria.js";
+models.Planilla.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
+models.Colaborador.hasMany(models.Planilla, { foreignKey: "id_colaborador", as: "planillas" });
 
-// Solicitudes
-import { TipoHoraExtra } from "./tipo_hora_extra.js";
-import { SolicitudHoraExtra } from "./solicitud_hora_extra.js";
-import { TipoSolicitud } from "./tipo_solicitud.js";
-import { SolicitudPermisosLicencias } from "./solicitud_permisos_licencias.js";
-import { SaldoVacaciones } from "./saldo_vacaciones.js";
-import { SolicitudVacaciones } from "./solicitud_vacaciones.js";
+models.Planilla.belongsTo(models.Contrato, { foreignKey: "id_contrato", as: "contrato" });
+models.Contrato.hasMany(models.Planilla, { foreignKey: "id_contrato", as: "planillas" });
 
-// Liquidaciones
-import { Liquidacion } from "./liquidacion.js";
-import { CausaLiquidacion } from "./causa_liquidacion.js";
+models.Planilla.hasMany(models.DeduccionPlanilla, { foreignKey: "id_planilla", as: "deduccionesDetalle" });
+models.DeduccionPlanilla.belongsTo(models.Planilla, { foreignKey: "id_planilla", as: "planilla" });
 
-// Otros
-import { Telefono } from "./telefono.js";
-import { Feriado } from "./feriado.js";
+models.Deduccion.hasMany(models.DeduccionPlanilla, { foreignKey: "id_deduccion", as: "detallesPlanilla" });
+models.DeduccionPlanilla.belongsTo(models.Deduccion, { foreignKey: "id_deduccion", as: "deduccion" });
 
-// ========================================
-//  RELACIONES
-// ========================================
-
-// ---------- CATÁLOGOS ----------
-Genero.hasMany(Colaborador, { foreignKey: "id_genero" });
-Colaborador.belongsTo(Genero, { foreignKey: "id_genero" });
-
-EstadoCivil.hasMany(Colaborador, { foreignKey: "estado_civil", as: "colaboradores", });
-Colaborador.belongsTo(EstadoCivil, { foreignKey: "estado_civil", as: "estadoCivil" });
-
-Estado.hasMany(Colaborador, { foreignKey: "estado", as: "colaboradoresEstado" });
-Colaborador.belongsTo(Estado, { foreignKey: "estado", as: "estadoColaborador" });
-
-Estado.hasMany(Direccion, { foreignKey: "estado", as: "direcciones" });
-Direccion.belongsTo(Estado, { foreignKey: "estado", as: "estadoDireccion" });
-
-Estado.hasMany(Usuario, { foreignKey: "estado", as: "usuarios" });
-Usuario.belongsTo(Estado, { foreignKey: "estado", as: "estadoUsuario" });
-
-Estado.hasMany(Puesto, { foreignKey: "estado", as: "puestos" });
-Puesto.belongsTo(Estado, { foreignKey: "estado", as: "estadoPuesto" });
-
-Estado.hasMany(Contrato, { foreignKey: "estado", as: "contratos" });
-Contrato.belongsTo(Estado, { foreignKey: "estado", as: "estadoContrato" });
-
-Estado.hasMany(PeriodoPlanilla, { foreignKey: "estado", as: "periodosPlanilla" });
-PeriodoPlanilla.belongsTo(Estado, { foreignKey: "estado", as: "estadoPeriodo" });
-
-Estado.hasMany(SolicitudHoraExtra, { foreignKey: "estado", as: "solicitudesHorasExtra" });
-SolicitudHoraExtra.belongsTo(Estado, { foreignKey: "estado", as: "estadoSolicitudHoraExtra" });
-
-Estado.hasMany(SolicitudVacaciones, { foreignKey: "estado_solicitud", as: "solicitudesVacaciones" });
-SolicitudVacaciones.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudVacaciones" });
-
-Estado.hasMany(SolicitudPermisosLicencias, { foreignKey: "estado_solicitud", as: "solicitudesPermisos" });
-SolicitudPermisosLicencias.belongsTo(Estado, { foreignKey: "estado_solicitud", as: "estadoSolicitudPermisos" });
-
-Estado.hasMany(HorarioLaboral, { foreignKey: "estado", as: "horariosLaborales" });
-HorarioLaboral.belongsTo(Estado, { foreignKey: "estado", as: "estadoHorario" });
-
-
-// ---------- ORGANIZACIÓN ----------
-Departamento.hasMany(Puesto, { foreignKey: "id_departamento", as: "puestoDepartamento" });
-Puesto.belongsTo(Departamento, { foreignKey: "id_departamento", as: "departamentoPuesto" });
-
-Puesto.hasMany(Contrato, { foreignKey: "id_puesto", as: "puestoContrato" });
-Contrato.belongsTo(Puesto, { foreignKey: "id_puesto", as: "contratoPuesto" });
-
-TipoContrato.hasMany(Contrato, { foreignKey: "id_tipo_contrato", as: "tipo_contrato_contrato" });
-Contrato.belongsTo(TipoContrato, { foreignKey: "id_tipo_contrato", as: "contrato_tipo_contrato" });
-
-TipoJornada.hasMany(Contrato, { foreignKey: "id_tipo_jornada", as: "tipoJornada_contrato" });
-Contrato.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada", as: "contrato_tipoJornada" });
-
-CicloPago.hasMany(Contrato, { foreignKey: "id_ciclo_pago", as: "cicloPago_contrato" });
-Contrato.belongsTo(CicloPago, { foreignKey: "id_ciclo_pago", as: "contrato_cicloPago" });
-
-Contrato.hasMany(HorarioLaboral, { foreignKey: "id_contrato", as: "contrato_horario" });
-HorarioLaboral.belongsTo(Contrato, { foreignKey: "id_contrato", as: "horario_contrato" });
-
-Contrato.hasMany(AjusteSalarial, { foreignKey: "id_contrato", as: "contrato_ajusteSalarial" });
-AjusteSalarial.belongsTo(Contrato, { foreignKey: "id_contrato", as: "ajusteSalarial_contrato" });
-
-TipoJornada.hasMany(HorarioLaboral, { foreignKey: "id_tipo_jornada", as: "horariosPorJornada" });
-HorarioLaboral.belongsTo(TipoJornada, { foreignKey: "id_tipo_jornada", as: "tipoJornadaHorario" });
-
-
-// ---------- PLANILLAS ----------
-CicloPago.hasMany(PeriodoPlanilla, { foreignKey: "id_ciclo_pago" });
-PeriodoPlanilla.belongsTo(CicloPago, { foreignKey: "id_ciclo_pago" });
-
-PeriodoPlanilla.hasMany(DetallePlanilla, { foreignKey: "id_periodo" });
-DetallePlanilla.belongsTo(PeriodoPlanilla, { foreignKey: "id_periodo" });
-
-Contrato.hasMany(DetallePlanilla, { foreignKey: "id_contrato" });
-DetallePlanilla.belongsTo(Contrato, { foreignKey: "id_contrato" });
-
-Colaborador.hasMany(DetallePlanilla, { foreignKey: "generado_por", as: "planillas_generadas" });
-DetallePlanilla.belongsTo(Colaborador, { foreignKey: "generado_por", as: "generador_planilla" });
-
-DetallePlanilla.hasMany(DeduccionPlanilla, { foreignKey: "id_detalle" });
-DeduccionPlanilla.belongsTo(DetallePlanilla, { foreignKey: "id_detalle" });
-
-TipoDeduccion.hasMany(DeduccionPlanilla, { foreignKey: "id_tipo_deduccion" });
-DeduccionPlanilla.belongsTo(TipoDeduccion, { foreignKey: "id_tipo_deduccion" });
-
-Colaborador.hasMany(DetallePlanilla, { foreignKey: "id_colaborador", as: "planillasColaborador" });
-DetallePlanilla.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "colaborador_detalle_planilla" });
-
-// ---------- AGUINALDO ----------
-Colaborador.hasMany(Aguinaldo, { foreignKey: "id_colaborador" });
-Aguinaldo.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Colaborador.hasMany(Aguinaldo, {
-  foreignKey: "registrado_por",
-  as: "aguinaldos_registrados",
-});
-Aguinaldo.belongsTo(Colaborador, {
-  foreignKey: "registrado_por",
-  as: "registrador",
-});
-
-// ---------- EVALUACIONES ----------
-Colaborador.hasMany(Evaluacion, { foreignKey: "id_colaborador" });
-Evaluacion.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Colaborador.hasMany(Evaluacion, {
-  foreignKey: "id_evaluador",
-  as: "evaluaciones_realizadas",
-});
-Evaluacion.belongsTo(Colaborador, {
-  foreignKey: "id_evaluador",
-  as: "evaluador",
-});
-
-Evaluacion.belongsToMany(RubroEvaluacion, {
-  through: EvaluacionRubro,
-  foreignKey: "id_evaluacion",
-  otherKey: "id_rubro_evaluacion",
-});
-RubroEvaluacion.belongsToMany(Evaluacion, {
-  through: EvaluacionRubro,
-  foreignKey: "id_rubro_evaluacion",
-  otherKey: "id_evaluacion",
-});
-
-// ---------- ASISTENCIA / INCAPACIDADES ----------
-TipoMarca.hasMany(MarcaAsistencia, { foreignKey: "id_tipo_marca" });
-MarcaAsistencia.belongsTo(TipoMarca, { foreignKey: "id_tipo_marca" });
-
-Colaborador.hasMany(MarcaAsistencia, { foreignKey: "id_colaborador" });
-MarcaAsistencia.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-TipoIncapacidad.hasMany(Incapacidad, { foreignKey: "id_tipo_incap" });
-Incapacidad.belongsTo(TipoIncapacidad, { foreignKey: "id_tipo_incap" });
-
-Colaborador.hasMany(Incapacidad, { foreignKey: "id_colaborador" });
-Incapacidad.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Colaborador.hasMany(JornadaDiaria, { foreignKey: "id_colaborador" });
-JornadaDiaria.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-// ---------- SOLICITUDES ----------
-TipoHoraExtra.hasMany(SolicitudHoraExtra, { foreignKey: "id_tipo_hx" });
-SolicitudHoraExtra.belongsTo(TipoHoraExtra, { foreignKey: "id_tipo_hx" });
-
-Colaborador.hasMany(SolicitudHoraExtra, { foreignKey: "id_colaborador" });
-SolicitudHoraExtra.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Colaborador.hasMany(SolicitudHoraExtra, {
-  foreignKey: "aprobado_por",
-  as: "hx_aprobadas",
-});
-SolicitudHoraExtra.belongsTo(Colaborador, {
-  foreignKey: "aprobado_por",
-  as: "aprobador",
-});
-
-TipoSolicitud.hasMany(SolicitudPermisosLicencias, { foreignKey: "tipo_solicitud", as: "solicitudes" });
-SolicitudPermisosLicencias.belongsTo(TipoSolicitud, { foreignKey: "tipo_solicitud", as: "tiposSolicitud" });
-
-Colaborador.hasMany(SolicitudVacaciones, { foreignKey: "id_colaborador" });
-SolicitudVacaciones.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-SaldoVacaciones.hasMany(SolicitudVacaciones, { foreignKey: "id_saldo_vacaciones" });
-SolicitudVacaciones.belongsTo(SaldoVacaciones, { foreignKey: "id_saldo_vacaciones" });
-
-// ---------- LIQUIDACIONES ----------
-Colaborador.hasMany(Liquidacion, { foreignKey: "id_colaborador" });
-Liquidacion.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Colaborador.hasMany(Liquidacion, {
-  foreignKey: "id_aprobador",
-  as: "liquidaciones_aprobadas",
-});
-Liquidacion.belongsTo(Colaborador, {
-  foreignKey: "id_aprobador",
-  as: "aprobador",
-});
-
-CausaLiquidacion.hasMany(Liquidacion, { foreignKey: "causa" });
-Liquidacion.belongsTo(CausaLiquidacion, { foreignKey: "causa" });
-
-SaldoVacaciones.hasMany(Liquidacion, { foreignKey: "saldo_vacaciones" });
-Liquidacion.belongsTo(SaldoVacaciones, { foreignKey: "saldo_vacaciones" });
-
-// ---------- USUARIOS ----------
-Usuario.belongsToMany(Rol, { through: UsuarioRol, foreignKey: "id_usuario" });
-Rol.belongsToMany(Usuario, { through: UsuarioRol, foreignKey: "id_rol" });
-
-Colaborador.hasMany(Usuario, { foreignKey: "id_colaborador" });
-Usuario.belongsTo(Colaborador, { foreignKey: "id_colaborador" });
-
-Usuario.hasMany(BitacoraAuditoria, { foreignKey: "actor_id" });
-BitacoraAuditoria.belongsTo(Usuario, { foreignKey: "actor_id" });
-
-// ---------- TELÉFONO ----------
-Colaborador.hasMany(Telefono, { foreignKey: "id_colaborador", as: "telefonoColaborador" });
-Telefono.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "colaboradorTelefono" });
-
-//----------- CONTRATOS ↔ COLABORADOR ----------
-Colaborador.hasMany(Contrato, { foreignKey: "id_colaborador", as: "contratosColaborador" });
-Contrato.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "datosColaboradorEnContrato" });
-
-// ---------- DIRECCIONES ----------
-Provincia.hasMany(Canton, { foreignKey: "id_provincia", as: "cantonesPorProvincia" });
-Canton.belongsTo(Provincia, { foreignKey: "id_provincia", as: "provinciaPorCantones" });
-
-Canton.hasMany(Distrito, { foreignKey: "id_canton", as: "distritosPorCantones" });
-Distrito.belongsTo(Canton, { foreignKey: "id_canton", as: "cantonesPorDistrito" });
-
-Provincia.hasMany(Direccion, { foreignKey: "id_provincia", as: "direccionesProvincia" });
-Direccion.belongsTo(Provincia, { foreignKey: "id_provincia", as: "provinciaEnDirecciones" });
-
-Canton.hasMany(Direccion, { foreignKey: "id_canton", as: "direccionesCanton" });
-Direccion.belongsTo(Canton, { foreignKey: "id_canton", as: "cantonEnDirecciones" });
-
-Distrito.hasMany(Direccion, { foreignKey: "id_distrito", as: "direccionesDistrito" });
-Direccion.belongsTo(Distrito, { foreignKey: "id_distrito", as: "distritoEnDirecciones" });
-
-// PERMISOS/LICENCIAS ↔ COLABORADOR (solicitante)
-Colaborador.hasMany(SolicitudPermisosLicencias, { foreignKey: "id_colaborador", as: "permisos_solicitados" });
-SolicitudPermisosLicencias.belongsTo(Colaborador, { foreignKey: "id_colaborador", as: "solicitante" });
-
-// PERMISOS/LICENCIAS ↔ COLABORADOR (aprobador)
-Colaborador.hasMany(SolicitudPermisosLicencias, { foreignKey: "id_aprobador", as: "permisos_aprobados" });
-SolicitudPermisosLicencias.belongsTo(Colaborador, { foreignKey: "id_aprobador", as: "aprobadorSolicitudes" });
-
-// VACACIONES ↔ APROBADOR
-Colaborador.hasMany(SolicitudVacaciones, { foreignKey: "id_aprobador", as: "vacaciones_aprobadas" });
-SolicitudVacaciones.belongsTo(Colaborador, { foreignKey: "id_aprobador", as: "aprobadorVacaciones" });
-
-
-// ========================================
-//  EXPORTS
-// ========================================
-export {
-  sequelize,
-  Colaborador,
-  Usuario,
-  Genero,
-  EstadoCivil,
-  Estado,
-  Rol,
-  UsuarioRol,
-  BitacoraAuditoria,
-
-  // Organización
-  Departamento,
-  Puesto,
-  TipoContrato,
-  TipoJornada,
-  CicloPago,
-  Contrato,
-  HorarioLaboral,
-  AjusteSalarial,
-
-  // Evaluaciones
-  Evaluacion,
-  RubroEvaluacion,
-  EvaluacionRubro,
-
-  // Planillas
-  PeriodoPlanilla,
-  DetallePlanilla,
-  TipoDeduccion,
-  DeduccionPlanilla,
-  Aguinaldo,
-
-  // Ubicación
-  Provincia,
-  Canton,
-  Distrito,
-  Direccion,
-
-  // Asistencia y solicitudes
-  TipoMarca,
-  MarcaAsistencia,
-  TipoIncapacidad,
-  Incapacidad,
-  JornadaDiaria,
-  TipoHoraExtra,
-  SolicitudHoraExtra,
-  TipoSolicitud,
-  SolicitudPermisosLicencias,
-  SolicitudVacaciones,
-  SaldoVacaciones,
-
-  // Liquidaciones
-  Liquidacion,
-  CausaLiquidacion,
-
-  // Otros
-  Telefono,
-  Feriado,
-};
+export { sequelize };
