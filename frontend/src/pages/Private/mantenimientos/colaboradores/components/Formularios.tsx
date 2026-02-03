@@ -11,11 +11,9 @@ type Mode = "create" | "edit";
 
 type Props = {
   mode: Mode;
-  genderOptions: SelectOption[];
   marStatsOptions: SelectOption[];
   rolesOptions: SelectOption[];
   provincias: Provincia[];
-  gendersLoaded: boolean;
   maritalStatusesLoaded: boolean;
   rolesLoaded: boolean;
   isSubmitting?: boolean;
@@ -26,12 +24,10 @@ type Props = {
 export function Formularios({
   mode,
 
-  genderOptions,
   marStatsOptions,
   rolesOptions,
 
   provincias,
-  gendersLoaded,
   maritalStatusesLoaded,
   rolesLoaded,
 
@@ -95,21 +91,6 @@ export function Formularios({
             },
             setValueAs: (v) => String(v ?? "").trim(),
           }}
-        />
-
-        <InputField
-          fieldType="select"
-          label="Género"
-          name="genero"
-          required
-          disableSelectPortal
-          placeholder={gendersLoaded ? "Seleccione una opción" : "Cargando..."}
-          options={genderOptions}
-          rules={{
-            required: "El campo es obligatorio",
-            setValueAs: (v) => String(v ?? "").trim(),
-          }}
-          selectRootProps={{ disabled: !gendersLoaded }}
         />
 
         <InputField

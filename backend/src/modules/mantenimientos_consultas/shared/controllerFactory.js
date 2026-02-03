@@ -1,7 +1,7 @@
 import { HTTP_CODES } from "../../../common/strings.js";
 
-const ok = HTTP_CODES.OK;
-const created = HTTP_CODES.CREATED;
+const ok = HTTP_CODES.SUCCESS.OK;
+const created = HTTP_CODES.SUCCESS.CREATED;
 
 const defaultMessage = (action, singular, plural) => {
   switch (action) {

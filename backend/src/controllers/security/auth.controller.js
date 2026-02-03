@@ -1,3 +1,4 @@
+// This file has been removed as it is replaced by module implementation.
 import { HTTP_CODES } from "../../common/strings.js";
 import { autenticarUsuario } from "./handlers/autenticarUsuario.js";
 import { cambiarPassword } from "./handlers/cambiarPassword.js";

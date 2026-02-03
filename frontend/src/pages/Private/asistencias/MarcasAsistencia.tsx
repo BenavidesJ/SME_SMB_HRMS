@@ -1,208 +1,435 @@
-import { useMemo, useState } from "react";
+/* eslint-disable no-unused-vars */
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Badge, HStack, Text, Button as ChakraButton, Box, VStack } from "@chakra-ui/react";
 import dayjs from "dayjs";
-import { Badge, Button as ChakraButton, HStack, Text, Wrap } from "@chakra-ui/react";
+import "dayjs/locale/es";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { useApiMutation } from "../../../hooks/useApiMutations";
+import { useApiQuery } from "../../../hooks/useApiQuery";
 import { Layout } from "../../../components/layout";
-import { Form, InputField } from "../../../components/forms";
-import { Button } from "../../../components/general/button/Button";
 import { DataTable } from "../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../components/general/table/types";
-import { useApiQuery } from "../../../hooks/useApiQuery";
-import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useWeekPager } from "../../../hooks/useWeekPager";
+import { Form } from "../../../components/forms/Form/Form";
+import { InputField } from "../../../components/forms/InputField/InputField";
 import { useAuth } from "../../../context/AuthContext";
-import { showToast } from "../../../services/toast/toastService";
+import { useWatch } from "react-hook-form";
 
-interface MarcaAsistencia {
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("es");
+
+type MarcaDiaRow = {
+  id: string;
   identificacion: string;
-  tipo_marca: string;
-  timestamp: string;
-}
-
-type MarcaEventoRow = {
-  key: string;
-  identificacion: number | string;
-  nombre_completo: string;
   dia: string;
-  tipo_marca: string;
-  timestamp: string;
-  observaciones: string;
-  id_marca: number;
+  horaEntrada: string | null;
+  horaSalida: string | null;
 };
+
+type RegistrarMarcaPayload = {
+  identificacion: string;
+  tipo_marca: "ENTRADA" | "SALIDA";
+  timestamp: string;
+};
+
+type RegistrarMarcaResponse = {
+  id_marca: number;
+  tipo_marca: "ENTRADA" | "SALIDA";
+  timestamp: string;
+  jornada: {
+    fecha: string;
+    horas_ordinarias: number;
+    entrada: string | null;
+    salida: string | null;
+  };
+};
+
+type MarcaRegistroApi = {
+  id_marca: number;
+  timestamp: string;
+  tipo_marca?: string | null;
+  TipoMarca?: {
+    nombre?: string | null;
+  };
+};
+
+type MarcaDiaApi = {
+  dia: string;
+  asistencia: MarcaRegistroApi[];
+};
+
+type ColaboradorResumen = {
+  id_colaborador: number;
+  identificacion: string | number;
+  nombre?: string | null;
+  primer_apellido?: string | null;
+  segundo_apellido?: string | null;
+};
+
+type MarcasApiResponse = {
+  colaborador: ColaboradorResumen | null;
+  marcas: MarcaDiaApi[];
+};
+
+type MarcasFormValues = {
+  identificacion: string;
+};
+
+const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : "");
+
+const formatClockText = (source: dayjs.Dayjs) => {
+  const localized = source.locale("es");
+  const dayName = capitalize(localized.format("dddd"));
+  const dayNumber = localized.format("D");
+  const monthName = capitalize(localized.format("MMMM"));
+  const year = localized.format("YYYY");
+  const time = localized.format("h:mm a");
+  return `${dayName} ${dayNumber} de ${monthName} de ${year}, ${time}`;
+};
+
+const formatDayLabel = (dateStr: string) => {
+  const localized = dayjs(dateStr).locale("es");
+  const dayName = capitalize(localized.format("dddd"));
+  const dayNumber = localized.format("D");
+  const monthName = localized.format("MMMM");
+  return `${dayName} ${dayNumber} de ${monthName}`;
+};
+
+const formatTimeCR = (timestamp: string) =>
+  dayjs
+    .utc(timestamp)
+    .tz("America/Costa_Rica")
+    .format("h:mm a");
+
+const getTipo = (registro: MarcaRegistroApi) => String((registro.tipo_marca ?? registro.TipoMarca?.nombre) ?? "").toUpperCase();
+
+const onlyDigitsMax = (v: unknown, max = 17) => String(v ?? "").replace(/\D/g, "").slice(0, max);
 
 export const MarcasAsistencia = () => {
   const { user } = useAuth();
-  const [check, setCheck] = useState<string>("");
-  const [identificacionActual, setIdentificacionActual] = useState<string | number | undefined>(user?.identificacion);
+
+  const loggedId = useMemo(() => onlyDigitsMax(user?.identificacion, 17), [user?.identificacion]);
+
+  const [clockText, setClockText] = useState(() => formatClockText(dayjs()));
+  const [tipoEnProceso, setTipoEnProceso] = useState<"ENTRADA" | "SALIDA" | null>(null);
+
+  useEffect(() => {
+    const tick = () => setClockText(formatClockText(dayjs()));
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const { desde, hasta, label, goPrevWeek, goNextWeek, goToday } = useWeekPager();
 
-  const { data: tiposMarca = [] } = useApiQuery<{ id: number; tipo: string }[]>({
-    url: "/asistencia/tipos_marca",
-  });
-
   const marcasUrl = useMemo(() => {
-    if (!identificacionActual) return "";
-    return `/asistencia/marcas?rango&identificacion=${encodeURIComponent(
-      identificacionActual,
-    )}&desde=${desde}&hasta=${hasta}`;
-  }, [identificacionActual, desde, hasta]);
+    if (!loggedId) return "";
+    const params = new URLSearchParams({ identificacion: loggedId, desde, hasta });
+    return `/asistencia/marcas?${params.toString()}`;
+  }, [loggedId, desde, hasta]);
 
-  const { data: marcasApi, isLoading: asistenciaLoading, refetch } = useApiQuery<any>({
-    url: marcasUrl,
-    enabled: Boolean(marcasUrl),
-  });
+  const { data: marcasData, isLoading: marcasLoading, refetch: refetchMarcas, setData: setMarcasData } =
+    useApiQuery<MarcasApiResponse | null>({
+      url: marcasUrl,
+      enabled: Boolean(marcasUrl),
+      initialData: null,
+    });
 
-  const { mutate: makeCheck, isLoading: isSubmitting } = useApiMutation<MarcaAsistencia, void>({
+  const { mutate: registrarMarca } = useApiMutation<RegistrarMarcaPayload, RegistrarMarcaResponse>({
     url: "/asistencia/marca",
     method: "POST",
   });
 
-  function mapMarcasToRows(apiData: any): MarcaEventoRow[] {
-    const colab = apiData?.colaborador;
-    const nombreCompleto = `${colab?.nombre ?? ""} ${colab?.primer_apellido ?? ""} ${colab?.segundo_apellido ?? ""}`.trim();
-    const identificacion = colab?.identificacion ?? "";
+  const nombreColaborador = useMemo(() => {
+    const colab = marcasData?.colaborador;
+    if (!colab) return "";
+    return `${colab.nombre ?? ""} ${colab.primer_apellido ?? ""} ${colab.segundo_apellido ?? ""}`.trim();
+  }, [marcasData]);
 
-    const marcas = apiData?.marcas ?? [];
-    return marcas.flatMap((diaItem: any) => {
-      const dia = diaItem.dia;
-      const asistencia = diaItem.asistencia ?? [];
+  const rows = useMemo<MarcaDiaRow[]>(() => {
+    if (!marcasData) return [];
 
-      return asistencia.map((m: any) => ({
-        key: `${colab?.id_colaborador ?? "x"}-${dia}-${m.id_marca}`,
-        identificacion,
-        nombre_completo: nombreCompleto,
-        dia,
-        tipo_marca: m.tipo_marca,
-        timestamp: m.timestamp,
-        observaciones: m.observaciones,
-        id_marca: m.id_marca,
-      }));
-    });
-  }
+    const identificacionColab = marcasData.colaborador
+      ? String(marcasData.colaborador.identificacion)
+      : loggedId;
 
-  const rows = useMemo(() => mapMarcasToRows(marcasApi), [marcasApi]);
+    const marcas = Array.isArray(marcasData.marcas) ? marcasData.marcas : [];
 
-  const normalizeIdentificacion = (v: unknown) => String(v ?? "").trim();
-  const loggedId = normalizeIdentificacion(user?.identificacion);
+    return marcas.map((diaItem) => {
+      const asistenciaDia = Array.isArray(diaItem.asistencia) ? diaItem.asistencia : [];
 
-  const handleMakeCheck = async (form: { identificacion: string }) => {
-    try {
-      const inputId = normalizeIdentificacion(form.identificacion);
+      const entradaRegistro = asistenciaDia.find((r) => getTipo(r) === "ENTRADA");
+      const salidaRegistro = [...asistenciaDia].reverse().find((r) => getTipo(r) === "SALIDA");
 
-
-      if (inputId !== loggedId) {
-        showToast("La identificación no coincide con la del usuario logueado. No se puede registrar marcas en nombre de otro usuario.", "error");
-        return false;
-      }
-
-      if (!check) {
-        showToast("Selecciona el tipo de marca.", "error");
-        return false;
-      }
-
-      setIdentificacionActual(String(form.identificacion ?? "").trim());
-
-      const payload: MarcaAsistencia = {
-        identificacion: inputId,
-        tipo_marca: check,
-        timestamp: new Date().toISOString(),
+      return {
+        id: String(diaItem.dia),
+        identificacion: identificacionColab,
+        dia: formatDayLabel(String(diaItem.dia)),
+        horaEntrada: entradaRegistro ? formatTimeCR(entradaRegistro.timestamp) : null,
+        horaSalida: salidaRegistro ? formatTimeCR(salidaRegistro.timestamp) : null,
       };
+    });
+  }, [marcasData, loggedId]);
 
-      await makeCheck(payload);
-      await refetch();
-      return true;
-    } catch (error) {
-      console.log(error);
-      return false;
-    }
-  };
+  const updateMarcasConSalida = useCallback(
+    (response: RegistrarMarcaResponse) => {
+      setMarcasData((prev) => {
+        if (!prev) return prev;
 
-  const columns = useMemo<DataTableColumn<MarcaEventoRow>[]>(() => {
-    return [
-      { id: "identificacion", header: "Identificación", minW: "140px", textAlign: "center", cell: (r) => String(r.identificacion) },
-      { id: "nombre_completo", header: "Nombre completo", minW: "260px", textAlign: "left", cell: (r) => r.nombre_completo },
-      { id: "dia", header: "Día", minW: "130px", textAlign: "center", cell: (r) => r.dia },
+        const fecha = response.jornada.fecha;
+        const salida = response.jornada.salida;
+        if (!salida) return prev;
+
+        let diaActualizado = false;
+
+        const updatedMarcas = prev.marcas.map((diaItem) => {
+          if (diaItem.dia !== fecha) return diaItem;
+          diaActualizado = true;
+
+          const asistenciaActualizada = diaItem.asistencia.map((registro) => {
+            if (getTipo(registro) !== "SALIDA") return registro;
+            return { ...registro, timestamp: salida, tipo_marca: "SALIDA" };
+          });
+
+          const tieneSalida = asistenciaActualizada.some((r) => getTipo(r) === "SALIDA");
+          if (!tieneSalida) {
+            asistenciaActualizada.push({ id_marca: response.id_marca, timestamp: salida, tipo_marca: "SALIDA" });
+          }
+
+          return { ...diaItem, asistencia: asistenciaActualizada };
+        });
+
+        if (!diaActualizado) {
+          updatedMarcas.push({
+            dia: fecha,
+            asistencia: [{ id_marca: response.id_marca, timestamp: salida, tipo_marca: "SALIDA" }],
+          });
+        }
+
+        updatedMarcas.sort((a, b) => (a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0));
+
+        return { ...prev, marcas: updatedMarcas };
+      });
+    },
+    [setMarcasData],
+  );
+
+  const handleRegistrarMarca = useCallback(
+    async (tipo: "ENTRADA" | "SALIDA", identificacionIngresada: string) => {
+      const identificacionDestino = onlyDigitsMax(identificacionIngresada || loggedId, 17);
+      if (!identificacionDestino) return;
+
+      setTipoEnProceso(tipo);
+      try {
+        const response = await registrarMarca({
+          identificacion: identificacionDestino,
+          tipo_marca: tipo,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Mantengo tu intención original:
+        // - Entrada: refetch (para recalcular y traer el día completo)
+        // - Salida: si hay data, patch local; si no, refetch
+        if (tipo === "ENTRADA") {
+          if (marcasUrl) await refetchMarcas();
+          return;
+        }
+
+        if (!response) return;
+
+        if (!marcasData) {
+          if (marcasUrl) await refetchMarcas();
+        } else {
+          updateMarcasConSalida(response);
+        }
+      } finally {
+        setTipoEnProceso(null);
+      }
+    },
+    [loggedId, registrarMarca, marcasUrl, refetchMarcas, marcasData, updateMarcasConSalida],
+  );
+
+  const columns = useMemo<DataTableColumn<MarcaDiaRow>[]>(
+    () => [
       {
-        id: "tipo_marca",
-        header: "Tipo",
-        minW: "120px",
+        id: "dia",
+        header: "Día",
+        minW: "160px",
         textAlign: "center",
-        cell: (r) => (
-          <Badge colorPalette={r.tipo_marca === "ENTRADA" ? "teal" : "orange"}>
-            {r.tipo_marca}
-          </Badge>
+        cell: (row) => row.dia,
+      },
+      {
+        id: "horaEntrada",
+        header: "Hora Entrada",
+        minW: "160px",
+        textAlign: "center",
+        cell: (row) => (
+          <Box px="2" py="1" rounded="md" bg={row.horaEntrada ? "transparent" : "red.50"}>
+            {row.horaEntrada ?? "Sin registro"}
+          </Box>
         ),
       },
       {
-        id: "timestamp",
-        header: "Hora",
-        minW: "190px",
+        id: "horaSalida",
+        header: "Hora Salida",
+        minW: "160px",
         textAlign: "center",
-        cell: (r) => dayjs(r.timestamp).format("YYYY-MM-DD HH:mm:ss"),
+        cell: (row) => (
+          <Box px="2" py="1" rounded="md" bg={row.horaSalida ? "transparent" : "red.50"}>
+            {row.horaSalida ?? "Sin registro"}
+          </Box>
+        ),
       },
-      { id: "observaciones", header: "Observaciones", minW: "220px", textAlign: "left", cell: (r) => <Text>{r.observaciones}</Text> },
-    ];
-  }, []);
+    ],
+    [],
+  );
 
   return (
-    <Layout pageTitle="Realizar Marcas de Asistencia">
-      <Form onSubmit={handleMakeCheck} resetOnSuccess>
-        <InputField
-          fieldType="text"
-          label="Cédula o DIMEX"
-          name="identificacion"
-          required
-          rules={{
-            required: "El campo es obligatorio",
-            pattern: { value: /^\d+$/, message: "Solo se permiten números." },
-            validate: (value: string) =>
-              String(value ?? "").trim() === loggedId || "Debe coincidir con tu identificación. No se puede registrar marcas en nombre de otro usuario.",
-          }}
+    <Layout pageTitle="Marcas de asistencia">
+      <Form<MarcasFormValues>
+        defaultValues={{ identificacion: loggedId }}
+        onSubmit={async () => true}
+        formOptions={{ mode: "onChange" }}
+      >
+        <FormContent
+          clockText={clockText}
+          nombreColaborador={nombreColaborador}
+          label={label}
+          goPrevWeek={goPrevWeek}
+          goNextWeek={goNextWeek}
+          goToday={goToday}
+          tipoEnProceso={tipoEnProceso}
+          loggedId={loggedId}
+          onRegistrarMarca={handleRegistrarMarca}
         />
-
-        <Wrap w="500px" alignContent="center" direction="row">
-          {tiposMarca.map((tm) => (
-            <Button
-              key={`${tm.id}-${tm.tipo}`}
-              loading={isSubmitting}
-              loadingText="Agregando"
-              appearance="login"
-              type="submit"
-              mt="4"
-              size="lg"
-              marginBottom="5"
-              onClick={() => setCheck(tm.tipo)}
-            >
-              {tm.tipo}
-            </Button>
-          ))}
-        </Wrap>
       </Form>
 
-      <HStack justify="space-between" align="center" mt="6" mb="3">
-        <HStack>
-          <ChakraButton backgroundColor="brand.green.100" color="brand.text" _hover={{ backgroundColor: "brand.green.75" }} size="sm" onClick={goPrevWeek}>
+      <DataTable<MarcaDiaRow> data={marcasLoading ? [] : rows} columns={columns} isDataLoading={marcasLoading} size="md" />
+    </Layout>
+  );
+};
+
+type FormContentProps = {
+  clockText: string;
+  nombreColaborador: string;
+  label: string;
+  goPrevWeek: () => void;
+  goNextWeek: () => void;
+  goToday: () => void;
+  tipoEnProceso: "ENTRADA" | "SALIDA" | null;
+  loggedId: string;
+  onRegistrarMarca: (tipo: "ENTRADA" | "SALIDA", identificacionIngresada: string) => void;
+};
+
+const FormContent = ({
+  clockText,
+  nombreColaborador,
+  label,
+  goPrevWeek,
+  goNextWeek,
+  goToday,
+  tipoEnProceso,
+  loggedId,
+  onRegistrarMarca,
+}: FormContentProps) => {
+  const identificacionForm = useWatch({ name: "identificacion" }) as string;
+  const identificacionIngresada = String(identificacionForm ?? "").trim();
+
+  const identificacionValida = Boolean(identificacionIngresada.length) && identificacionIngresada === loggedId;
+
+  return (
+    <VStack align="stretch" mt="6">
+      <Text fontSize="lg" fontWeight="medium">
+        {clockText}
+      </Text>
+
+      {nombreColaborador && <Text color="gray.600">Colaborador: {nombreColaborador}</Text>}
+
+      <HStack flexWrap="wrap" align="flex-start" justifyItems="center" alignItems="center">
+        <Box css={{ "& > div": { minWidth: "20ch", maxWidth: "20ch", width: "20ch" } }}>
+          <InputField
+            fieldType="text"
+            name="identificacion"
+            placeholder="Cédula o DIMEX"
+            label="Identificación"
+            size="sm"
+            required
+            rules={{
+              required: "El campo es obligatorio",
+              pattern: { value: /^\d+$/, message: "Solo se permiten números." },
+              maxLength: { value: 17, message: "Máximo 17 dígitos" },
+              validate: (value: string) =>
+                String(value ?? "").trim() === loggedId ||
+                "Debe coincidir con tu identificación.",
+            }}
+          />
+        </Box>
+
+        <HStack display="flex" alignContent="center" justifyContent="center">
+          <ChakraButton
+            type="button"
+            colorPalette="blue"
+            size="sm"
+            onClick={() => onRegistrarMarca("ENTRADA", identificacionIngresada)}
+            disabled={!identificacionValida || Boolean(tipoEnProceso)}
+            loading={tipoEnProceso === "ENTRADA"}
+          >
+            Entrada
+          </ChakraButton>
+
+          <ChakraButton
+            type="button"
+            colorPalette="teal"
+            _hover={{ backgroundColor: "brand.green.75" }}
+            size="sm"
+            onClick={() => onRegistrarMarca("SALIDA", identificacionIngresada)}
+            disabled={!identificacionValida || Boolean(tipoEnProceso)}
+            loading={tipoEnProceso === "SALIDA"}
+          >
+            Salida
+          </ChakraButton>
+        </HStack>
+      </HStack>
+
+      <VStack align="flex-start" gap="2" mb="1rem">
+        <HStack gap="3">
+          <ChakraButton
+            variant="surface"
+            colorPalette="blue"
+            size="sm"
+            type="button"
+            onClick={goPrevWeek}
+          >
             Semana anterior
           </ChakraButton>
-          <ChakraButton backgroundColor="brand.green.100" color="brand.text" _hover={{ backgroundColor: "brand.green.75" }} size="sm" onClick={goToday}>
+
+          <ChakraButton
+            variant="surface"
+            colorPalette="blue"
+            size="sm"
+            type="button"
+            onClick={goToday}
+          >
             Hoy
           </ChakraButton>
-          <ChakraButton backgroundColor="brand.green.100" color="brand.text" _hover={{ backgroundColor: "brand.green.75" }} size="sm" onClick={goNextWeek}>
+
+          <ChakraButton
+            variant="surface"
+            colorPalette="blue"
+            size="sm"
+            type="button"
+            onClick={goNextWeek}
+          >
             Semana siguiente
           </ChakraButton>
         </HStack>
 
-        <Badge variant="surface">
+        <Badge variant="surface" colorPalette="blue" size="lg">
           {label}
         </Badge>
-      </HStack>
+      </VStack>
 
-      <DataTable<MarcaEventoRow>
-        data={asistenciaLoading ? [] : rows}
-        columns={columns}
-        isDataLoading={asistenciaLoading}
-        size="md"
-      />
-    </Layout>
+    </VStack>
   );
 };

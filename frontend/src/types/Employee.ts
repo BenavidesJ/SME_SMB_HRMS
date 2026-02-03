@@ -19,6 +19,19 @@ export interface Employee {
   direccion?: object
 }
 
+export interface EmployeeCatalogRef {
+  id: number;
+  nombre: string;
+}
+
+export interface EmployeeAddress {
+  id: number;
+  provincia: string | null;
+  canton: string | null;
+  distrito: string | null;
+  otros_datos: string | null;
+}
+
 /* Genero */
 export interface Genero {
   data: string[]
@@ -31,11 +44,9 @@ export interface EstadoCivil {
 export interface EmployeeUserInfo {
   id_usuario: number;
   username: string;
-  activo: number;
+  estado: number | string;
   requiere_cambio_contrasena: boolean;
-  ultimo_acceso: string;
   roles: string[];
-  estado_usuario: string;
 }
 
 export interface EmployeeRow {
@@ -46,13 +57,14 @@ export interface EmployeeRow {
   correo_electronico: string;
   identificacion: number | string;
   cantidad_hijos?: number;
-  genero: string;
-  estado_civil: string;
-  fecha_ingreso: string;
-  fecha_nacimiento: string;
-  estado: string;
-  telefono: number | string;
-  usuario: EmployeeUserInfo | null;
+  genero?: string | null;
+  estado_civil?: EmployeeCatalogRef | null;
+  fecha_ingreso?: string;
+  fecha_nacimiento?: string;
+  estado?: EmployeeCatalogRef | null;
+  telefono?: number | string | null;
+  direccion?: EmployeeAddress | null;
+  usuario?: EmployeeUserInfo | null;
 }
 
 export interface TipoJornada {
@@ -168,28 +180,7 @@ export interface Roles {
   nombre: string
 }
 
-export type EmployeeFullApi = {
-  id: number;
-  nombre: string;
-  primer_apellido: string;
-  segundo_apellido: string;
-  correo_electronico: string;
-  identificacion: number;
-  genero: string;
-  fecha_ingreso: string;
-  fecha_nacimiento: string;
-  estado_civil: string;
-  telefono: number | string;
-  cantidad_hijos?: number;
-
-  usuario?: {
-    roles?: string[];
-  } | null;
-
-  direccion?: {
-    provincia?: string | null;
-    canton?: string | null;
-    distrito?: string | null;
-    otros_datos?: string | null;
-  } | null;
+export type EmployeeFullApi = EmployeeRow & {
+  direccion?: EmployeeRow["direccion"];
+  usuario?: EmployeeUserInfo | null;
 };

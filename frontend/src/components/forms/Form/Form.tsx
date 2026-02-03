@@ -5,6 +5,7 @@ import {
   FormProvider,
   type DefaultValues,
   type FieldValues,
+  type UseFormProps,
 } from "react-hook-form";
 
 type SubmitResult = boolean | void;
@@ -14,6 +15,7 @@ interface FormProps<T extends FieldValues> {
   readonly onSubmit: (data: T) => Promise<SubmitResult> | SubmitResult;
   readonly defaultValues?: DefaultValues<T>;
   readonly resetOnSuccess?: boolean;
+  formOptions?: UseFormProps<T>; 
 }
 
 export function Form<T extends FieldValues>({
@@ -21,8 +23,9 @@ export function Form<T extends FieldValues>({
   onSubmit,
   defaultValues,
   resetOnSuccess = false,
+  formOptions,
 }: FormProps<T>) {
-  const methods = useForm<T>({ defaultValues });
+  const methods = useForm<T>({ defaultValues, ...formOptions });
 
   return (
     <FormProvider {...methods}>
