@@ -15,12 +15,12 @@ import { Layout } from "../../../../components/layout";
 export const Estados = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: estados = [], isLoading: statusLoading, refetch: refetchStatus } = useApiQuery<Status[]>({ url: "estados" });
+  const { data: estados = [], isLoading: statusLoading, refetch: refetchStatus } = useApiQuery<Status[]>({ url: "mantenimientos/estados" });
   const [selection, setSelection] = useState<string[]>([]);
-  const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "/estados", method: "POST" });
+  const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "mantenimeintos/estados", method: "POST" });
   const { mutate: modifyStatus } =
     useApiMutation<{ estado: string }, void, number>({
-      url: (id) => `/estados/${id}`,
+      url: (id) => `mantenimientos/estados/${id}`,
       method: "PATCH",
     })
   const [page, setPage] = useState(1);

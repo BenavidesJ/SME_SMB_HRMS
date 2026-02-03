@@ -11,31 +11,38 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
-type CicloPagoRow = { id: number; ciclo_pago: string };
+type CantonRow = { id: number; id_provincia: number; nombre: string };
+type ProvinciaRow = { id: number; nombre: string };
 
-type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdateFormValues = { ciclo_pago: string };
+type CreateFormValues = { id_provincia: string; nombre: string };
+type UpdateFormValues = { id_provincia: string; nombre: string };
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdatePayload = { ciclo_pago: string };
+type CreatePayload = { id_provincia: number; nombre: string };
+type UpdatePayload = { id_provincia: number; nombre: string };
 
-const BASE_URL = "mantenimientos/ciclos-pago";
+const BASE_URL = "mantenimientos/cantones";
+const PROVINCE_URL = "mantenimientos/provincias";
 
-const CiclosPago = () => {
+const Cantones = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const { data: ciclos = [], isLoading: isTableLoading, refetch } = useApiQuery<CicloPagoRow[]>({ url: BASE_URL });
+  const { data: cantones = [], isLoading: isTableLoading, refetch } = useApiQuery<CantonRow[]>({ url: BASE_URL });
+  const { data: provincias = [] } = useApiQuery<ProvinciaRow[]>({ url: PROVINCE_URL });
 
-  const { mutate: createCiclo, isLoading: isCreating } = useApiMutation<CreatePayload, CicloPagoRow>({
+  const provinceOptions = useMemo(() => {
+    return provincias.map((provincia) => ({ label: provincia.nombre, value: String(provincia.id) }));
+  }, [provincias]);
+
+  const { mutate: createCanton, isLoading: isCreating } = useApiMutation<CreatePayload, CantonRow>({
     url: BASE_URL,
     method: "POST",
   });
 
-  const { mutate: updateCiclo, isLoading: isUpdating } = useApiMutation<UpdatePayload, CicloPagoRow, number>({
+  const { mutate: updateCanton, isLoading: isUpdating } = useApiMutation<UpdatePayload, CantonRow, number>({
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
@@ -48,29 +55,46 @@ const CiclosPago = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return ciclos.find((row) => row.id === selectedId) ?? null;
-  }, [ciclos, selectedId]);
+    return cantones.find((row) => row.id === selectedId) ?? null;
+  }, [cantones, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return ciclos.slice(start, start + pageSize);
-  }, [ciclos, page]);
+    return cantones.slice(start, start + pageSize);
+  }, [cantones, page]);
 
-  const columns = useMemo<DataTableColumn<CicloPagoRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<CantonRow>[]>(() => {
     return [
-      { id: "id", header: "ID", minW: "80px", textAlign: "center", cell: (row) => String(row.id) },
-      { id: "ciclo_pago", header: "Ciclo de pago", minW: "220px", cell: (row) => row.ciclo_pago },
+      {
+        id: "id",
+        header: "ID",
+        minW: "100px",
+        textAlign: "center",
+        cell: (row) => String(row.id),
+      },
+      {
+        id: "provincia",
+        header: "Provincia",
+        minW: "200px",
+        cell: (row) => provincias.find((provincia) => provincia.id === row.id_provincia)?.nombre ?? String(row.id_provincia),
+      },
+      {
+        id: "nombre",
+        header: "Cantón",
+        minW: "200px",
+        cell: (row) => row.nombre,
+      },
     ];
-  }, []);
+  }, [provincias]);
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        id_provincia: Number(values.id_provincia),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
-      await createCiclo(payload);
+      await createCanton(payload);
 
       setOpenCreate(false);
       setSelection([]);
@@ -88,10 +112,11 @@ const CiclosPago = () => {
 
     try {
       const payload: UpdatePayload = {
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        id_provincia: Number(values.id_provincia),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
-      await updateCiclo(selectedId, payload);
+      await updateCanton(selectedId, payload);
 
       setOpenEdit(false);
       setSelection([]);
@@ -106,7 +131,10 @@ const CiclosPago = () => {
   const handleDelete = async () => {
     if (!selectedId) return;
     try {
-      await apiRequest<void>({ url: `${BASE_URL}/${selectedId}`, method: "DELETE" });
+      await apiRequest<void>({
+        url: `${BASE_URL}/${selectedId}`,
+        method: "DELETE",
+      });
       setSelection([]);
       setPage(1);
       await refetch();
@@ -116,7 +144,7 @@ const CiclosPago = () => {
   };
 
   return (
-    <Layout pageTitle="Mantenimiento de Ciclos de Pago">
+    <Layout pageTitle="Mantenimiento de Cantones">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px">
@@ -126,13 +154,13 @@ const CiclosPago = () => {
               w="100%"
               onClick={() => setOpenCreate(true)}
             >
-              Crear Ciclo <FiPlus />
+              Crear Cantón <FiPlus />
             </Button>
           </Box>
         </section>
 
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<CicloPagoRow>
+          <DataTable<CantonRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -172,7 +200,7 @@ const CiclosPago = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: ciclos.length,
+              totalCount: cantones.length,
               onPageChange: setPage,
             }}
           />
@@ -180,30 +208,29 @@ const CiclosPago = () => {
       </Stack>
 
       <Modal
-        title="Crear ciclo de pago"
+        title="Crear cantón"
         isOpen={openCreate}
         size="lg"
         onOpenChange={(event) => setOpenCreate(event.open)}
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
+              fieldType="select"
+              label="Provincia"
+              name="id_provincia"
               required
+              options={provinceOptions}
               rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-                setValueAs: (value) => Number(value),
+                required: "Seleccione una provincia",
               }}
             />
             <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
             />
@@ -226,22 +253,35 @@ const CiclosPago = () => {
       />
 
       <Modal
-        title="Editar ciclo de pago"
+        title="Editar cantón"
         isOpen={openEdit}
         size="md"
         onOpenChange={(event) => setOpenEdit(event.open)}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ ciclo_pago: selectedRow?.ciclo_pago ?? "" }}
+            defaultValues={{
+              id_provincia: selectedRow ? String(selectedRow.id_provincia) : "",
+              nombre: selectedRow?.nombre ?? "",
+            }}
           >
             <InputField
+              fieldType="select"
+              label="Provincia"
+              name="id_provincia"
+              required
+              options={provinceOptions}
+              rules={{
+                required: "Seleccione una provincia",
+              }}
+            />
+            <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
             />
@@ -267,4 +307,4 @@ const CiclosPago = () => {
   );
 };
 
-export default CiclosPago;
+export default Cantones;

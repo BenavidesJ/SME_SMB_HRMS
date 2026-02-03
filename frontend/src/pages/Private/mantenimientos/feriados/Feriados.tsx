@@ -11,31 +11,36 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
-type CicloPagoRow = { id: number; ciclo_pago: string };
+const BASE_URL = "mantenimientos/feriados";
 
-type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdateFormValues = { ciclo_pago: string };
+const BOOLEAN_OPTIONS = [
+  { label: "Sí", value: "true" },
+  { label: "No", value: "false" },
+];
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdatePayload = { ciclo_pago: string };
+type FeriadoRow = { id: number; fecha: string; nombre: string; es_obligatorio: boolean };
 
-const BASE_URL = "mantenimientos/ciclos-pago";
+type CreateFormValues = { fecha: string; nombre: string; es_obligatorio: string };
+type UpdateFormValues = { fecha: string; nombre: string; es_obligatorio: string };
 
-const CiclosPago = () => {
+type CreatePayload = { fecha: string; nombre: string; es_obligatorio: boolean };
+type UpdatePayload = { fecha?: string; nombre?: string; es_obligatorio?: boolean };
+
+const Feriados = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const { data: ciclos = [], isLoading: isTableLoading, refetch } = useApiQuery<CicloPagoRow[]>({ url: BASE_URL });
+  const { data: feriados = [], isLoading: isTableLoading, refetch } = useApiQuery<FeriadoRow[]>({ url: BASE_URL });
 
-  const { mutate: createCiclo, isLoading: isCreating } = useApiMutation<CreatePayload, CicloPagoRow>({
+  const { mutate: createFeriado, isLoading: isCreating } = useApiMutation<CreatePayload, FeriadoRow>({
     url: BASE_URL,
     method: "POST",
   });
 
-  const { mutate: updateCiclo, isLoading: isUpdating } = useApiMutation<UpdatePayload, CicloPagoRow, number>({
+  const { mutate: updateFeriado, isLoading: isUpdating } = useApiMutation<UpdatePayload, FeriadoRow, number>({
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
@@ -48,29 +53,38 @@ const CiclosPago = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return ciclos.find((row) => row.id === selectedId) ?? null;
-  }, [ciclos, selectedId]);
+    return feriados.find((row) => row.id === selectedId) ?? null;
+  }, [feriados, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return ciclos.slice(start, start + pageSize);
-  }, [ciclos, page]);
+    return feriados.slice(start, start + pageSize);
+  }, [feriados, page]);
 
-  const columns = useMemo<DataTableColumn<CicloPagoRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<FeriadoRow>[]>(() => {
     return [
       { id: "id", header: "ID", minW: "80px", textAlign: "center", cell: (row) => String(row.id) },
-      { id: "ciclo_pago", header: "Ciclo de pago", minW: "220px", cell: (row) => row.ciclo_pago },
+      { id: "fecha", header: "Fecha", minW: "140px", cell: (row) => row.fecha },
+      { id: "nombre", header: "Nombre", minW: "220px", cell: (row) => row.nombre },
+      {
+        id: "obligatorio",
+        header: "Obligatorio",
+        minW: "120px",
+        textAlign: "center",
+        cell: (row) => (row.es_obligatorio ? "Sí" : "No"),
+      },
     ];
   }, []);
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        fecha: String(values.fecha ?? "").trim(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        es_obligatorio: values.es_obligatorio === "true",
       };
 
-      await createCiclo(payload);
+      await createFeriado(payload);
 
       setOpenCreate(false);
       setSelection([]);
@@ -88,10 +102,12 @@ const CiclosPago = () => {
 
     try {
       const payload: UpdatePayload = {
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        fecha: String(values.fecha ?? "").trim(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        es_obligatorio: values.es_obligatorio === "true",
       };
 
-      await updateCiclo(selectedId, payload);
+      await updateFeriado(selectedId, payload);
 
       setOpenEdit(false);
       setSelection([]);
@@ -116,7 +132,7 @@ const CiclosPago = () => {
   };
 
   return (
-    <Layout pageTitle="Mantenimiento de Ciclos de Pago">
+    <Layout pageTitle="Feriados">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px">
@@ -126,13 +142,13 @@ const CiclosPago = () => {
               w="100%"
               onClick={() => setOpenCreate(true)}
             >
-              Crear Ciclo <FiPlus />
+              Registrar feriado <FiPlus />
             </Button>
           </Box>
         </section>
 
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<CicloPagoRow>
+          <DataTable<FeriadoRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -172,7 +188,7 @@ const CiclosPago = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: ciclos.length,
+              totalCount: feriados.length,
               onPageChange: setPage,
             }}
           />
@@ -180,32 +196,38 @@ const CiclosPago = () => {
       </Stack>
 
       <Modal
-        title="Crear ciclo de pago"
+        title="Registrar feriado"
         isOpen={openCreate}
         size="lg"
         onOpenChange={(event) => setOpenCreate(event.open)}
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
+              fieldType="date"
+              label="Fecha"
+              name="fecha"
               required
-              rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-                setValueAs: (value) => Number(value),
-              }}
+              rules={{ required: "La fecha es obligatoria" }}
             />
+
             <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
+            />
+
+            <InputField
+              fieldType="select"
+              label="Obligatorio"
+              name="es_obligatorio"
+              required
+              options={BOOLEAN_OPTIONS}
+              rules={{ required: "El estado es obligatorio" }}
             />
 
             <Box w="250px">
@@ -226,24 +248,44 @@ const CiclosPago = () => {
       />
 
       <Modal
-        title="Editar ciclo de pago"
+        title="Editar feriado"
         isOpen={openEdit}
-        size="md"
+        size="lg"
         onOpenChange={(event) => setOpenEdit(event.open)}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ ciclo_pago: selectedRow?.ciclo_pago ?? "" }}
+            defaultValues={{
+              fecha: selectedRow?.fecha ?? "",
+              nombre: selectedRow?.nombre ?? "",
+              es_obligatorio: selectedRow?.es_obligatorio ? "true" : "false",
+            }}
           >
             <InputField
+              fieldType="date"
+              label="Fecha"
+              name="fecha"
+              required
+              rules={{ required: "La fecha es obligatoria" }}
+            />
+
+            <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
+            />
+
+            <InputField
+              fieldType="select"
+              label="Obligatorio"
+              name="es_obligatorio"
+              required
+              options={BOOLEAN_OPTIONS}
             />
 
             <Box w="250px">
@@ -267,4 +309,4 @@ const CiclosPago = () => {
   );
 };
 
-export default CiclosPago;
+export default Feriados;

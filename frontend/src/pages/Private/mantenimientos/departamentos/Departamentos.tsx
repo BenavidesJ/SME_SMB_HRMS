@@ -16,11 +16,11 @@ import { Layout } from "../../../../components/layout";
 export const Departamentos = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: departments = [], isLoading: isTableLoading, refetch: refetch } = useApiQuery<Department[]>({ url: "departamentos" });
-  const { mutate: createDepartment, isLoading: isSubmitting } = useApiMutation<{ departamento: string }, void>({ url: "/departamentos", method: "POST" });
+  const { data: departments = [], isLoading: isTableLoading, refetch: refetch } = useApiQuery<Department[]>({ url: "mantenimientos/departamentos" });
+  const { mutate: createDepartment, isLoading: isSubmitting } = useApiMutation<{ departamento: string }, void>({ url: "mantenimientos/departamentos", method: "POST" });
   const { mutate: patchDepartment } =
     useApiMutation<{ nombre: string }, void, number>({
-      url: (id) => `/departamentos/${id}`,
+      url: (id) => `mantenimientos/departamentos/${id}`,
       method: "PATCH",
     })
   const [selection, setSelection] = useState<string[]>([]);
@@ -115,7 +115,7 @@ export const Departamentos = () => {
         header: "Departamento",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => `${r.departamento}`,
+        cell: (r) => `${r.nombre}`,
       }
     ]
   },
@@ -231,7 +231,7 @@ export const Departamentos = () => {
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              nombre: selectedRow?.departamento ?? "",
+              nombre: selectedRow?.nombre ?? "",
             }}
           >
             <InputField

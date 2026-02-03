@@ -11,31 +11,31 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
-type CicloPagoRow = { id: number; ciclo_pago: string };
+const BASE_URL = "mantenimientos/tipos-hora-extra";
 
-type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdateFormValues = { ciclo_pago: string };
+type TipoHoraExtraRow = { id: number; nombre: string; multiplicador: number };
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdatePayload = { ciclo_pago: string };
+type CreateFormValues = { nombre: string; multiplicador: string };
+type UpdateFormValues = { nombre: string; multiplicador: string };
 
-const BASE_URL = "mantenimientos/ciclos-pago";
+type CreatePayload = { nombre: string; multiplicador: string };
+type UpdatePayload = { nombre?: string; multiplicador?: string };
 
-const CiclosPago = () => {
+const TiposHoraExtra = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const { data: ciclos = [], isLoading: isTableLoading, refetch } = useApiQuery<CicloPagoRow[]>({ url: BASE_URL });
+  const { data: tipos = [], isLoading: isTableLoading, refetch } = useApiQuery<TipoHoraExtraRow[]>({ url: BASE_URL });
 
-  const { mutate: createCiclo, isLoading: isCreating } = useApiMutation<CreatePayload, CicloPagoRow>({
+  const { mutate: createTipo, isLoading: isCreating } = useApiMutation<CreatePayload, TipoHoraExtraRow>({
     url: BASE_URL,
     method: "POST",
   });
 
-  const { mutate: updateCiclo, isLoading: isUpdating } = useApiMutation<UpdatePayload, CicloPagoRow, number>({
+  const { mutate: updateTipo, isLoading: isUpdating } = useApiMutation<UpdatePayload, TipoHoraExtraRow, number>({
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
@@ -48,29 +48,36 @@ const CiclosPago = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return ciclos.find((row) => row.id === selectedId) ?? null;
-  }, [ciclos, selectedId]);
+    return tipos.find((row) => row.id === selectedId) ?? null;
+  }, [tipos, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return ciclos.slice(start, start + pageSize);
-  }, [ciclos, page]);
+    return tipos.slice(start, start + pageSize);
+  }, [tipos, page]);
 
-  const columns = useMemo<DataTableColumn<CicloPagoRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<TipoHoraExtraRow>[]>(() => {
     return [
       { id: "id", header: "ID", minW: "80px", textAlign: "center", cell: (row) => String(row.id) },
-      { id: "ciclo_pago", header: "Ciclo de pago", minW: "220px", cell: (row) => row.ciclo_pago },
+      { id: "nombre", header: "Nombre", minW: "220px", cell: (row) => row.nombre },
+      {
+        id: "multiplicador",
+        header: "Multiplicador",
+        minW: "160px",
+        textAlign: "center",
+        cell: (row) => Number(row.multiplicador).toFixed(2),
+      },
     ];
   }, []);
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        multiplicador: String(values.multiplicador ?? "").trim(),
       };
 
-      await createCiclo(payload);
+      await createTipo(payload);
 
       setOpenCreate(false);
       setSelection([]);
@@ -88,10 +95,11 @@ const CiclosPago = () => {
 
     try {
       const payload: UpdatePayload = {
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        multiplicador: String(values.multiplicador ?? "").trim(),
       };
 
-      await updateCiclo(selectedId, payload);
+      await updateTipo(selectedId, payload);
 
       setOpenEdit(false);
       setSelection([]);
@@ -116,7 +124,7 @@ const CiclosPago = () => {
   };
 
   return (
-    <Layout pageTitle="Mantenimiento de Ciclos de Pago">
+    <Layout pageTitle="Tipos de hora extra">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px">
@@ -126,13 +134,13 @@ const CiclosPago = () => {
               w="100%"
               onClick={() => setOpenCreate(true)}
             >
-              Crear Ciclo <FiPlus />
+              Registrar tipo <FiPlus />
             </Button>
           </Box>
         </section>
 
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<CicloPagoRow>
+          <DataTable<TipoHoraExtraRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -172,7 +180,7 @@ const CiclosPago = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: ciclos.length,
+              totalCount: tipos.length,
               onPageChange: setPage,
             }}
           />
@@ -180,30 +188,31 @@ const CiclosPago = () => {
       </Stack>
 
       <Modal
-        title="Crear ciclo de pago"
+        title="Registrar tipo de hora extra"
         isOpen={openCreate}
         size="lg"
         onOpenChange={(event) => setOpenCreate(event.open)}
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
+              fieldType="text"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-                setValueAs: (value) => Number(value),
+                required: "El nombre es obligatorio",
+                setValueAs: (value) => String(value ?? "").trim(),
               }}
             />
+
             <InputField
-              fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              fieldType="number"
+              label="Multiplicador"
+              name="multiplicador"
               required
+              // inputProps={{ step: "0.01", min: "0" }}
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El multiplicador es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
             />
@@ -226,22 +235,37 @@ const CiclosPago = () => {
       />
 
       <Modal
-        title="Editar ciclo de pago"
+        title="Editar tipo de hora extra"
         isOpen={openEdit}
-        size="md"
+        size="lg"
         onOpenChange={(event) => setOpenEdit(event.open)}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ ciclo_pago: selectedRow?.ciclo_pago ?? "" }}
+            defaultValues={{
+              nombre: selectedRow?.nombre ?? "",
+              multiplicador: selectedRow ? String(selectedRow.multiplicador) : "",
+            }}
           >
             <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
+                setValueAs: (value) => String(value ?? "").trim(),
+              }}
+            />
+
+            <InputField
+              fieldType="number"
+              label="Multiplicador"
+              name="multiplicador"
+              required
+              // inputProps={{ step: "0.01", min: "0" }}      
+              rules={{
+                required: "El multiplicador es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
             />
@@ -267,4 +291,4 @@ const CiclosPago = () => {
   );
 };
 
-export default CiclosPago;
+export default TiposHoraExtra;

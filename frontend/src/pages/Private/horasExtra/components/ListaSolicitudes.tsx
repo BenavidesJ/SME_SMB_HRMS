@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   HStack,
+  ScrollArea,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -40,7 +41,7 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
     setSubmittingId(id);
     try {
       await modifyRequest(id,
-        { id_aprobador: user?.id, estado: "aprobado" },
+        { estado: "aprobado" },
       );
       await refetch();
     } catch (error) {
@@ -75,36 +76,41 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
       )}
 
       {!isLoading && res && (
-        <Stack gap="4" mb="80px">
-          {isAgrupada(res) ? (
-            <Stack gap="5">
-              {grupos.map((g) => (
-                <Stack key={String(g.clave)} gap="3">
-                  <HStack justify="space-between">
-                    <Text fontWeight="semibold">
-                      {g.etiqueta}{" "}
-                      <Text as="span" color="fg.muted" fontWeight="normal">
-                        ({g.cantidad})
-                      </Text>
-                    </Text>
-                  </HStack>
+        <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "30rem" }}>
+          <ScrollArea.Viewport>
+            <Stack gap="4" pb="8">
+              {isAgrupada(res) ? (
+                <Stack gap="5">
+                  {grupos.map((g) => (
+                    <Stack key={String(g.clave)} gap="3">
+                      <HStack justify="space-between">
+                        <Text fontWeight="semibold">
+                          {g.etiqueta}{" "}
+                          <Text as="span" color="fg.muted" fontWeight="normal">
+                            ({g.cantidad})
+                          </Text>
+                        </Text>
+                      </HStack>
 
-                  <Stack gap="3">
-                    {g.items.map((item) => (
-                      <SolicitudCard key={item.id_solicitud_hx} item={item} onApprove={handleApprove} onDecline={handleDecline} isSubmitting={submittingId === item.id_solicitud_hx} />
-                    ))}
-                  </Stack>
+                      <Stack gap="3">
+                        {g.items.map((item) => (
+                          <SolicitudCard key={item.id_solicitud_hx} item={item} onApprove={handleApprove} onDecline={handleDecline} isSubmitting={submittingId === item.id_solicitud_hx} />
+                        ))}
+                      </Stack>
+                    </Stack>
+                  ))}
                 </Stack>
-              ))}
+              ) : (
+                <Stack gap="3">
+                  {flatItems.map((item: SolicitudHoraExtra) => (
+                    <SolicitudCard key={item.id_solicitud_hx} item={item} onApprove={handleApprove} onDecline={handleDecline} isSubmitting={submittingId === item.id_solicitud_hx} />
+                  ))}
+                </Stack>
+              )}
             </Stack>
-          ) : (
-            <Stack gap="3">
-              {flatItems.map((item: SolicitudHoraExtra) => (
-                <SolicitudCard key={item.id_solicitud_hx} item={item} onApprove={handleApprove} onDecline={handleDecline} isSubmitting={submittingId === item.id_solicitud_hx} />
-              ))}
-            </Stack>
-          )}
-        </Stack>
+          </ScrollArea.Viewport>
+          <ScrollArea.Scrollbar orientation="vertical" />
+        </ScrollArea.Root>
       )}
     </Stack>
   );

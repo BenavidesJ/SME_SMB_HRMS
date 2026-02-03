@@ -38,7 +38,7 @@ const TiposContrato = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return rows.find((r) => r.id_tipo_contrato === selectedId) ?? null;
+    return rows.find((r) => r.id === selectedId) ?? null;
   }, [rows, selectedId]);
 
   const fill = useCallback(async () => {
@@ -62,7 +62,7 @@ const TiposContrato = () => {
         header: "ID",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => String(r.id_tipo_contrato),
+        cell: (r) => String(r.id),
       },
       {
         id: "tipo_contrato",
@@ -161,7 +161,7 @@ const TiposContrato = () => {
               enabled: true,
               selectedKeys: selection,
               onChange: setSelection,
-              getRowKey: (r) => String(r.id_tipo_contrato),
+              getRowKey: (r) => String(r.id),
             }}
             actionBar={{
               enabled: true,

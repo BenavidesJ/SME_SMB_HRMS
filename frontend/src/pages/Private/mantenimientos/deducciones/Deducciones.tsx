@@ -11,31 +11,40 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
-type CicloPagoRow = { id: number; ciclo_pago: string };
+type DeduccionRow = {
+  id: number;
+  nombre: string;
+  valor: number;
+  es_voluntaria: boolean;
+};
 
-type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdateFormValues = { ciclo_pago: string };
+type CreateFormValues = { nombre: string; valor: number; es_voluntaria: string };
+type UpdateFormValues = { nombre: string; valor: number; es_voluntaria: string };
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdatePayload = { ciclo_pago: string };
+type CreatePayload = { nombre: string; valor: number; es_voluntaria: boolean };
+type UpdatePayload = Partial<CreatePayload>;
 
-const BASE_URL = "mantenimientos/ciclos-pago";
+const BASE_URL = "mantenimientos/deducciones";
+const BOOLEAN_OPTIONS = [
+  { label: "Sí", value: "true" },
+  { label: "No", value: "false" },
+];
 
-const CiclosPago = () => {
+const Deducciones = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const { data: ciclos = [], isLoading: isTableLoading, refetch } = useApiQuery<CicloPagoRow[]>({ url: BASE_URL });
+  const { data: deducciones = [], isLoading: isTableLoading, refetch } = useApiQuery<DeduccionRow[]>({ url: BASE_URL });
 
-  const { mutate: createCiclo, isLoading: isCreating } = useApiMutation<CreatePayload, CicloPagoRow>({
+  const { mutate: createDeduccion, isLoading: isCreating } = useApiMutation<CreatePayload, DeduccionRow>({
     url: BASE_URL,
     method: "POST",
   });
 
-  const { mutate: updateCiclo, isLoading: isUpdating } = useApiMutation<UpdatePayload, CicloPagoRow, number>({
+  const { mutate: updateDeduccion, isLoading: isUpdating } = useApiMutation<UpdatePayload, DeduccionRow, number>({
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
@@ -48,29 +57,38 @@ const CiclosPago = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return ciclos.find((row) => row.id === selectedId) ?? null;
-  }, [ciclos, selectedId]);
+    return deducciones.find((row) => row.id === selectedId) ?? null;
+  }, [deducciones, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return ciclos.slice(start, start + pageSize);
-  }, [ciclos, page]);
+    return deducciones.slice(start, start + pageSize);
+  }, [deducciones, page]);
 
-  const columns = useMemo<DataTableColumn<CicloPagoRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<DeduccionRow>[]>(() => {
     return [
       { id: "id", header: "ID", minW: "80px", textAlign: "center", cell: (row) => String(row.id) },
-      { id: "ciclo_pago", header: "Ciclo de pago", minW: "220px", cell: (row) => row.ciclo_pago },
+      { id: "nombre", header: "Nombre", minW: "200px", cell: (row) => row.nombre },
+      { id: "valor", header: "Valor", minW: "120px", textAlign: "center", cell: (row) => row.valor.toFixed(2) },
+      {
+        id: "es_voluntaria",
+        header: "Voluntaria",
+        minW: "120px",
+        textAlign: "center",
+        cell: (row) => (row.es_voluntaria ? "Sí" : "No"),
+      },
     ];
   }, []);
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        valor: Number(values.valor),
+        es_voluntaria: values.es_voluntaria === "true",
       };
 
-      await createCiclo(payload);
+      await createDeduccion(payload);
 
       setOpenCreate(false);
       setSelection([]);
@@ -88,10 +106,12 @@ const CiclosPago = () => {
 
     try {
       const payload: UpdatePayload = {
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
+        valor: Number(values.valor),
+        es_voluntaria: values.es_voluntaria === "true",
       };
 
-      await updateCiclo(selectedId, payload);
+      await updateDeduccion(selectedId, payload);
 
       setOpenEdit(false);
       setSelection([]);
@@ -116,7 +136,7 @@ const CiclosPago = () => {
   };
 
   return (
-    <Layout pageTitle="Mantenimiento de Ciclos de Pago">
+    <Layout pageTitle="Mantenimiento de Deducciones">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px">
@@ -126,13 +146,13 @@ const CiclosPago = () => {
               w="100%"
               onClick={() => setOpenCreate(true)}
             >
-              Crear Ciclo <FiPlus />
+              Crear Deducción <FiPlus />
             </Button>
           </Box>
         </section>
 
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<CicloPagoRow>
+          <DataTable<DeduccionRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -172,7 +192,7 @@ const CiclosPago = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: ciclos.length,
+              totalCount: deducciones.length,
               onPageChange: setPage,
             }}
           />
@@ -180,32 +200,40 @@ const CiclosPago = () => {
       </Stack>
 
       <Modal
-        title="Crear ciclo de pago"
+        title="Crear deducción"
         isOpen={openCreate}
         size="lg"
         onOpenChange={(event) => setOpenCreate(event.open)}
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
+              fieldType="text"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
+                required: "El nombre es obligatorio",
+                setValueAs: (value) => String(value ?? "").trim(),
+              }}
+            />
+            <InputField
+              fieldType="number"
+              label="Valor"
+              name="valor"
+              required
+              rules={{
+                required: "El valor es obligatorio",
+                min: { value: 0, message: "Debe ser mayor o igual a 0" },
                 setValueAs: (value) => Number(value),
               }}
             />
             <InputField
-              fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              fieldType="select"
+              label="¿Es voluntaria?"
+              name="es_voluntaria"
               required
-              rules={{
-                required: "La descripción es obligatoria",
-                setValueAs: (value) => String(value ?? "").trim(),
-              }}
+              options={BOOLEAN_OPTIONS}
+              rules={{ required: "Seleccione una opción" }}
             />
 
             <Box w="250px">
@@ -226,24 +254,47 @@ const CiclosPago = () => {
       />
 
       <Modal
-        title="Editar ciclo de pago"
+        title="Editar deducción"
         isOpen={openEdit}
         size="md"
         onOpenChange={(event) => setOpenEdit(event.open)}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ ciclo_pago: selectedRow?.ciclo_pago ?? "" }}
+            defaultValues={{
+              nombre: selectedRow?.nombre ?? "",
+              valor: selectedRow?.valor ?? 0,
+              es_voluntaria: selectedRow ? (selectedRow.es_voluntaria ? "true" : "false") : "false",
+            }}
           >
             <InputField
               fieldType="text"
-              label="Descripción"
-              name="ciclo_pago"
+              label="Nombre"
+              name="nombre"
               required
               rules={{
-                required: "La descripción es obligatoria",
+                required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
               }}
+            />
+            <InputField
+              fieldType="number"
+              label="Valor"
+              name="valor"
+              required
+              rules={{
+                required: "El valor es obligatorio",
+                min: { value: 0, message: "Debe ser mayor o igual a 0" },
+                setValueAs: (value) => Number(value),
+              }}
+            />
+            <InputField
+              fieldType="select"
+              label="¿Es voluntaria?"
+              name="es_voluntaria"
+              required
+              options={BOOLEAN_OPTIONS}
+              rules={{ required: "Seleccione una opción" }}
             />
 
             <Box w="250px">
@@ -267,4 +318,4 @@ const CiclosPago = () => {
   );
 };
 
-export default CiclosPago;
+export default Deducciones;

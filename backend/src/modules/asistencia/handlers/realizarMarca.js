@@ -8,6 +8,8 @@ import {
   TipoMarca,
   MarcaAsistencia,
   JornadaDiaria,
+  TipoJornada,
+  SolicitudHoraExtra,
 } from "../../../models/index.js";
 import { getDayInitial } from "./helpers/obtenerInicialDia.js";
 
@@ -79,6 +81,14 @@ export const registrarMarcaAsistencia = async ({
 
     const ESTADO_ACTIVO_ID = estadoActivo.id_estado;
 
+    const estadoAprobado = await Estado.findOne({
+      where: { estado: "APROBADO" },
+      attributes: ["id_estado", "estado"],
+      transaction: tx,
+    });
+
+    const ESTADO_APROBADO_ID = estadoAprobado?.id_estado ?? null;
+
     const contratoActivo = await Contrato.findOne({
       where: {
         id_colaborador: colaborador.id_colaborador,
@@ -102,6 +112,17 @@ export const registrarMarcaAsistencia = async ({
     if (!horarioActivo) {
       throw new Error("El contrato activo no tiene un horario ACTIVO asignado");
     }
+
+    const tipoJornada = await TipoJornada.findByPk(contratoActivo.id_tipo_jornada, {
+      attributes: ["id_tipo_jornada", "max_horas_diarias"],
+      transaction: tx,
+    });
+
+    if (!tipoJornada) {
+      throw new Error("No se encontró el tipo de jornada asociado al contrato activo");
+    }
+
+    const maxHorasDiarias = Number(tipoJornada.max_horas_diarias ?? 0);
 
     // Validar si es día laboral
     const dayInitial = getDayInitial(timestampDate);
@@ -199,6 +220,7 @@ export const registrarMarcaAsistencia = async ({
 
     //  Si hay ENTRADA y SALIDA, crear registro de JornadaDiaria
     let horasOrdinarias = 0.0;
+    let horasExtra = 0.0;
     const fechaDia = dayjs(timestampDate).format("YYYY-MM-DD");
 
     const marcasActualizadas = await MarcaAsistencia.findAll({
@@ -219,18 +241,71 @@ export const registrarMarcaAsistencia = async ({
       transaction: tx,
     });
 
-    const entradaMarca = marcasActualizadas.find(
-      (m) => String(m.tipoMarca?.nombre ?? "").toUpperCase() === "ENTRADA"
-    );
-    const salidaMarca = marcasActualizadas.find(
-      (m) => String(m.tipoMarca?.nombre ?? "").toUpperCase() === "SALIDA"
-    );
+    let totalWorkedMinutes = 0;
+    let primeraEntradaMarca = null;
+    let ultimaSalidaMarca = null;
+    let entradaAbierta = null;
 
-    if (entradaMarca && salidaMarca) {
-      const entrada = dayjs(entradaMarca.timestamp);
-      const salida = dayjs(salidaMarca.timestamp);
-      const diferencia = salida.diff(entrada, "minutes");
-      horasOrdinarias = Number((diferencia / 60).toFixed(2));
+    for (const marca of marcasActualizadas) {
+      const tipoNombre = String(marca.tipoMarca?.nombre ?? "").toUpperCase();
+
+      if (tipoNombre === "ENTRADA") {
+        if (!primeraEntradaMarca) {
+          primeraEntradaMarca = marca;
+        }
+        entradaAbierta = dayjs(marca.timestamp);
+      } else if (tipoNombre === "SALIDA") {
+        if (entradaAbierta) {
+          const salidaActual = dayjs(marca.timestamp);
+          const diff = salidaActual.diff(entradaAbierta, "minutes");
+          if (diff > 0) {
+            totalWorkedMinutes += diff;
+          }
+          entradaAbierta = null;
+        }
+        ultimaSalidaMarca = marca;
+      }
+    }
+
+    const entradaMarca = primeraEntradaMarca;
+    const salidaMarca = ultimaSalidaMarca;
+
+    if (entradaMarca && salidaMarca && totalWorkedMinutes > 0) {
+      const totalHoras = Math.max(totalWorkedMinutes / 60, 0);
+
+      const limiteOrdinario = maxHorasDiarias > 0 && Number.isFinite(maxHorasDiarias)
+        ? Number(maxHorasDiarias)
+        : totalHoras;
+
+      horasOrdinarias = Number(Math.min(totalHoras, limiteOrdinario).toFixed(2));
+
+      let horasExtraAprobadas = 0;
+
+      if (ESTADO_APROBADO_ID) {
+        const solicitudesAprobadas = await SolicitudHoraExtra.findAll({
+          where: {
+            id_colaborador: colaborador.id_colaborador,
+            fecha_trabajo: fechaDia,
+            estado: ESTADO_APROBADO_ID,
+          },
+          attributes: ["horas_solicitadas"],
+          transaction: tx,
+        });
+
+        horasExtraAprobadas = solicitudesAprobadas.reduce((total, solicitud) => {
+          const horas = Number(solicitud.horas_solicitadas ?? 0);
+          return total + (Number.isFinite(horas) ? horas : 0);
+        }, 0);
+
+        horasExtraAprobadas = Number(horasExtraAprobadas.toFixed(2));
+      }
+
+      if (horasExtraAprobadas > 0) {
+        const potencialExtra = Math.max(totalHoras - horasOrdinarias, 0);
+        horasExtra = Number(Math.min(potencialExtra, horasExtraAprobadas).toFixed(2));
+      } else {
+        horasExtra = 0.0;
+      }
 
       const jornadaExistente = await JornadaDiaria.findOne({
         where: {
@@ -244,6 +319,7 @@ export const registrarMarcaAsistencia = async ({
         await jornadaExistente.update(
           {
             horas_ordinarias: horasOrdinarias,
+            horas_extra: horasExtra,
           },
           { transaction: tx }
         );
@@ -253,7 +329,7 @@ export const registrarMarcaAsistencia = async ({
             id_colaborador: colaborador.id_colaborador,
             fecha: fechaDia,
             horas_ordinarias: horasOrdinarias,
-            horas_extra: 0.0,
+            horas_extra: horasExtra,
             horas_nocturnas: 0.0,
           },
           { transaction: tx }
@@ -278,6 +354,7 @@ export const registrarMarcaAsistencia = async ({
       jornada: {
         fecha: fechaDia,
         horas_ordinarias: horasOrdinarias,
+        horas_extra: horasExtra,
         entrada: entradaMarca?.timestamp ?? null,
         salida: salidaMarca?.timestamp ?? null,
       },

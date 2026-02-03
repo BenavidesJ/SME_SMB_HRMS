@@ -14,8 +14,8 @@ import {
   FiClipboard,
   FiAlertCircle,
   FiPhone,
+  FiCalendar,
 } from "react-icons/fi";
-import { ImManWoman } from "react-icons/im";
 import { MdOutlineWorkOutline, MdOutlineLocationCity } from "react-icons/md";
 import { RiExchangeDollarLine, RiTimerLine } from "react-icons/ri";
 import { BsClipboardData } from "react-icons/bs";
@@ -39,7 +39,6 @@ export const modules: Array<{
   icon: JSX.Element;
 }> = [
     { name: "Colaboradores", path: "colaboradores", color: "blue", icon: <FiBriefcase /> },
-    { name: "Géneros", path: "generos", color: "teal", icon: <ImManWoman /> },
     { name: "Estados Civiles", path: "estados_civiles", color: "cyan", icon: <FiHome /> },
     { name: "Estados", path: "estados", color: "gray", icon: <FiTag /> },
     { name: "Roles", path: "roles", color: "purple", icon: <FiShield /> },
@@ -61,5 +60,6 @@ export const modules: Array<{
     { name: "Tipos de Hora Extra", path: "tipos_hora_extra", color: "orange", icon: <FiClock /> },
     { name: "Tipos de Solicitud", path: "tipos_solicitud", color: "yellow", icon: <FiSettings /> },
     { name: "Causas de Liquidación", path: "causas_liquidacion", color: "orange", icon: <FiTag /> },
+    { name: "Feriados", path: "feriados", color: "pink", icon: <FiCalendar /> },
     { name: "Teléfonos", path: "telefonos", color: "pink", icon: <FiPhone /> },
   ];

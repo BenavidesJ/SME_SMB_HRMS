@@ -11,31 +11,31 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
-type CicloPagoRow = { id: number; ciclo_pago: string };
+type CausaRow = { id: number; causa_liquidacion: string };
 
-type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdateFormValues = { ciclo_pago: string };
+type CreateFormValues = { causa_liquidacion: string };
+type UpdateFormValues = { causa_liquidacion: string };
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
-type UpdatePayload = { ciclo_pago: string };
+type CreatePayload = { causa_liquidacion: string };
+type UpdatePayload = { causa_liquidacion: string };
 
-const BASE_URL = "mantenimientos/ciclos-pago";
+const BASE_URL = "mantenimientos/causas-liquidacion";
 
-const CiclosPago = () => {
+const CausasLiquidacion = () => {
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const { data: ciclos = [], isLoading: isTableLoading, refetch } = useApiQuery<CicloPagoRow[]>({ url: BASE_URL });
+  const { data: causas = [], isLoading: isTableLoading, refetch } = useApiQuery<CausaRow[]>({ url: BASE_URL });
 
-  const { mutate: createCiclo, isLoading: isCreating } = useApiMutation<CreatePayload, CicloPagoRow>({
+  const { mutate: createCausa, isLoading: isCreating } = useApiMutation<CreatePayload, CausaRow>({
     url: BASE_URL,
     method: "POST",
   });
 
-  const { mutate: updateCiclo, isLoading: isUpdating } = useApiMutation<UpdatePayload, CicloPagoRow, number>({
+  const { mutate: updateCausa, isLoading: isUpdating } = useApiMutation<UpdatePayload, CausaRow, number>({
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
@@ -48,29 +48,28 @@ const CiclosPago = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return ciclos.find((row) => row.id === selectedId) ?? null;
-  }, [ciclos, selectedId]);
+    return causas.find((row) => row.id === selectedId) ?? null;
+  }, [causas, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return ciclos.slice(start, start + pageSize);
-  }, [ciclos, page]);
+    return causas.slice(start, start + pageSize);
+  }, [causas, page]);
 
-  const columns = useMemo<DataTableColumn<CicloPagoRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<CausaRow>[]>(() => {
     return [
       { id: "id", header: "ID", minW: "80px", textAlign: "center", cell: (row) => String(row.id) },
-      { id: "ciclo_pago", header: "Ciclo de pago", minW: "220px", cell: (row) => row.ciclo_pago },
+      { id: "causa", header: "Descripción", minW: "240px", cell: (row) => row.causa_liquidacion },
     ];
   }, []);
 
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        causa_liquidacion: String(values.causa_liquidacion ?? "").trim().toUpperCase(),
       };
 
-      await createCiclo(payload);
+      await createCausa(payload);
 
       setOpenCreate(false);
       setSelection([]);
@@ -88,10 +87,10 @@ const CiclosPago = () => {
 
     try {
       const payload: UpdatePayload = {
-        ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
+        causa_liquidacion: String(values.causa_liquidacion ?? "").trim().toUpperCase(),
       };
 
-      await updateCiclo(selectedId, payload);
+      await updateCausa(selectedId, payload);
 
       setOpenEdit(false);
       setSelection([]);
@@ -116,7 +115,7 @@ const CiclosPago = () => {
   };
 
   return (
-    <Layout pageTitle="Mantenimiento de Ciclos de Pago">
+    <Layout pageTitle="Causas de Liquidación">
       <Stack px="2.5rem" gap="8" py="1rem">
         <section>
           <Box w="250px">
@@ -126,13 +125,13 @@ const CiclosPago = () => {
               w="100%"
               onClick={() => setOpenCreate(true)}
             >
-              Crear Ciclo <FiPlus />
+              Crear Causa <FiPlus />
             </Button>
           </Box>
         </section>
 
         <section style={{ marginBottom: "100px" }}>
-          <DataTable<CicloPagoRow>
+          <DataTable<CausaRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
             isDataLoading={isTableLoading}
@@ -172,7 +171,7 @@ const CiclosPago = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: ciclos.length,
+              totalCount: causas.length,
               onPageChange: setPage,
             }}
           />
@@ -180,27 +179,16 @@ const CiclosPago = () => {
       </Stack>
 
       <Modal
-        title="Crear ciclo de pago"
+        title="Crear causa"
         isOpen={openCreate}
         size="lg"
         onOpenChange={(event) => setOpenCreate(event.open)}
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
-              required
-              rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-                setValueAs: (value) => Number(value),
-              }}
-            />
-            <InputField
               fieldType="text"
               label="Descripción"
-              name="ciclo_pago"
+              name="causa_liquidacion"
               required
               rules={{
                 required: "La descripción es obligatoria",
@@ -226,19 +214,19 @@ const CiclosPago = () => {
       />
 
       <Modal
-        title="Editar ciclo de pago"
+        title="Editar causa"
         isOpen={openEdit}
         size="md"
         onOpenChange={(event) => setOpenEdit(event.open)}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ ciclo_pago: selectedRow?.ciclo_pago ?? "" }}
+            defaultValues={{ causa_liquidacion: selectedRow?.causa_liquidacion ?? "" }}
           >
             <InputField
               fieldType="text"
               label="Descripción"
-              name="ciclo_pago"
+              name="causa_liquidacion"
               required
               rules={{
                 required: "La descripción es obligatoria",
@@ -267,4 +255,4 @@ const CiclosPago = () => {
   );
 };
 
-export default CiclosPago;
+export default CausasLiquidacion;

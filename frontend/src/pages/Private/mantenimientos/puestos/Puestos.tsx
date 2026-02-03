@@ -33,17 +33,17 @@ type CreateJobPositionFormValues = {
 export default function Puestos() {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: puestos = [], isLoading: isTableLoading, refetch } = useApiQuery<JobPosition[]>({ url: "puestos" });
-  const { data: departments = [] } = useApiQuery<Department[]>({ url: "departamentos" });
-  const { data: estados = [] } = useApiQuery<Status[]>({ url: "estados" });
+  const { data: puestos = [], isLoading: isTableLoading, refetch } = useApiQuery<JobPosition[]>({ url: "mantenimientos/puestos" });
+  const { data: departments = [] } = useApiQuery<Department[]>({ url: "mantenimientos/departamentos" });
+  const { data: estados = [] } = useApiQuery<Status[]>({ url: "mantenimientos/estados" });
   const { mutate: createPuesto, isLoading: isSubmitting } =
     useApiMutation<CreateJobPositionPayload, void>({
-      url: "/puestos",
+      url: "mantenimientos/puestos",
       method: "POST",
     });
   const { mutate: patchPuesto } =
     useApiMutation<CreateJobPositionPayload, void, number>({
-      url: (id) => `/puestos/${id}`,
+      url: (id) => `mantenimientos/puestos/${id}`,
       method: "PATCH",
     })
   const [selection, setSelection] = useState<string[]>([]);
@@ -69,8 +69,8 @@ export default function Puestos() {
   const departmentsOptions = useMemo(
     () =>
       departments.map((d) => ({
-        label: toTitleCase(d.departamento),
-        value: d.departamento,
+        label: toTitleCase(d.nombre!),
+        value: d.nombre,
       })),
     [departments],
   );

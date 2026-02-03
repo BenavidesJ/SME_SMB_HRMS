@@ -41,17 +41,17 @@ export const TiposJornada = () => {
     data: tipos = [],
     isLoading: isTableLoading,
     refetch,
-  } = useApiQuery<TipoJornadaRow[]>({ url: "tipos_jornada" });
+  } = useApiQuery<TipoJornadaRow[]>({ url: "mantenimientos/tipos-jornada" });
 
   const { mutate: createTipo, isLoading: isSubmittingCreate } =
     useApiMutation<CreatePayload, void>({
-      url: "/tipos_jornada",
+      url: "mantenimientos/tipos-jornada",
       method: "POST",
     });
 
   const { mutate: patchTipo, isLoading: isSubmittingEdit } =
     useApiMutation<UpdatePayload, void, number>({
-      url: (id) => `/tipos_jornada/${id}`,
+      url: (id) => `mantenimientos/tipos-jornada/${id}`,
       method: "PATCH",
     });
 
