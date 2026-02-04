@@ -11,7 +11,6 @@ import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import type { Department, JobPosition } from "../../../../types/Company";
 import { toTitleCase } from "../../../../utils";
-import { formatCRC } from "../../../../utils";
 import type { Status } from "../../../../types";
 
 interface CreateJobPositionPayload {
@@ -68,19 +67,23 @@ export default function Puestos() {
 
   const departmentsOptions = useMemo(
     () =>
-      departments.map((d) => ({
-        label: toTitleCase(d.nombre!),
-        value: d.nombre,
-      })),
+      departments
+        .filter((d): d is Department & { nombre: string } => typeof d.nombre === "string" && d.nombre.trim().length > 0)
+        .map((d) => ({
+          label: toTitleCase(d.nombre),
+          value: d.nombre,
+        })),
     [departments],
   );
 
   const statusOptions = useMemo(
     () =>
-      estados.map((d) => ({
-        label: toTitleCase(d.estado),
-        value: d.estado,
-      })),
+      estados
+        .filter((d): d is Status & { estado: string } => typeof d.estado === "string" && d.estado.trim().length > 0)
+        .map((d) => ({
+          label: toTitleCase(d.estado),
+          value: d.estado,
+        })),
     [estados],
   );
 
@@ -106,20 +109,6 @@ export default function Puestos() {
         minW: "80px",
         textAlign: "center",
         cell: (r) => `${r.departamento}`,
-      },
-      {
-        id: "salario_minimo",
-        header: "Salario de Referencia Mínimo",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${formatCRC(r.salario_ref_minimo)}`,
-      },
-      {
-        id: "salario_maximo",
-        header: "Salario de Referencia Máximo",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => `${formatCRC(r.salario_ref_maximo)}`,
       },
       {
         id: "estado",
@@ -318,32 +307,6 @@ export default function Puestos() {
                 selectRootProps={{ disabled: departments.length === 0 }}
               />
 
-              <InputField
-                fieldType="text"
-                label="Salario base referencia mínimo"
-                startElement="₡"
-                name="sal_base_referencia_min"
-                required
-                rules={{
-                  required: "El campo es obligatorio",
-                  min: { value: 1, message: "Debe ser mayor a 0" },
-                  setValueAs: (v) => Number(String(v ?? "").replace(/,/g, "").trim()),
-                }}
-              />
-
-              <InputField
-                fieldType="text"
-                startElement="₡"
-                label="Salario base referencia máximo"
-                name="sal_base_referencia_max"
-                required
-                rules={{
-                  required: "El campo es obligatorio",
-                  min: { value: 1, message: "Debe ser mayor a 0" },
-                  setValueAs: (v) => Number(String(v ?? "").replace(/,/g, "").trim()),
-                }}
-              />
-
               <Box w="250px" alignContent="center">
                 <Button
                   loading={isSubmitting}
@@ -372,8 +335,6 @@ export default function Puestos() {
           <Form onSubmit={handleEdit} resetOnSuccess defaultValues={{
             nombre: selectedRow?.puesto,
             departamento: selectedRow?.departamento,
-            sal_base_referencia_min: Number(selectedRow?.salario_ref_minimo),
-            sal_base_referencia_max: Number(selectedRow?.salario_ref_maximo),
             estado: selectedRow?.estado
           }}>
             <Stack gap="4">
@@ -414,32 +375,6 @@ export default function Puestos() {
                 options={statusOptions}
                 rules={{ required: "El campo es obligatorio" }}
                 selectRootProps={{ disabled: estados.length === 0 }}
-              />
-
-              <InputField
-                fieldType="text"
-                label="Salario base referencia mínimo"
-                name="sal_base_referencia_min"
-                startElement="₡"
-                required
-                rules={{
-                  required: "El campo es obligatorio",
-                  min: { value: 1, message: "Debe ser mayor a 0" },
-                  setValueAs: (v) => Number(String(v ?? "").replace(/,/g, "").trim()),
-                }}
-              />
-
-              <InputField
-                fieldType="text"
-                label="Salario base referencia máximo"
-                name="sal_base_referencia_max"
-                startElement="₡"
-                required
-                rules={{
-                  required: "El campo es obligatorio",
-                  min: { value: 1, message: "Debe ser mayor a 0" },
-                  setValueAs: (v) => Number(String(v ?? "").replace(/,/g, "").trim()),
-                }}
               />
 
               <Box w="250px" alignContent="center">
