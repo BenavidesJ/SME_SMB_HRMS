@@ -18,6 +18,7 @@ import { tipoIncapacidadControllers } from "../modules/mantenimientos_consultas/
 import { tipoJornadaControllers } from "../modules/mantenimientos_consultas/tipo_jornada/controllers/tipo_jornada.controller.js";
 import { tipoMarcaControllers } from "../modules/mantenimientos_consultas/tipo_marca/controllers/tipo_marca.controller.js";
 import { empleadoControllers } from "../modules/mantenimientos_consultas/empleado/controllers/empleado.controller.js";
+import { puestoControllers } from "../modules/mantenimientos_consultas/puesto/controllers/puesto.controller.js";
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ const bindCrudRoutes = (basePath, controllers) => {
 	{ path: "/cantones", controllers: cantonControllers },
 	{ path: "/distritos", controllers: distritoControllers },
 	{ path: "/departamentos", controllers: departamentoControllers },
+	{ path: "/puestos", controllers: puestoControllers },
 	{ path: "/empleados", controllers: empleadoControllers },
 	{ path: "/roles", controllers: rolControllers },
 	{ path: "/causas-liquidacion", controllers: causaLiquidacionControllers },
