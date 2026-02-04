@@ -5,7 +5,7 @@ import { Box, Stack } from "@chakra-ui/react";
 import { Form } from "../../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
 import { Button } from "../../../../../components/general/button/Button";
-import type { Employee, EmployeeFullApi, EmployeeRow, Gender, Roles } from "../../../../../types";
+import type { Employee, EmployeeFullApi, EmployeeRow, Roles } from "../../../../../types";
 import { toTitleCase } from "../../../../../utils";
 import { Modal } from "../../../../../components/general";
 import { useApiQuery } from "../../../../../hooks/useApiQuery";
@@ -36,13 +36,12 @@ const toDateInput = (v?: string | null) => {
 };
 
 const GestionEmpleados = () => {
-  const { data: genders = [] } = useApiQuery<Gender[]>({ url: "/generos" });
-  const { data: maritalStatuses = [] } = useApiQuery<MaritalStatus[]>({ url: "/estado_civil" });
+  const { data: maritalStatuses = [] } = useApiQuery<MaritalStatus[]>({ url: "mantenimientos/estados-civiles" });
   const { data: roles = [] } = useApiQuery<Roles[]>({ url: "/auth/roles" });
   const { data: employees = [], isLoading: isTableLoading, refetch: refetchEmployees } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
-  const { data: provincias = [], refetch: refetchProvincias } = useApiQuery<Provincia[]>({ url: "/provincias" });
+  const { data: provincias = [], refetch: refetchProvincias } = useApiQuery<Provincia[]>({ url: "mantenimientos/provincias" });
 
   const { mutate: createEmployee, isLoading: isSubmitting } =
     useApiMutation<Employee, void>({ url: "/empleados", method: "POST" });
@@ -64,16 +63,11 @@ const GestionEmpleados = () => {
     (items: MaritalStatus[]) => items.map((v) => ({ label: toTitleCase(v.estado_civil), value: v.estado_civil })),
     [],
   );
-  const mapGenderToOptions = useCallback(
-    (items: Gender[]) => items.map((v) => ({ label: toTitleCase(v.genero), value: v.genero })),
-    [],
-  );
   const mapRoleToOptions = useCallback(
     (items: Roles[]) => items.map((v) => ({ label: toTitleCase(v.nombre), value: v.nombre })),
     [],
   );
 
-  const genderOptions = useMemo(() => mapGenderToOptions(genders), [genders, mapGenderToOptions]);
   const marStatsOptions = useMemo(() => mapMaritalStatusToOptions(maritalStatuses), [maritalStatuses, mapMaritalStatusToOptions]);
   const rolesOptions = useMemo(() => mapRoleToOptions(roles), [roles, mapRoleToOptions]);
 
@@ -161,7 +155,7 @@ const GestionEmpleados = () => {
       fecha_ingreso: toDateInput(employeeFull.fecha_ingreso),
       fecha_nacimiento: toDateInput(employeeFull.fecha_nacimiento),
 
-      estado_civil: employeeFull.estado_civil ?? "",
+      estado_civil: employeeFull.estado_civil?.nombre ?? "",
       rol: role,
 
       cantidad_hijos: Number(employeeFull.cantidad_hijos ?? 0),
@@ -173,7 +167,6 @@ const GestionEmpleados = () => {
     } satisfies Partial<Employee>;
   }, [employeeFull]);
 
-  const gendersLoaded = genders.length > 0;
   const maritalStatusesLoaded = maritalStatuses.length > 0;
   const rolesLoaded = roles.length > 0;
 
@@ -225,11 +218,9 @@ const GestionEmpleados = () => {
           <Form onSubmit={handleCreateEmployee} resetOnSuccess>
             <Formularios
               mode="create"
-              genderOptions={genderOptions}
               marStatsOptions={marStatsOptions}
               rolesOptions={rolesOptions}
               provincias={provincias}
-              gendersLoaded={gendersLoaded}
               maritalStatusesLoaded={maritalStatusesLoaded}
               rolesLoaded={rolesLoaded}
               isSubmitting={isSubmitting}
@@ -257,11 +248,9 @@ const GestionEmpleados = () => {
             >
               <Formularios
                 mode="edit"
-                genderOptions={genderOptions}
                 marStatsOptions={marStatsOptions}
                 rolesOptions={rolesOptions}
                 provincias={provincias}
-                gendersLoaded={gendersLoaded}
                 maritalStatusesLoaded={maritalStatusesLoaded}
                 rolesLoaded={rolesLoaded}
                 isSubmitting={isPatching}

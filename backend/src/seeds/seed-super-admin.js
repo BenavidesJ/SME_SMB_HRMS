@@ -1,44 +1,37 @@
-import { sequelize } from "../config/db.js";
-import {
+import { models, sequelize } from "../models/index.js";
+
+const {
   Colaborador,
   Usuario,
-  UsuarioRol,
   Rol,
-  Genero,
   Estado,
   EstadoCivil,
   Contrato,
   HorarioLaboral,
   Direccion,
-  Telefono,
-} from "../models/index.js";
+} = models;
 
 export async function seedSuperAdmin() {
   const t = await sequelize.transaction();
   try {
-    const genero = await Genero.findOne({
-      where: { genero: "MASCULINO" },
-      transaction: t,
-    });
-    if (!genero) throw new Error("No existe genero MASCULINO (corré seedCatalogosBase primero)");
-
-    const estadoActivo = await Estado.findOne({
+    let estadoActivo = await Estado.findOne({
       where: { estado: "ACTIVO" },
       transaction: t,
     });
-    if (!estadoActivo) throw new Error("No existe estado ACTIVO (corré seedCatalogosBase primero)");
 
-    const estadoCivil = await EstadoCivil.findOne({
-      where: { estado_civil: "SOLTERO" },
+    if (!estadoActivo) {
+      const maxId = Number(await Estado.max("id_estado", { transaction: t })) || 0;
+      estadoActivo = await Estado.create(
+        { id_estado: maxId + 1, estado: "ACTIVO" },
+        { transaction: t }
+      );
+    }
+
+    const [estadoCivil] = await EstadoCivil.findOrCreate({
+      where: { estado_civil: "CASADO" },
+      defaults: { estado_civil: "CASADO" },
       transaction: t,
     });
-    if (!estadoCivil) throw new Error("No existe estado_civil SOLTERO (corré seedCatalogosBase primero)");
-
-    const rolSuper = await Rol.findOne({
-      where: { nombre: "SUPER_ADMIN" },
-      transaction: t,
-    });
-    if (!rolSuper) throw new Error("No existe rol SUPER_ADMIN (corré seedCatalogosBase primero)");
 
     const [colab] = await Colaborador.findOrCreate({
       where: { identificacion: 115050783 },
@@ -46,11 +39,11 @@ export async function seedSuperAdmin() {
         nombre: "Jose Daniel",
         primer_apellido: "Benavides",
         segundo_apellido: "Obando",
-        id_genero: genero.id_genero,
         fecha_nacimiento: "1992-07-01",
         correo_electronico: "jdanielbenavides@hotmail.com",
+        telefono: "70192643",
         fecha_ingreso: new Date(),
-        cantidad_hijos: 0,
+        cantidad_hijos: false,
         estado_civil: estadoCivil.id_estado_civil,
         estado: estadoActivo.id_estado,
       },
@@ -59,8 +52,8 @@ export async function seedSuperAdmin() {
 
     await colab.update(
       {
-        id_genero: genero.id_genero,
         correo_electronico: "jdanielbenavides@hotmail.com",
+        telefono: "70192643",
         estado_civil: estadoCivil.id_estado_civil,
         estado: estadoActivo.id_estado,
       },
@@ -76,8 +69,7 @@ export async function seedSuperAdmin() {
       defaults: {
         username,
         contrasena_hash: passwordHash,
-        requiere_cambio_contrasena: 0,
-        ultimo_acceso_en: new Date(),
+        requiere_cambio_contrasena: false,
         id_colaborador: colab.id_colaborador,
         estado: estadoActivo.id_estado,
       },
@@ -92,17 +84,11 @@ export async function seedSuperAdmin() {
       { transaction: t },
     );
 
-    const exists = await UsuarioRol.findOne({
-      where: { id_usuario: user.id_usuario, id_rol: rolSuper.id_rol },
+    await Rol.findOrCreate({
+      where: { id_usuario: user.id_usuario, nombre: "SUPER_ADMIN" },
+      defaults: { id_usuario: user.id_usuario, nombre: "SUPER_ADMIN" },
       transaction: t,
     });
-
-    if (!exists) {
-      await UsuarioRol.create(
-        { id_usuario: user.id_usuario, id_rol: rolSuper.id_rol },
-        { transaction: t },
-      );
-    }
 
     await Direccion.upsert(
       {
@@ -113,7 +99,6 @@ export async function seedSuperAdmin() {
         id_distrito: 10203,
         otros_datos: "Cerro Vista Ap 4A",
         es_principal: 1,
-        estado: estadoActivo.id_estado,
       },
       { transaction: t },
     );
@@ -162,16 +147,6 @@ export async function seedSuperAdmin() {
         estado: estadoActivo.id_estado,
         fecha_actualizacion: "2026-01-04",
         id_tipo_jornada: 1,
-      },
-      { transaction: t },
-    );
-
-    await Telefono.upsert(
-      {
-        id_telefono: 8,
-        id_colaborador: colab.id_colaborador,
-        numero: 70192643,
-        es_principal: 1,
       },
       { transaction: t },
     );

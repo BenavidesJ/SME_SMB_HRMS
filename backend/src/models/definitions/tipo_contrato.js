@@ -4,7 +4,7 @@ export function TipoContrato(sequelize) {
   return sequelize.define(
     "tipo_contrato",
     {
-      id_tipo_contrato: { type: DataTypes.INTEGER, allowNull: false, primaryKey: true },
+      id_tipo_contrato: { type: DataTypes.INTEGER, autoIncrement: true, allowNull: false, primaryKey: true },
       tipo_contrato: { type: DataTypes.STRING(25), allowNull: false },
     },
     {

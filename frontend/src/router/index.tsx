@@ -14,13 +14,21 @@ import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIn
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/page/GestionEmpleados";
 import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/page/ColaboradorDetalle";
-import Generos from "../pages/Private/mantenimientos/generos/Generos";
 import { Estados } from "../pages/Private/mantenimientos/estados/Estados";
 import Puestos from "../pages/Private/mantenimientos/puestos/Puestos";
 import { EstadosCiviles } from "../pages/Private/mantenimientos/estadosCiviles/EstadosCiviles";
 import { Departamentos } from "../pages/Private/mantenimientos/departamentos/Departamentos";
 import TiposContrato from "../pages/Private/mantenimientos/tiposContrato/TiposContrato";
 import CiclosPago from "../pages/Private/mantenimientos/ciclosPago/CiclosPago";
+import Provincias from "../pages/Private/mantenimientos/provincias/Provincias";
+import Cantones from "../pages/Private/mantenimientos/cantones/Cantones";
+import Distritos from "../pages/Private/mantenimientos/distritos/Distritos";
+import Deducciones from "../pages/Private/mantenimientos/deducciones/Deducciones";
+import Feriados from "../pages/Private/mantenimientos/feriados/Feriados";
+import TiposHoraExtra from "../pages/Private/mantenimientos/tiposHoraExtra/TiposHoraExtra";
+import CausasLiquidacion from "../pages/Private/mantenimientos/causasLiquidacion/CausasLiquidacion";
+import TiposIncapacidad from "../pages/Private/mantenimientos/tiposIncapacidad/TiposIncapacidad";
+import TiposMarca from "../pages/Private/mantenimientos/tiposMarca/TiposMarca";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
 import UIdocs from "../pages/Private/UIdocs";
 import NotFoundPage from "../pages/Public/NotFoundPage";
@@ -187,11 +195,6 @@ export const router = createBrowserRouter([
         },
       },
       {
-        path: "/mantenimientos-consultas/generos",
-        element: <Generos />,
-        handle: { crumb: "Géneros" },
-      },
-      {
         path: "/mantenimientos-consultas/estados",
         element: <Estados />,
         handle: { crumb: "Estados" },
@@ -227,9 +230,54 @@ export const router = createBrowserRouter([
         handle: { crumb: "Ciclos de pago" },
       },
       {
+        path: "/mantenimientos-consultas/deducciones_planilla",
+        element: <Deducciones />,
+        handle: { crumb: "Deducciones de planilla" },
+      },
+      {
+        path: "/mantenimientos-consultas/provincias",
+        element: <Provincias />,
+        handle: { crumb: "Provincias" },
+      },
+      {
+        path: "/mantenimientos-consultas/cantones",
+        element: <Cantones />,
+        handle: { crumb: "Cantones" },
+      },
+      {
+        path: "/mantenimientos-consultas/distritos",
+        element: <Distritos />,
+        handle: { crumb: "Distritos" },
+      },
+      {
+        path: "/mantenimientos-consultas/feriados",
+        element: <Feriados />,
+        handle: { crumb: "Feriados" },
+      },
+      {
         path: "/mantenimientos-consultas/tipos_jornada",
         element: <TiposJornada />,
         handle: { crumb: "Tipos de Jornada" },
+      },
+      {
+        path: "/mantenimientos-consultas/tipos_hora_extra",
+        element: <TiposHoraExtra />,
+        handle: { crumb: "Tipos de hora extra" },
+      },
+      {
+        path: "/mantenimientos-consultas/tipos_incapacidad",
+        element: <TiposIncapacidad />,
+        handle: { crumb: "Tipos de incapacidad" },
+      },
+      {
+        path: "/mantenimientos-consultas/tipos_marca",
+        element: <TiposMarca />,
+        handle: { crumb: "Tipos de marca" },
+      },
+      {
+        path: "/mantenimientos-consultas/causas_liquidacion",
+        element: <CausasLiquidacion />,
+        handle: { crumb: "Causas de liquidación" },
       },
 
       {

@@ -9,7 +9,7 @@ import { AppLoader } from "../../../components/layout/loading";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
-import type { EmployeeRow } from "../../../types";
+import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { toTitleCase } from "../../../utils";
 
 interface TipoPermiso {
@@ -88,11 +88,19 @@ export const SolicitudPermisos = () => {
 
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
+  const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
+    if (!usuario) return false;
+    if (typeof usuario.estado === "string") return usuario.estado.toUpperCase() === "ACTIVO";
+    if (typeof usuario.estado === "number") return usuario.estado === 1;
+    return Boolean(usuario.estado);
+  };
+
   const colaboradoresActivos = useMemo(
     () =>
-      (employees ?? []).filter((colaborador) =>
-        colaborador?.usuario?.activo ? colaborador.estado.toUpperCase() === "ACTIVO" : true,
-      ),
+      (employees ?? []).filter((colaborador) => {
+        const estadoNombre = (colaborador.estado?.nombre ?? "").toUpperCase();
+        return isUsuarioActivo(colaborador.usuario) ? estadoNombre === "ACTIVO" : true;
+      }),
     [employees],
   );
 

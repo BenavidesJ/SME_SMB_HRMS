@@ -108,7 +108,7 @@ const Perfil = () => {
                     />
                     <InfoBlock
                       label="Estado civil"
-                      value={user?.estado_civil}
+                      value={employee?.estado_civil?.nombre ?? user?.estado_civil?.nombre}
                     />
                     <InfoBlock
                       label="Fecha de nacimiento"
