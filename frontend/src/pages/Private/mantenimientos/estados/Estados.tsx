@@ -17,7 +17,7 @@ export const Estados = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const { data: estados = [], isLoading: statusLoading, refetch: refetchStatus } = useApiQuery<Status[]>({ url: "mantenimientos/estados" });
   const [selection, setSelection] = useState<string[]>([]);
-  const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "mantenimeintos/estados", method: "POST" });
+  const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "mantenimientos/estados", method: "POST" });
   const { mutate: modifyStatus } =
     useApiMutation<{ estado: string }, void, number>({
       url: (id) => `mantenimientos/estados/${id}`,
