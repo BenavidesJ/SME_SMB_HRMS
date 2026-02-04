@@ -6,7 +6,7 @@ export type TipoContratoRow = {
   tipo_contrato: string;
 };
 
-export type TipoContratoCreatePayload = { tipo: string };
+export type TipoContratoCreatePayload = { tipo_contrato: string };
 export type TipoContratoPatchPayload = { tipo_contrato: string };
 
 export const getAllContractTypesFull = () => {

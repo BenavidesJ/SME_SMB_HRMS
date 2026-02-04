@@ -17,7 +17,7 @@ import {
   type TipoContratoRow,
 } from "../../../../services/api/tiposContrato";
 
-type TipoContratoFormCreate = { tipo: string };
+type TipoContratoFormCreate = { tipo_contrato: string };
 type TipoContratoFormEdit = { tipo_contrato: string };
 
 const TiposContrato = () => {
@@ -78,7 +78,7 @@ const TiposContrato = () => {
     try {
       setIsSubmitting(true);
 
-      const payload = { tipo: String(values.tipo ?? "").trim() };
+      const payload = { tipo_contrato: String(values.tipo_contrato ?? "").trim() };
       await createContractType(payload);
 
       await fill();
@@ -208,13 +208,13 @@ const TiposContrato = () => {
           <Form<TipoContratoFormCreate>
             onSubmit={handleCreate}
             resetOnSuccess
-            defaultValues={{ tipo: "" }}
+            defaultValues={{ tipo_contrato: "" }}
           >
             <SimpleGrid columns={1} gapX="1rem">
               <InputField
                 fieldType="text"
-                label="Tipo"
-                name="tipo"
+                label="Tipo de Contrato"
+                name="tipo_contrato"
                 required
                 rules={{
                   required: "El campo es obligatorio",
