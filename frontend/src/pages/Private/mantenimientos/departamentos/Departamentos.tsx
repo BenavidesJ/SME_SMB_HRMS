@@ -17,7 +17,7 @@ export const Departamentos = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const { data: departments = [], isLoading: isTableLoading, refetch: refetch } = useApiQuery<Department[]>({ url: "mantenimientos/departamentos" });
-  const { mutate: createDepartment, isLoading: isSubmitting } = useApiMutation<{ departamento: string }, void>({ url: "mantenimientos/departamentos", method: "POST" });
+  const { mutate: createDepartment, isLoading: isSubmitting } = useApiMutation<{ nombre: string }, void>({ url: "mantenimientos/departamentos", method: "POST" });
   const { mutate: patchDepartment } =
     useApiMutation<{ nombre: string }, void, number>({
       url: (id) => `mantenimientos/departamentos/${id}`,
@@ -43,11 +43,11 @@ export const Departamentos = () => {
     return departments.slice(start, start + pageSize);
   }, [departments, page]);
 
-  const handleCreate = async (values: { departamento: string }) => {
+  const handleCreate = async (values: { nombre: string }) => {
     try {
 
       const payload = {
-        departamento: String(values.departamento ?? "").trim().toUpperCase(),
+        nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
       await createDepartment(payload);
@@ -194,7 +194,7 @@ export const Departamentos = () => {
             <InputField
               fieldType="text"
               label="Departamento"
-              name="departamento"
+              name="nombre"
               required
               rules={{
                 required: "El campo es obligatorio",
