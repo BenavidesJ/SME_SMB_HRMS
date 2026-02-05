@@ -1,11 +1,15 @@
-// import { Router } from "express";
-// import { authorization } from "../middlewares/authorization.js";
-// import { getVacacionesPorColaborador, postVacaciones } from "../controllers/vacaciones/vacaciones.controller.js";
+import { Router } from "express";
+import { authorization } from "../middlewares/authorization.js";
+import {
+	solicitarVacacionesController,
+	listarVacacionesPorColaboradorController,
+	actualizarEstadoSolicitudVacacionesController,
+} from "../modules/vacaciones/vacaciones.controller.js";
 
-// const router = Router();
+const router = Router();
 
-// router.post("/", authorization, postVacaciones);
-// router.get("/colaborador/:id_colaborador", authorization, getVacacionesPorColaborador);
-// // router.patch("/solicitud/:id", authorization, );
+router.post("/", authorization, solicitarVacacionesController);
+router.get("/colaborador/:id_colaborador", authorization, listarVacacionesPorColaboradorController);
+router.patch("/solicitud/:id", authorization, actualizarEstadoSolicitudVacacionesController);
 
-// export default router;
+export default router;

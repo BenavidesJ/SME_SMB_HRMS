@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { Op } from "sequelize";
 import {
   sequelize,
   Colaborador,
@@ -10,6 +11,8 @@ import {
   JornadaDiaria,
   TipoJornada,
   SolicitudHoraExtra,
+  SolicitudVacaciones,
+  SolicitudPermisos,
 } from "../../../models/index.js";
 import { getDayInitial } from "./helpers/obtenerInicialDia.js";
 
@@ -111,6 +114,59 @@ export const registrarMarcaAsistencia = async ({
 
     if (!horarioActivo) {
       throw new Error("El contrato activo no tiene un horario ACTIVO asignado");
+    }
+
+    const fechaDia = dayjs(timestampDate).format("YYYY-MM-DD");
+    const bloqueoMensaje = "Existe una incapacidad/solicitud de vacaciones aprobada /permiso aprobado para este día, contáctese con recursos humanos";
+
+    const jornadaBloqueada = await JornadaDiaria.findOne({
+      where: {
+        id_colaborador: colaborador.id_colaborador,
+        fecha: fechaDia,
+        [Op.or]: [
+          { incapacidad: { [Op.ne]: null } },
+          { vacaciones: { [Op.ne]: null } },
+          { permiso: { [Op.ne]: null } },
+        ],
+      },
+      transaction: tx,
+      lock: tx.LOCK.UPDATE,
+    });
+
+    if (jornadaBloqueada) {
+      throw new Error(bloqueoMensaje);
+    }
+
+    if (ESTADO_APROBADO_ID) {
+      const vacacionAprobada = await SolicitudVacaciones.findOne({
+        where: {
+          id_colaborador: colaborador.id_colaborador,
+          estado_solicitud: ESTADO_APROBADO_ID,
+          fecha_inicio: { [Op.lte]: fechaDia },
+          fecha_fin: { [Op.gte]: fechaDia },
+        },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE,
+      });
+
+      if (vacacionAprobada) {
+        throw new Error(bloqueoMensaje);
+      }
+
+      const permisoAprobado = await SolicitudPermisos.findOne({
+        where: {
+          id_colaborador: colaborador.id_colaborador,
+          estado_solicitud: ESTADO_APROBADO_ID,
+          fecha_inicio: { [Op.lte]: fechaDia },
+          fecha_fin: { [Op.gte]: fechaDia },
+        },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE,
+      });
+
+      if (permisoAprobado) {
+        throw new Error(bloqueoMensaje);
+      }
     }
 
     const tipoJornada = await TipoJornada.findByPk(contratoActivo.id_tipo_jornada, {
@@ -221,7 +277,6 @@ export const registrarMarcaAsistencia = async ({
     //  Si hay ENTRADA y SALIDA, crear registro de JornadaDiaria
     let horasOrdinarias = 0.0;
     let horasExtra = 0.0;
-    const fechaDia = dayjs(timestampDate).format("YYYY-MM-DD");
 
     const marcasActualizadas = await MarcaAsistencia.findAll({
       where: {

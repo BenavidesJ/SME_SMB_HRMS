@@ -1,4 +1,4 @@
-import { Incapacidad, sequelize, TipoIncapacidad } from "../../../../models/index.js";
+import { Incapacidad, JornadaDiaria, sequelize, TipoIncapacidad } from "../../../../models/index.js";
 import { assertNoIncapacityOverlapRange } from "../../../../services/scheduleEngine/incapacityGuard.js";
 import {
   computeIncapacityPolicy,
@@ -41,7 +41,7 @@ export const editarIncapacidad = async ({
     });
 
     await assertNoIncapacityOverlapRange({
-      models: { Incapacidad },
+      models: { Incapacidad, JornadaDiaria },
       idColaborador: Number(row.id_colaborador),
       fecha_inicio: nextInicio,
       fecha_fin: nextFin,

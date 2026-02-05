@@ -18,27 +18,20 @@ interface TipoIncapacidad {
   descripcion: string;
 }
 
-interface Incapacidad {
+interface CrearIncapacidadPayload {
   id_colaborador: number;
   fecha_inicio: string;
   fecha_fin: string;
   tipo_incap: string;
 }
 
-interface IncapacidadListItem extends Incapacidad {
-  id_incapacidad: number;
-  observaciones?: string;
-  porcentaje_patrono?: string;
-  porcentaje_ccss?: string;
-  tipo_incapacidad?: {
-    id_tipo_incap: number;
-    nombre: string;
-  };
-}
-
-interface IncapacidadesResponse {
-  rows: IncapacidadListItem[];
-  events: unknown[];
+interface JornadaIncapacidadItem {
+  id_jornada: number;
+  fecha: string;
+  id_incapacidad: number | null;
+  tipo_incapacidad: string | null;
+  porcentaje_patrono: number;
+  porcentaje_ccss: number;
 }
 
 export const RegistroIncapacidades = () => {
@@ -51,14 +44,12 @@ export const RegistroIncapacidades = () => {
     [loggedUserRole],
   );
 
-  const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "incapacidades/tipos" });
-  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<Incapacidad, void>({ url: "/incapacidades", method: "POST" });
-  const { data: incapacidadesResponse = { rows: [], events: [] }, isLoading: isLoadingList, refetch: refecthIncapacidades } = useApiQuery<IncapacidadesResponse>({
+  const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "mantenimientos/tipos-incapacidad" });
+  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<CrearIncapacidadPayload, void>({ url: "/incapacidades", method: "POST" });
+  const { data: incapacidades = [], isLoading: isLoadingList, refetch: refetchIncapacidades } = useApiQuery<JornadaIncapacidadItem[]>({
     url: `incapacidades/colaborador/${userID}`,
     enabled: Boolean(userID),
   });
-
-  const incapacidades = incapacidadesResponse.rows;
 
   const { data: employees = [], isLoading: isEmployeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
@@ -108,18 +99,6 @@ export const RegistroIncapacidades = () => {
     });
   }, [colaboradoresVisibles, userID]);
 
-  const getDurationLabel = useCallback((inicio: string, fin: string) => {
-    const MS_IN_DAY = 86_400_000;
-    const startDate = new Date(inicio);
-    const endDate = new Date(fin);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return "Duración desconocida";
-    }
-    const diffDays = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / MS_IN_DAY));
-    const totalDays = diffDays + 1;
-    return `${totalDays} ${totalDays === 1 ? "día" : "días"}`;
-  }, []);
-
   const tipoToOptions = useCallback(
     (items: TipoIncapacidad[]) => items.map((v) => ({ label: toTitleCase(v.nombre), value: v.nombre })),
     [],
@@ -133,11 +112,11 @@ export const RegistroIncapacidades = () => {
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
 
   const {
-    data: otherIncapacidadesResponse = { rows: [], events: [] },
+    data: otherIncapacidades = [],
     isLoading: isLoadingOtherIncapacidades,
     refetch: refetchOtherIncapacidades,
-  } = useApiQuery<IncapacidadesResponse>({
-    url: selectedCollaboratorId ? `incapacidades/colaborador/${selectedCollaboratorId}` : `incapacidades/colaborador/${userID}`,
+  } = useApiQuery<JornadaIncapacidadItem[]>({
+    url: `incapacidades/colaborador/${selectedCollaboratorId}`,
     enabled: hasAdminPermission && Boolean(selectedCollaboratorId),
   });
 
@@ -153,36 +132,42 @@ export const RegistroIncapacidades = () => {
     }
   }, [hasAdminPermission, selectedCollaboratorId, refetchOtherIncapacidades]);
 
-  const otherIncapacidades = otherIncapacidadesResponse.rows;
-
   const renderIncapacidadesList = useCallback(
-    (items: IncapacidadListItem[], isLoading: boolean, emptyMessage: string) => (
+    (items: JornadaIncapacidadItem[], isLoading: boolean, emptyMessage: string) => (
       <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
         <ScrollArea.Viewport>
           <Stack gap={4}>
             {isLoading && <AppLoader />}
             {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
-            {items.map((item) => (
-              <Box key={item.id_incapacidad} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
-                <Box flex="1">
-                  <Text fontWeight="semibold">
-                    {toTitleCase(item.tipo_incapacidad?.nombre ?? item.tipo_incap ?? "")}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {item.fecha_inicio} → {item.fecha_fin}
-                  </Text>
-                  <Text mt={2} fontSize="xs" color="gray.500">
-                    Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
-                  </Text>
+            {items.map((item) => {
+              const tipoRaw = item.tipo_incapacidad?.replace(/_/g, " ") ?? "";
+              const tipoLabel = tipoRaw
+                ? tipoRaw.toUpperCase() === tipoRaw
+                  ? tipoRaw
+                  : toTitleCase(tipoRaw)
+                : "Tipo no definido";
+              const keyValue = item.id_incapacidad ?? item.id_jornada;
+
+              return (
+                <Box key={`${keyValue}-${item.fecha}`} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
+                  <Box flex="1">
+                    <Text fontWeight="semibold">{tipoLabel}</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Día: {item.fecha}
+                    </Text>
+                    <Text mt={2} fontSize="xs" color="gray.500">
+                      Porcentajes: Patrono {item.porcentaje_patrono}% · CCSS {item.porcentaje_ccss}%
+                    </Text>
+                  </Box>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Stack>
         </ScrollArea.Viewport>
         <ScrollArea.Scrollbar orientation="vertical" />
       </ScrollArea.Root>
     ),
-    [getDurationLabel],
+    [],
   );
 
   const handleOtherCollaboratorSubmit = useCallback(
@@ -194,10 +179,10 @@ export const RegistroIncapacidades = () => {
     [],
   );
 
-  const handleCreateRequest = async (incapacidad: Incapacidad) => {
+  const handleCreateRequest = async (incapacidad: CrearIncapacidadPayload) => {
     try {
       await createIncapacidad(incapacidad);
-      await refecthIncapacidades();
+      await refetchIncapacidades();
       return true;
     } catch (error) {
       console.log(error);
