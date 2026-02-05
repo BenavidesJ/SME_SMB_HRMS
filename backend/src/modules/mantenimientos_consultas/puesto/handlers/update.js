@@ -1,7 +1,14 @@
 import { Op } from "sequelize";
 import { models } from "../../../../models/index.js";
 import { runInTransaction } from "../../shared/transaction.js";
-import { ensurePatchHasAllowedFields, requireNonEmptyString, requirePositiveInt, requireDecimal } from "../../shared/validators.js";
+import {
+  ensurePatchHasAllowedFields,
+  optionalDecimal,
+  optionalString,
+  requireDecimal,
+  requireNonEmptyString,
+  requirePositiveInt,
+} from "../../shared/validators.js";
 
 const serialize = (puesto) => ({
   id: puesto.id_puesto,
@@ -17,13 +24,25 @@ export const updatePuesto = ({ id, patch }) =>
     const pid = requirePositiveInt(id, "id");
     ensurePatchHasAllowedFields(patch, ["nombre", "departamento", "sal_base_referencia_min", "sal_base_referencia_max"]);
 
-    const puesto = await models.Puesto.findByPk(pid, { transaction });
+    const puesto = await models.Puesto.findByPk(pid, {
+      include: [{ model: models.Departamento, as: "departamento", attributes: ["nombre"] }],
+      transaction,
+    });
     if (!puesto) throw new Error(`No existe puesto con id ${pid}`);
 
-    const nombre = requireNonEmptyString(patch.nombre, "nombre");
-    const departamentoNombre = requireNonEmptyString(patch.departamento, "departamento");
-    const sal_min = requireDecimal(patch.sal_base_referencia_min, "sal_base_referencia_min", { min: 0 });
-    const sal_max = requireDecimal(patch.sal_base_referencia_max, "sal_base_referencia_max", { min: 0 });
+    const nombreRaw = optionalString(patch.nombre, "nombre") ?? puesto.nombre;
+    const departamentoNombreRaw = optionalString(patch.departamento, "departamento") ?? puesto.departamento?.nombre;
+    const sal_min_raw = optionalDecimal(patch.sal_base_referencia_min, "sal_base_referencia_min", { min: 0 });
+    const sal_max_raw = optionalDecimal(patch.sal_base_referencia_max, "sal_base_referencia_max", { min: 0 });
+
+    const nombre = requireNonEmptyString(nombreRaw, "nombre");
+    const departamentoNombre = requireNonEmptyString(departamentoNombreRaw, "departamento");
+    const sal_min = sal_min_raw !== undefined
+      ? requireDecimal(sal_min_raw, "sal_base_referencia_min", { min: 0 })
+      : Number(puesto.sal_base_referencia_min);
+    const sal_max = sal_max_raw !== undefined
+      ? requireDecimal(sal_max_raw, "sal_base_referencia_max", { min: 0 })
+      : Number(puesto.sal_base_referencia_max);
 
     if (sal_min > sal_max) {
       throw new Error("El salario mínimo no puede ser mayor al máximo");
