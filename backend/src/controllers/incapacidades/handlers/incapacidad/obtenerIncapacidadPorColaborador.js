@@ -1,4 +1,4 @@
-import { Incapacidad, TipoIncapacidad } from "../../../../models/index.js";
+import { Incapacidad, JornadaDiaria, TipoIncapacidad } from "../../../../models/index.js";
 import {
   loadIncapacityBlocksByDateRange,
   mapIncapacitiesToCalendarEvents,
@@ -17,7 +17,7 @@ export const obtenerIncapacidadesPorColaborador = async ({
   const to = toDateStr ?? "2999-12-31";
 
   const rows = await loadIncapacityBlocksByDateRange({
-    models: { Incapacidad, TipoIncapacidad },
+    models: { Incapacidad, TipoIncapacidad, JornadaDiaria },
     idColaborador: Number(id_colaborador),
     fromDateStr: from,
     toDateStr: to,

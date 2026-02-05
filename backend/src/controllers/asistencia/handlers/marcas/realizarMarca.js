@@ -12,6 +12,7 @@ import {
   SolicitudHoraExtra,
   Feriado,
   Incapacidad,
+  JornadaDiaria,
 } from "../../../../models/index.js";
 
 import { isAfterWithTolerance, isBeforeWithTolerance } from "../helpers/checkTolerances.js";
@@ -134,7 +135,7 @@ export const registrarMarcaAsistencia = async ({
     const todayDate = windowDateStr;
 
     await assertNoIncapacityCoveringDate({
-      models: { Incapacidad },
+      models: { Incapacidad, JornadaDiaria },
       idColaborador: colaborador.id_colaborador,
       dateStr: todayDate,
       transaction: tx,
