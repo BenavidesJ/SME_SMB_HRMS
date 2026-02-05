@@ -31,18 +31,16 @@ export const updatePuesto = ({ id, patch }) =>
     if (!puesto) throw new Error(`No existe puesto con id ${pid}`);
 
     const nombreRaw = optionalString(patch.nombre, "nombre") ?? puesto.nombre;
-    const departamentoNombreRaw = optionalString(patch.departamento, "departamento") ?? puesto.departamento?.nombre;
+    const departamentoNombreRaw = optionalString(patch.departamento, "departamento");
     const sal_min_raw = optionalDecimal(patch.sal_base_referencia_min, "sal_base_referencia_min", { min: 0 });
     const sal_max_raw = optionalDecimal(patch.sal_base_referencia_max, "sal_base_referencia_max", { min: 0 });
 
     const nombre = requireNonEmptyString(nombreRaw, "nombre");
-    const departamentoNombre = requireNonEmptyString(departamentoNombreRaw, "departamento");
-    const sal_min = sal_min_raw !== undefined
-      ? requireDecimal(sal_min_raw, "sal_base_referencia_min", { min: 0 })
-      : Number(puesto.sal_base_referencia_min);
-    const sal_max = sal_max_raw !== undefined
-      ? requireDecimal(sal_max_raw, "sal_base_referencia_max", { min: 0 })
-      : Number(puesto.sal_base_referencia_max);
+    const departamentoNombre = departamentoNombreRaw !== undefined
+      ? requireNonEmptyString(departamentoNombreRaw, "departamento")
+      : puesto.departamento?.nombre ?? (() => { throw new Error("No se pudo obtener el departamento actual"); })();
+    const sal_min = sal_min_raw !== undefined ? sal_min_raw : Number(puesto.sal_base_referencia_min);
+    const sal_max = sal_max_raw !== undefined ? sal_max_raw : Number(puesto.sal_base_referencia_max);
 
     if (sal_min > sal_max) {
       throw new Error("El salario mínimo no puede ser mayor al máximo");
