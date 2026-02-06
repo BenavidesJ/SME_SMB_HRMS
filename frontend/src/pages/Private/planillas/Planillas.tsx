@@ -9,7 +9,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { Layout } from "../../../components/layout";
-import { FiFilePlus } from "react-icons/fi";
+import { FiEdit2, FiFilePlus, FiTrash2 } from "react-icons/fi";
 import { PiMoney } from "react-icons/pi";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
@@ -17,6 +17,7 @@ import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { showToast } from "../../../services/toast/toastService";
 
 interface PeriodoPlanilla {
   id: number;
@@ -32,6 +33,18 @@ type CreatePeriodoFormValues = {
   fecha_inicio: string;
   fecha_fin: string;
   fecha_pago: string;
+  id_ciclo_pago: string;
+};
+
+type CicloPagoOption = {
+  id: number;
+  ciclo_pago: string;
+};
+
+type PersistPeriodoPayload = {
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_pago: string;
   id_ciclo_pago: number;
 };
 
@@ -40,12 +53,29 @@ export const Planillas = () => {
     useApiQuery<PeriodoPlanilla[]>({ url: "planillas/periodo_planilla" });
 
   const { mutate: createPeriod, isLoading: isCreating } =
-    useApiMutation<CreatePeriodoFormValues, void>({
+    useApiMutation<PersistPeriodoPayload, void>({
       url: "planillas/periodo_planilla",
       method: "POST",
     });
 
-  const [showCreateCard, setShowCreateCard] = useState(false);
+  const { mutate: updatePeriod, isLoading: isUpdating } =
+    useApiMutation<PersistPeriodoPayload, void, number>({
+      url: (id) => `planillas/periodo_planilla/${id}`,
+      method: "PATCH",
+    });
+
+  const { mutate: deletePeriod, isLoading: isDeleting } =
+    useApiMutation<undefined, void, number>({
+      url: (id) => `planillas/periodo_planilla/${id}`,
+      method: "DELETE",
+    });
+
+  const { data: cycles = [], isLoading: isLoadingCycles } =
+    useApiQuery<CicloPagoOption[]>({ url: "mantenimientos/ciclos-pago" });
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState<PeriodoPlanilla | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const dateFormatter = useMemo(
@@ -65,21 +95,107 @@ export const Planillas = () => {
     [dateFormatter],
   );
 
-  const handleCreatePeriod = async (values: CreatePeriodoFormValues) => {
+  const cycleOptions = useMemo(
+    () =>
+      cycles.map((cycle) => ({
+        label: cycle.ciclo_pago,
+        value: String(cycle.id),
+      })),
+    [cycles],
+  );
+
+  const cycleMap = useMemo(() => {
+    const map = new Map<number, string>();
+    cycles.forEach((cycle) => {
+      map.set(cycle.id, cycle.ciclo_pago);
+    });
+    return map;
+  }, [cycles]);
+
+  const defaultFormValues = useMemo<CreatePeriodoFormValues>(
+    () =>
+      editingPeriod
+        ? {
+          fecha_inicio: editingPeriod.fecha_inicio,
+          fecha_fin: editingPeriod.fecha_fin,
+          fecha_pago: editingPeriod.fecha_pago,
+          id_ciclo_pago: String(editingPeriod.id_ciclo_pago),
+        }
+        : {
+          fecha_inicio: "",
+          fecha_fin: "",
+          fecha_pago: "",
+          id_ciclo_pago: cycleOptions[0]?.value ?? "",
+        },
+    [editingPeriod, cycleOptions],
+  );
+
+  const handleSubmitPeriod = async (values: CreatePeriodoFormValues) => {
+    if (!values.id_ciclo_pago) {
+      showToast("Seleccione un ciclo de pago.", "error");
+      return false;
+    }
+
     try {
-      await createPeriod({
-        ...values,
+      const payload: PersistPeriodoPayload = {
+        fecha_inicio: values.fecha_inicio,
+        fecha_fin: values.fecha_fin,
+        fecha_pago: values.fecha_pago,
         id_ciclo_pago: Number(values.id_ciclo_pago),
-        descripcion: "N/A",
-      });
+      };
+
+      if (editingPeriod) {
+        await updatePeriod(editingPeriod.id, payload);
+        showToast("Periodo de planilla actualizado.", "success");
+      } else {
+        await createPeriod(payload);
+        showToast("Periodo de planilla creado.", "success");
+      }
+
       await refetch();
-      setShowCreateCard(false);
+      setShowForm(false);
+      setEditingPeriod(null);
       return true;
     } catch (error) {
       console.log(error);
+      showToast(
+        "No se pudo guardar el periodo. Revise la información e intente nuevamente.",
+        "error",
+      );
       return false;
     }
   };
+
+  const handleStartCreate = () => {
+    setEditingPeriod(null);
+    setShowForm((prev) => !prev);
+  };
+
+  const handleEditPeriod = (period: PeriodoPlanilla) => {
+    setEditingPeriod(period);
+    setShowForm(true);
+  };
+
+  const handleDeletePeriod = async (period: PeriodoPlanilla) => {
+    const confirmed = window.confirm(
+      `¿Desea eliminar el periodo del ${renderDate(period.fecha_inicio)} al ${renderDate(period.fecha_fin)}?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setPendingDeleteId(period.id);
+      await deletePeriod(period.id, undefined);
+      await refetch();
+      showToast("Periodo eliminado.", "success");
+    } catch (error) {
+      console.log(error);
+      showToast("No se pudo eliminar el periodo.", "error");
+    } finally {
+      setPendingDeleteId(null);
+    }
+  };
+
+  const isSaving = isCreating || isUpdating;
 
   return (
     <Layout pageTitle="Generación y gestión de planillas">
@@ -87,16 +203,24 @@ export const Planillas = () => {
         <Button
           colorPalette="blue"
           alignSelf="flex-start"
-          onClick={() => setShowCreateCard((prev) => !prev)}
+          onClick={handleStartCreate}
         >
-          <FiFilePlus /> {showCreateCard ? "Cerrar formulario" : "Crear periodo de planilla"}
+          <FiFilePlus />
+          {showForm && !editingPeriod ? " Cerrar formulario" : " Crear periodo de planilla"}
         </Button>
 
-        {showCreateCard && (
-          <Form<CreatePeriodoFormValues> onSubmit={handleCreatePeriod} resetOnSuccess>
+        {showForm && (
+          <Form<CreatePeriodoFormValues>
+            key={editingPeriod ? `edit-${editingPeriod.id}` : "create"}
+            onSubmit={handleSubmitPeriod}
+            defaultValues={defaultFormValues}
+            resetOnSuccess={!editingPeriod}
+          >
             <Card.Root as="section" maxW="lg">
               <Card.Header>
-                <Card.Title>Nuevo periodo de planilla</Card.Title>
+                <Card.Title>
+                  {editingPeriod ? "Editar periodo de planilla" : "Nuevo periodo de planilla"}
+                </Card.Title>
                 <Card.Description>
                   Define las fechas y el ciclo asociado.
                 </Card.Description>
@@ -123,19 +247,41 @@ export const Planillas = () => {
                   />
                   <InputField
                     name="id_ciclo_pago"
-                    label="ID de ciclo de pago"
-                    fieldType="number"
+                    label="Ciclo de pago"
+                    fieldType="select"
                     required
-                    helperText="Ingrese el identificador del ciclo correspondiente."
+                    options={cycleOptions}
+                    placeholder={
+                      cycleOptions.length === 0
+                        ? isLoadingCycles
+                          ? "Cargando ciclos..."
+                          : "Sin ciclos disponibles"
+                        : "Seleccione un ciclo de pago"
+                    }
+                    selectRootProps={{
+                      disabled: cycleOptions.length === 0,
+                    }}
                   />
                 </Stack>
               </Card.Body>
               <Card.Footer justifyContent="flex-end" gap="3">
-                <Button type="button" variant="outline" onClick={() => setShowCreateCard(false)}>
-                  Cancelar
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingPeriod(null);
+                  }}
+                >
+                  {editingPeriod ? "Cancelar edición" : "Cancelar"}
                 </Button>
-                <Button type="submit" colorPalette="blue" loading={isCreating}>
-                  Guardar periodo
+                <Button
+                  type="submit"
+                  colorPalette="blue"
+                  loading={isSaving}
+                  disabled={cycleOptions.length === 0 || isSaving}
+                >
+                  {editingPeriod ? "Guardar cambios" : "Guardar periodo"}
                 </Button>
               </Card.Footer>
             </Card.Root>
@@ -195,7 +341,9 @@ export const Planillas = () => {
                       <Text textStyle="sm" color="fg.muted">
                         Ciclo de pago
                       </Text>
-                      <Text fontWeight="medium">#{period.id_ciclo_pago}</Text>
+                      <Text fontWeight="medium">
+                        {cycleMap.get(period.id_ciclo_pago) ?? `#${period.id_ciclo_pago}`}
+                      </Text>
                     </Stack>
                     <Stack gap="0">
                       <Text textStyle="sm" color="fg.muted">
@@ -209,16 +357,30 @@ export const Planillas = () => {
                   <Badge colorPalette={period.estado === "ACTIVO" ? "green" : "gray"}>
                     {period.estado}
                   </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      refetch();
-                    }}
-                  >
-                    Actualizar
-                  </Button>
+                  <Stack direction="row" gap="2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEditPeriod(period);
+                      }}
+                    >
+                      <FiEdit2 /> Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      colorPalette="red"
+                      onClick={async (event) => {
+                        event.stopPropagation();
+                        await handleDeletePeriod(period);
+                      }}
+                      loading={isDeleting && pendingDeleteId === period.id}
+                    >
+                      <FiTrash2 /> Eliminar
+                    </Button>
+                  </Stack>
                 </Card.Footer>
               </Card.Root>
             ))}

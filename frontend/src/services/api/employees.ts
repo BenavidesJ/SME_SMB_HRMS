@@ -34,11 +34,12 @@ export const getAllContractTypes = () => {
 };
 
 export const createAndAssignContract = (contract: ContractPayload) => {
-  return api.post("contratos", contract);
+  const { id_colaborador, ...payload } = contract;
+  return api.post(`empleados/${id_colaborador}/contratos`, payload);
 };
 
 export const getAllContractsByEmployee = (id: number) => {
-  return api.get<ApiResponse<Contrato[]>>(`contratos/colaborador/${id}`);
+  return api.get<ApiResponse<Contrato[]>>(`empleados/${id}/contratos`);
 };
 
 export const getCantonesPorProvincia = (id_provincia: number) => {

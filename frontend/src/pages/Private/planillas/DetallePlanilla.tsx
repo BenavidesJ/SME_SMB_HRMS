@@ -39,7 +39,7 @@ type PayrollDetail = {
   bruto: number;
   deducciones: number;
   neto: number;
-  generado_por: number;
+  generado_por?: number;
 };
 
 type PayrollDetailsPayload = {
@@ -55,6 +55,20 @@ type PayrollDetailsResponse = {
 
 type GenerateFormValues = {
   colaboradores: (string | number)[];
+};
+
+type PayrollPeriod = {
+  id: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_pago: string | null;
+  id_ciclo_pago: number | null;
+  estado: string | null;
+  descripcion: string | null;
+};
+
+type GeneratePayrollPayload = PayrollDetailsPayload & {
+  generado_por: number;
   fecha_inicio: string;
   fecha_fin: string;
 };
@@ -80,6 +94,16 @@ export const DetallePlanilla = () => {
   const periodoId = Number(id);
   const periodoIdIsValid = Number.isInteger(periodoId) && periodoId > 0;
   const { user } = useAuth();
+
+  const {
+    data: periodoData,
+    isLoading: isPeriodoLoading,
+  } = useApiQuery<PayrollPeriod | null>({
+    url: periodoIdIsValid ? `planillas/periodo_planilla/${periodoId}` : "",
+    enabled: periodoIdIsValid,
+  });
+
+  const periodo = periodoData ?? null;
 
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
@@ -125,14 +149,7 @@ export const DetallePlanilla = () => {
   const {
     mutate: generatePayroll,
     isLoading: isGenerating,
-  } = useApiMutation<
-    PayrollDetailsPayload & {
-      fecha_inicio: string;
-      fecha_fin: string;
-      generado_por: number;
-    },
-    void
-  >({
+  } = useApiMutation<GeneratePayrollPayload, void>({
     url: "planillas",
     method: "POST",
   });
@@ -159,6 +176,28 @@ export const DetallePlanilla = () => {
       }),
     [],
   );
+
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-CR", {
+        dateStyle: "medium",
+      }),
+    [],
+  );
+
+  const renderDate = useCallback(
+    (value: string | null | undefined) => {
+      if (!value) return "No disponible";
+      const parsed = new Date(`${value}T00:00:00`);
+      return Number.isNaN(parsed.getTime()) ? value : dateFormatter.format(parsed);
+    },
+    [dateFormatter],
+  );
+
+  const periodoRangeLabel = useMemo(() => {
+    if (!periodo) return "No disponible";
+    return `${renderDate(periodo.fecha_inicio)} al ${renderDate(periodo.fecha_fin)}`;
+  }, [periodo, renderDate]);
 
   const loadDetails = useCallback(
     async (collaboratorIds: number[], options: { silent?: boolean } = {}) => {
@@ -236,8 +275,8 @@ export const DetallePlanilla = () => {
       return false;
     }
 
-    if (!values.fecha_inicio || !values.fecha_fin) {
-      showToast("Debe indicar las fechas de inicio y fin del periodo.", "error");
+    if (!periodo || !periodo.fecha_inicio || !periodo.fecha_fin) {
+      showToast("No se pudo determinar el rango del periodo seleccionado.", "error");
       return false;
     }
 
@@ -245,9 +284,9 @@ export const DetallePlanilla = () => {
       await generatePayroll({
         id_periodo: periodoId,
         colaboradores: collaboratorIds,
-        fecha_inicio: values.fecha_inicio,
-        fecha_fin: values.fecha_fin,
         generado_por: Number(user.id),
+        fecha_inicio: periodo.fecha_inicio,
+        fecha_fin: periodo.fecha_fin,
       });
 
       showToast("Planilla generada exitosamente.", "success");
@@ -367,7 +406,7 @@ export const DetallePlanilla = () => {
 
                 <Card.Footer justifyContent="space-between">
                   <Badge variant="surface">
-                    Generado por #{detail.generado_por}
+                    Generado por {detail.generado_por ? `#${detail.generado_por}` : "No disponible"}
                   </Badge>
                   <Badge colorPalette="red" variant="subtle">
                     Deducciones:{" "}
@@ -415,8 +454,6 @@ export const DetallePlanilla = () => {
               onSubmit={handleGeneratePayroll}
               defaultValues={{
                 colaboradores: defaultSelectedCollaborators,
-                fecha_inicio: "",
-                fecha_fin: "",
               }}
               resetOnSuccess
             >
@@ -442,6 +479,15 @@ export const DetallePlanilla = () => {
                       <Heading size="sm">
                         {periodoIdIsValid ? `#${periodoId}` : "No disponible"}
                       </Heading>
+                    </Stack>
+
+                    <Stack gap="0">
+                      <Text textStyle="sm" color="fg.muted">
+                        Rango del periodo
+                      </Text>
+                      <Text fontWeight="semibold">
+                        {isPeriodoLoading ? "Cargando…" : periodoRangeLabel}
+                      </Text>
                     </Stack>
 
                     <InputField
@@ -477,19 +523,6 @@ export const DetallePlanilla = () => {
 
                     <SelectedCollaboratorsBadges
                       collaboratorNameMap={collaboratorNameMap}
-                    />
-
-                    <InputField
-                      fieldType="date"
-                      name="fecha_inicio"
-                      label="Fecha de inicio"
-                      required
-                    />
-                    <InputField
-                      fieldType="date"
-                      name="fecha_fin"
-                      label="Fecha de fin"
-                      required
                     />
                   </Stack>
                 </Card.Body>

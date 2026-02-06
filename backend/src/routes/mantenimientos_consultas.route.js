@@ -17,7 +17,7 @@ import { tipoHoraExtraControllers } from "../modules/mantenimientos_consultas/ti
 import { tipoIncapacidadControllers } from "../modules/mantenimientos_consultas/tipo_incapacidad/controllers/tipo_incapacidad.controller.js";
 import { tipoJornadaControllers } from "../modules/mantenimientos_consultas/tipo_jornada/controllers/tipo_jornada.controller.js";
 import { tipoMarcaControllers } from "../modules/mantenimientos_consultas/tipo_marca/controllers/tipo_marca.controller.js";
-import { empleadoControllers } from "../modules/mantenimientos_consultas/empleado/controllers/empleado.controller.js";
+import { empleadoControllers, contratoControllers } from "../modules/mantenimientos_consultas/empleado/empleado.controller.js";
 import { puestoControllers } from "../modules/mantenimientos_consultas/puesto/controllers/puesto.controller.js";
 
 const router = express.Router();
@@ -50,5 +50,9 @@ const bindCrudRoutes = (basePath, controllers) => {
 	{ path: "/tipos-jornada", controllers: tipoJornadaControllers },
 	{ path: "/tipos-marca", controllers: tipoMarcaControllers },
 ].forEach(({ path, controllers }) => bindCrudRoutes(path, controllers));
+
+router.get("/empleados/:id/contratos", authorization, contratoControllers.listByColaborador);
+router.post("/empleados/:id/contratos", authorization, contratoControllers.createForColaborador);
+router.patch("/empleados/:id/contratos/:contratoId", authorization, contratoControllers.updateForColaborador);
 
 export default router;

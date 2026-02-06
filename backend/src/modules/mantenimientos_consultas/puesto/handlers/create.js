@@ -1,4 +1,3 @@
-import { Op } from "sequelize";
 import { models } from "../../../../models/index.js";
 import { runInTransaction } from "../../shared/transaction.js";
 import { requireNonEmptyString, requireDecimal } from "../../shared/validators.js";

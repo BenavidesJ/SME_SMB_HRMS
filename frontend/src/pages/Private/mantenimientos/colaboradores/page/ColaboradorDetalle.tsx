@@ -34,12 +34,11 @@ import { Layout } from "../../../../../components/layout";
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
-  const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}/full` });
-  const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `contratos/colaborador/${employee?.id}`, enabled: Boolean(employee?.id) });
-  const { data: ciclosPago = [] } = useApiQuery<string[]>({ url: "planillas/ciclos_pago" });
-  const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "tipos_jornada" });
-  const { data: positions = [] } = useApiQuery<Puesto[]>({ url: "puestos" });
-  const { data: tipoContratos = [] } = useApiQuery<TipoContratoRow[]>({ url: "tipos_contrato" });
+  const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
+  const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `empleados/${id}/contratos`, enabled: Boolean(id) });
+  const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "mantenimientos/tipos-jornada" });
+  const { data: positions = [] } = useApiQuery<Puesto[]>({ url: "mantenimientos/puestos" });
+  const { data: tipoContratos = [] } = useApiQuery<TipoContratoRow[]>({ url: "mantenimientos/tipos-contrato" });
 
   const [openModal, setOpenModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,11 +64,6 @@ export default function ColaboradorDetalle() {
   const contractTypesOptions = useMemo(
     () => mapContractTypesToOptions(tipoContratos),
     [tipoContratos, mapContractTypesToOptions],
-  );
-
-  const paymentCyclesOptions = useMemo(
-    () => mapToOptions(ciclosPago!),
-    [ciclosPago, mapToOptions],
   );
 
   const tipoJornadaOptions = useMemo(
@@ -188,13 +182,6 @@ export default function ColaboradorDetalle() {
         minW: "130px",
         textAlign: "center",
         cell: (r) => formatDate(r.fecha_inicio),
-      },
-      {
-        id: "ciclo_pago",
-        header: "Ciclo pago",
-        minW: "130px",
-        textAlign: "center",
-        cell: (r) => toTitleCase(r.ciclo_pago),
       },
       {
         id: "salario_base",
@@ -372,18 +359,6 @@ export default function ColaboradorDetalle() {
                 options={tipoJornadaOptions}
                 rules={{ required: "El campo es obligatorio" }}
                 selectRootProps={{ disabled: tiposJornada.length === 0 }}
-              />
-
-              <InputField
-                fieldType="select"
-                label="Ciclo de Pago"
-                name="ciclo_pago"
-                required
-                placeholder={ciclosPago?.length ? "Seleccione una opción" : "Cargando..."}
-                disableSelectPortal
-                options={paymentCyclesOptions}
-                rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: ciclosPago?.length === 0 }}
               />
 
               <InputField

@@ -103,11 +103,6 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
     run();
   }, [provinciaNombre, findProvinciaIdByNombre, setValue, mode]);
 
-  /**
-   * Carga distritos por cantón.
-   * - create: resetea distrito al cambiar cantón
-   * - edit: NO resetea si es hidratación inicial; solo asegura lista
-   */
   useEffect(() => {
     const run = async () => {
       if (!cantonNombre) {
@@ -150,16 +145,9 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
     run();
   }, [cantonNombre, findCantonIdByNombre, setValue, mode]);
 
-  /**
-   * ✅ “Hidratación” para edit:
-   * Cuando el form ya trae defaults (provincia/canton/distrito),
-   * marcamos hydratedRef = true para que después sí haga cascada
-   * si el usuario cambia provincia/canton manualmente.
-   */
   useEffect(() => {
     if (mode !== "edit") return;
 
-    // si ya hay valores iniciales, marcamos como hidratado
     const prov = getValues("provincia") as string;
     const cant = getValues("canton") as string;
 
