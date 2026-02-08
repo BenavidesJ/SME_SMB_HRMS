@@ -84,7 +84,7 @@ const GestionEmpleados = () => {
   };
 
   const { data: employeeFull, isLoading: isLoadingFull } = useApiQuery<EmployeeFullApi | null>({
-    url: editId ? `/empleados/${editId}/full` : "/__disabled__",
+    url: editId ? `/empleados/${editId}` : "/__disabled__",
     enabled: Boolean(openEditModal && editId),
   });
 
@@ -146,20 +146,13 @@ const GestionEmpleados = () => {
       nombre: employeeFull.nombre ?? "",
       primer_apellido: employeeFull.primer_apellido ?? "",
       segundo_apellido: employeeFull.segundo_apellido ?? "",
-
-      genero: employeeFull.genero ?? "",
       identificacion: String(employeeFull.identificacion ?? ""),
       correo_electronico: employeeFull.correo_electronico ?? "",
       telefono: String(employeeFull.telefono ?? ""),
-
-      fecha_ingreso: toDateInput(employeeFull.fecha_ingreso),
       fecha_nacimiento: toDateInput(employeeFull.fecha_nacimiento),
-
       estado_civil: employeeFull.estado_civil?.nombre ?? "",
       rol: role,
-
       cantidad_hijos: Number(employeeFull.cantidad_hijos ?? 0),
-
       provincia: employeeFull.direccion?.provincia ?? "",
       canton: employeeFull.direccion?.canton ?? "",
       distrito: employeeFull.direccion?.distrito ?? "",

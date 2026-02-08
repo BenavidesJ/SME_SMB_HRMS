@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { runInTransaction } from "../../shared/transaction.js";
-import { requireNonEmptyString, requireUppercaseString } from "../../shared/validators.js";
+import { requireUppercaseString } from "../../shared/validators.js";
 import { generateTempPassword } from "../../../../common/genTempPassword.js";
 import { generateUsername } from "../../../../common/genUsername.js";
 import { plantillaEmailBienvenida } from "../../../../common/htmlLayouts/plantillaEmailBienvenida.js";
@@ -18,9 +18,10 @@ import {
   resolveDireccionPayload,
   ensureUniqueIdentificacion,
   fetchEmpleadoById,
+  resolveRol,
 } from "./shared.js";
 
-const { Colaborador, Usuario, Rol } = empleadoModels;
+const { Colaborador, Usuario } = empleadoModels;
 
 export const createEmpleado = (payload) =>
   runInTransaction(async (transaction) => {
@@ -42,6 +43,7 @@ export const createEmpleado = (payload) =>
       : null;
 
     const rolNombre = requireUppercaseString(payload.rol ?? "EMPLEADO", "rol");
+    const rol = await resolveRol(rolNombre, transaction);
 
     const colaborador = await Colaborador.create(
       {
@@ -83,15 +85,8 @@ export const createEmpleado = (payload) =>
         contrasena_hash: passwordHash,
         requiere_cambio_contrasena: true,
         id_colaborador: colaborador.id_colaborador,
+        id_rol: rol.id_rol,
         estado: estadoActivo.id_estado,
-      },
-      { transaction },
-    );
-
-    await Rol.create(
-      {
-        id_usuario: usuario.id_usuario,
-        nombre: rolNombre,
       },
       { transaction },
     );

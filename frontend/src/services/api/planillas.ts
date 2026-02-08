@@ -1,6 +1,5 @@
 import api from "./api";
-import type { ApiResponse } from "../../types";
 
-export const getAllPaymentCycles= () => {
-  return api.get<ApiResponse<string[]>>("planillas/ciclos_pago"); 
+export const deletePeriodoPlanilla = (id: number) => {
+  return api.delete(`planillas/periodo_planilla/${id}`);
 };

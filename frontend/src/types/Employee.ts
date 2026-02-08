@@ -46,7 +46,10 @@ export interface EmployeeUserInfo {
   username: string;
   estado: number | string;
   requiere_cambio_contrasena: boolean;
-  roles: string[];
+  rol: {
+    id_rol: number,
+    nombre: string
+  }
 }
 
 export interface EmployeeRow {

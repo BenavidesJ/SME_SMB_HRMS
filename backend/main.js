@@ -25,6 +25,8 @@ app.use(
   cors({
     credentials: true,
     origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -39,6 +41,7 @@ const rateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 
 app.use(rateLimiter);
 // API V1 Routes

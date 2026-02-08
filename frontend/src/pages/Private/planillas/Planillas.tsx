@@ -18,6 +18,7 @@ import { InputField } from "../../../components/forms/InputField/InputField";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { showToast } from "../../../services/toast/toastService";
+import { deletePeriodoPlanilla } from "../../../services/api/planillas";
 
 interface PeriodoPlanilla {
   id: number;
@@ -62,12 +63,6 @@ export const Planillas = () => {
     useApiMutation<PersistPeriodoPayload, void, number>({
       url: (id) => `planillas/periodo_planilla/${id}`,
       method: "PATCH",
-    });
-
-  const { mutate: deletePeriod, isLoading: isDeleting } =
-    useApiMutation<undefined, void, number>({
-      url: (id) => `planillas/periodo_planilla/${id}`,
-      method: "DELETE",
     });
 
   const { data: cycles = [], isLoading: isLoadingCycles } =
@@ -184,7 +179,7 @@ export const Planillas = () => {
 
     try {
       setPendingDeleteId(period.id);
-      await deletePeriod(period.id, undefined);
+      await deletePeriodoPlanilla(period.id, undefined);
       await refetch();
       showToast("Periodo eliminado.", "success");
     } catch (error) {
@@ -376,7 +371,6 @@ export const Planillas = () => {
                         event.stopPropagation();
                         await handleDeletePeriod(period);
                       }}
-                      loading={isDeleting && pendingDeleteId === period.id}
                     >
                       <FiTrash2 /> Eliminar
                     </Button>

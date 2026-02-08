@@ -55,11 +55,11 @@ export function Route({
     return <Navigate to={unauthenticatedRedirectTo} replace />;
   }
 
-  const userRoles: string[] = Array.isArray(user?.usuario?.roles)
-    ? user?.usuario?.roles
-    : user?.usuario?.roles
-      ? [user?.usuario?.roles]
-      : [];
+  const roleName =
+    user?.usuario?.rol?.nombre ??
+    (typeof user?.usuario?.rol.id_rol === "string" ? user?.usuario?.rol.id_rol : undefined);
+
+  const userRoles: string[] = roleName ? [roleName] : [];
 
   const hasAccess =
     allowedRoles.length === 0

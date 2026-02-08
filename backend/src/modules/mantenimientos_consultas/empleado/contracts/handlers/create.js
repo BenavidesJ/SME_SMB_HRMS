@@ -4,16 +4,14 @@ import { ensureEstado } from "../../handlers/shared.js";
 import {
   buildWarnings,
   ensureColaboradorExists,
+  ensureSingleActiveContract,
   fetchContractById,
   normalizeFechaInicio,
   normalizeHorarioPayload,
-  normalizeHorasSemanales,
   normalizeSalario,
-  resolveCicloPago,
   resolvePuesto,
   resolveTipoContrato,
   resolveTipoJornada,
-  validateHorasContraJornada,
 } from "../helpers/shared.js";
 
 export const createContractForColaborador = ({ id, payload }) =>
@@ -21,14 +19,19 @@ export const createContractForColaborador = ({ id, payload }) =>
     const colaborador = await ensureColaboradorExists(id, transaction);
 
     const estadoActivo = await ensureEstado("ACTIVO", transaction);
+
+    await ensureSingleActiveContract({
+      colaboradorId: colaborador.id_colaborador,
+      estadoActivoId: estadoActivo.id_estado,
+      transaction,
+      message:
+        "Un empleado solo puede tener un contrato ACTIVO, desactive el contrato actual para asignar uno nuevo",
+    });
     const puesto = await resolvePuesto(payload.puesto, transaction);
     const tipoContrato = await resolveTipoContrato(payload.tipo_contrato, transaction);
     const tipoJornada = await resolveTipoJornada(payload.tipo_jornada, transaction);
-    const ciclo = await resolveCicloPago(payload.ciclo_pago, transaction);
 
     const salarioBase = normalizeSalario(payload.salario_base);
-    const horasSemanal = normalizeHorasSemanales(payload.horas_semanales, tipoJornada.max_horas_semanales);
-    validateHorasContraJornada(horasSemanal, tipoJornada.max_horas_semanales);
 
     const fechaInicio = normalizeFechaInicio(payload.fecha_inicio);
 
@@ -41,9 +44,8 @@ export const createContractForColaborador = ({ id, payload }) =>
         fecha_inicio: fechaInicio,
         id_tipo_contrato: tipoContrato.id_tipo_contrato,
         id_tipo_jornada: tipoJornada.id_tipo_jornada,
-        horas_semanales: horasSemanal,
+        horas_semanales: tipoJornada.max_horas_semanales,
         salario_base: salarioBase,
-        id_ciclo_pago: ciclo.id_ciclo_pago,
         estado: estadoActivo.id_estado,
       },
       { transaction }
@@ -54,7 +56,6 @@ export const createContractForColaborador = ({ id, payload }) =>
         id_contrato: contrato.id_contrato,
         hora_inicio: horario.horaInicio,
         hora_fin: horario.horaFin,
-        minutos_descanso: horario.minutosDescanso,
         dias_laborales: horario.diasLaborales,
         dias_libres: horario.diasLibres,
         estado: estadoActivo.id_estado,

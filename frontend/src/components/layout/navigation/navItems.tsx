@@ -47,24 +47,24 @@ export const NAV_MAIN: NavItem[] = [
     label: "Mantenimientos y Consultas",
     icon: <FiTable />,
     path: "/mantenimientos-consultas",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+    roles: ["SUPER_ADMIN", "ADMIN"]
   },
   {
     label: "Planillas",
     icon: <PiMoney />,
     path: "/planillas",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+    roles: ["SUPER_ADMIN", "ADMIN"]
   },
   {
     label: "Asistencia",
     icon: <PiCalendarCheck />,
     path: "/asistencia",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
     children: [
-      { label: "Marcar Asistencia", path: "/asistencia/marca", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
-      { label: "Gestionar Asistencias", path: "/asistencia/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Marcar Asistencia", path: "/asistencia/marca", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
+      { label: "Gestionar Asistencias", path: "/asistencia/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
     ],
-    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/asistencia/marca",
@@ -76,12 +76,12 @@ export const NAV_MAIN: NavItem[] = [
     label: "Vacaciones",
     icon: <FiBatteryCharging />,
     path: "/vacaciones",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
     children: [
-      { label: "Solicitud", path: "/vacaciones/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
-      { label: "Gestionar Solcitudes", path: "/vacaciones/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Solicitud", path: "/vacaciones/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
+      { label: "Gestionar Solcitudes", path: "/vacaciones/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
     ],
-    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/vacaciones/solicitud",
@@ -92,18 +92,18 @@ export const NAV_MAIN: NavItem[] = [
     label: "Aguinaldos",
     icon: <PiBank />,
     path: "/aguinaldos",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+    roles: ["SUPER_ADMIN", "ADMIN"]
   },
   {
     label: "Horas Extra",
     icon: <PiCalendarPlus />,
     path: "/horas-extra",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
     children: [
-      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
-      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
+      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
     ],
-    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/horas-extra/solicitud",
@@ -114,30 +114,30 @@ export const NAV_MAIN: NavItem[] = [
     label: "Liquidaciones",
     icon: <FiScissors />,
     path: "/liquidaciones",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+    roles: ["SUPER_ADMIN", "ADMIN"]
   },
   {
     label: "Evaluación de Desempeño",
     icon: <FiAward />,
     path: "/evaluacion",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR"]
+    roles: ["SUPER_ADMIN", "ADMIN"]
   },
   {
     label: "Incapacidades",
     icon: <PiHospital />,
     path: "/incapacidades",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"]
+    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"]
   },
   {
     label: "Permisos",
     icon: <FiUsers />,
     path: "/permisos",
-    roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"],
+    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
     children: [
-      { label: "Solicitud", path: "/permisos/solicitud", roles: ["EMPLEADO", "ADMINISTRADOR", "SUPER_ADMIN"] },
-      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+      { label: "Solicitud", path: "/permisos/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
+      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
     ],
-    childrenRoles: ["ADMINISTRADOR", "SUPER_ADMIN"],
+    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/permisos/solicitud",

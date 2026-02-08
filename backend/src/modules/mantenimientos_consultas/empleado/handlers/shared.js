@@ -33,7 +33,7 @@ const empleadoInclude = [
     model: Usuario,
     as: "usuarios",
     attributes: ["id_usuario", "username", "estado", "requiere_cambio_contrasena"],
-    include: [{ model: Rol, as: "roles", attributes: ["id_rol", "nombre"] }],
+    include: [{ model: Rol, as: "rol", attributes: ["id_rol", "nombre"] }],
     required: false,
   },
 ];
@@ -97,6 +97,15 @@ export async function resolveEstado(value, transaction) {
 
   const record = await Estado.findOne({ where, transaction });
   if (!record) throw new Error(`No existe estado '${value}'`);
+  return record;
+}
+
+export async function resolveRol(value, transaction) {
+  const raw = requireNonEmptyString(value, "rol");
+  const where = /^\d+$/.test(raw) ? { id_rol: Number(raw) } : { nombre: raw.toUpperCase() };
+
+  const record = await Rol.findOne({ where, transaction });
+  if (!record) throw new Error(`No existe rol '${value}'`);
   return record;
 }
 
@@ -197,7 +206,7 @@ export function serializeEmpleado(instance) {
 
   const principalDireccion = (plain.direcciones ?? []).find((dir) => dir.es_principal) ?? (plain.direcciones ?? [])[0] ?? null;
   const usuario = (plain.usuarios ?? [])[0] ?? null;
-  const roles = usuario?.roles ?? [];
+  const rol = usuario?.rol ?? null;
 
   return {
     id: plain.id_colaborador,
@@ -230,7 +239,7 @@ export function serializeEmpleado(instance) {
           username: usuario.username,
           estado: usuario.estado,
           requiere_cambio_contrasena: Boolean(usuario.requiere_cambio_contrasena),
-          roles: roles.map((rol) => rol.nombre),
+          roles: rol ? [rol.nombre] : [],
         }
       : null,
   };

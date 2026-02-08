@@ -21,7 +21,6 @@ export async function apiRequest<TResponse, TBody = unknown>(opts: {
       signal,
     });
 
-    // { success, status_code, message, data }
     const envelope = res.data;
 
     if (envelope && envelope.success === false) {
@@ -30,14 +29,26 @@ export async function apiRequest<TResponse, TBody = unknown>(opts: {
 
     return (envelope?.data ?? null) as TResponse;
   } catch (err: any) {
-    // Aca ya pasó por interceptor, solo normaliza para el hook
-    const status = err?.response?.status;
+    if (err?.name === "AbortError") {
+      throw err;
+    }
+
+    if (!err?.response) {
+      throw new ApiError(
+        "Error de conexión - verifica CORS o red",
+        0,
+        { originalError: err }
+      );
+    }
+
+    // Error de aplicación (response existe)
+    const status = err.response.status;
     const msg =
-      err?.response?.data?.message ||
-      err?.response?.data?.error ||
-      err?.message ||
+      err.response.data?.message ||
+      err.response.data?.error ||
+      err.message ||
       "Error en la solicitud";
 
-    throw new ApiError(msg, status, err?.response?.data);
+    throw new ApiError(msg, status, err.response.data);
   }
 }

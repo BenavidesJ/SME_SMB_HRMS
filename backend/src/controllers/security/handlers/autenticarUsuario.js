@@ -27,8 +27,8 @@ export const autenticarUsuario = async ({ username, password }) => {
     include: [
       {
         model: Rol,
+        as: "rol",
         attributes: ["nombre"],
-        through: { attributes: [] }
       },
       {
         model: Colaborador,
@@ -37,7 +37,7 @@ export const autenticarUsuario = async ({ username, password }) => {
       },
       {
         model: Estado,
-        as: "estadoUsuario",
+        as: "estadoRef",
         attributes: ["estado"]
       }
     ]
@@ -45,7 +45,7 @@ export const autenticarUsuario = async ({ username, password }) => {
 
   if (!user) throw new Error("Credenciales incorrectas, por favor verifique e ingrese de nuevo sus datos.");
 
-  if (String(user.estadoUsuario.estado).toLowerCase() !== "activo") throw new Error("El usuario está inactivo. Contacte al administrador.");
+  if (String(user.estadoRef.estado).toLowerCase() !== "activo") throw new Error("El usuario está inactivo. Contacte al administrador.");
 
   const isPasswordValid = await bcrypt.compare(password, user.contrasena_hash);
 
@@ -59,7 +59,7 @@ export const autenticarUsuario = async ({ username, password }) => {
 
   const payload = {
     id: user.id_usuario,
-    roles: user.rols.map(r => r.nombre),
+    roles: user.rol ? [user.rol.nombre] : [],
   };
 
   const access_token = genJWT(payload);

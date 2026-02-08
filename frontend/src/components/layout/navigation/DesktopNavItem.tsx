@@ -10,7 +10,8 @@ import { hasAnyRole } from "./helpers/hasAnyRole";
 
 export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: boolean }) => {
   const { user } = useAuth();
-  const userRoles = user?.usuario?.roles ?? [];
+  const roleName = user?.usuario?.rol?.nombre ?? "";
+  const userRoles = roleName ? [roleName] : [];
 
   const [open, setOpen] = useState(false);
 
@@ -41,6 +42,7 @@ export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: 
         if (hit) return hit;
       }
     }
+    return item.path;
   }, [parentBehavior, item.path, userRoles]);
 
   const Wrapper = parentShouldNavigate ? RouterLink : Box;

@@ -136,15 +136,6 @@ export function Formularios({
 
         <InputField
           fieldType="date"
-          label="Fecha de Ingreso"
-          name="fecha_ingreso"
-          helperText={dateHelper}
-          required
-          rules={{ required: "El campo es obligatorio" }}
-        />
-
-        <InputField
-          fieldType="date"
           label="Fecha de Nacimiento"
           name="fecha_nacimiento"
           helperText={dateHelper}

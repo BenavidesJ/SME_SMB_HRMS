@@ -43,11 +43,11 @@ export const getAllContractsByEmployee = (id: number) => {
 };
 
 export const getCantonesPorProvincia = (id_provincia: number) => {
-  return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`provincias/${id_provincia}/cantones`);
+  return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`mantenimientos/provincias/${id_provincia}/cantones`);
 };
 
-export const getDistritosPorCanton = (id_provincia: number) => {
-  return api.get<ApiResponse<DistritosPorCantonResponse>>(`cantones/${id_provincia}/distritos`);
+export const getDistritosPorCanton = (id_canton: number) => {
+  return api.get<ApiResponse<DistritosPorCantonResponse>>(`mantenimientos/cantones/${id_canton}/distritos`);
 };
 
 export const deleteJornada = (id: number) => {

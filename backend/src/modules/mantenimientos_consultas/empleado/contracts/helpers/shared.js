@@ -224,11 +224,6 @@ export function normalizeHorarioPayload(horarioPayload) {
     throw new Error("La hora de fin debe ser mayor a la hora de inicio");
   }
 
-  const descansoValue = Number(horarioPayload.minutos_descanso ?? 0);
-  if (!Number.isInteger(descansoValue) || descansoValue < 0) {
-    throw new Error("horario.minutos_descanso debe ser un entero mayor o igual a 0");
-  }
-
   const diasLaborales = normalizeDays(horarioPayload.dias_laborales, "horario.dias_laborales");
   const diasLibres = normalizeDays(horarioPayload.dias_libres, "horario.dias_libres");
   ensureDisjoint(diasLaborales, diasLibres);
@@ -236,14 +231,13 @@ export function normalizeHorarioPayload(horarioPayload) {
   return {
     horaInicio,
     horaFin,
-    minutosDescanso: descansoValue,
     diasLaborales,
     diasLibres,
     fechaActualizacion: dayjs().format("YYYY-MM-DD"),
   };
 }
 
-export async function ensureSingleActiveContract({ colaboradorId, excludeContractId, estadoActivoId, transaction }) {
+export async function ensureSingleActiveContract({ colaboradorId, excludeContractId, estadoActivoId, transaction, message }) {
   const existing = await models.Contrato.findOne({
     where: {
       id_colaborador: colaboradorId,
@@ -256,7 +250,8 @@ export async function ensureSingleActiveContract({ colaboradorId, excludeContrac
 
   if (existing) {
     throw new Error(
-      "El colaborador ya tiene otro contrato activo. Primero desactive el contrato activo actual antes de activar uno nuevo."
+      message ??
+        "El colaborador ya tiene otro contrato activo. Primero desactive el contrato activo actual antes de activar uno nuevo."
     );
   }
 }

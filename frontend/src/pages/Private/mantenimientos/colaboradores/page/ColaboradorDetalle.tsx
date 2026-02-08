@@ -376,14 +376,6 @@ export default function ColaboradorDetalle() {
                 required
                 rules={{ required: "El campo es obligatorio" }}
               />
-
-              <InputField
-                fieldType="number"
-                label="Cantidad de Horas Semanales"
-                name="horas_semanales"
-                required
-                rules={{ required: "El campo es obligatorio" }}
-              />
             </SimpleGrid>
 
             <Heading mt="3">Horario Laboral</Heading>
@@ -401,14 +393,6 @@ export default function ColaboradorDetalle() {
                 fieldType="time"
                 label="Hora de Salida"
                 name="hora_fin"
-                required
-                rules={{ required: "El campo es obligatorio" }}
-              />
-
-              <InputField
-                fieldType="number"
-                label="Tiempo de Descanso"
-                name="minutos_descanso"
                 required
                 rules={{ required: "El campo es obligatorio" }}
               />
@@ -438,9 +422,8 @@ export default function ColaboradorDetalle() {
 
             <Button
               mt="4"
-              color="black"
               fontWeight="semibold"
-              backgroundColor="brand.green.100"
+              colorPalette="blue"
               loadingText="Creando contrato..."
               loading={isSubmitting}
               type="submit"

@@ -173,8 +173,8 @@ models.Colaborador.hasMany(models.Usuario, { foreignKey: "id_colaborador", as: "
 models.BitacoraAuditoria.belongsTo(models.Usuario, { foreignKey: "actor_id", as: "actor" });
 models.Usuario.hasMany(models.BitacoraAuditoria, { foreignKey: "actor_id", as: "bitacoras" });
 
-models.Rol.belongsTo(models.Usuario, { foreignKey: "id_usuario", as: "usuario" });
-models.Usuario.hasMany(models.Rol, { foreignKey: "id_usuario", as: "roles" });
+models.Usuario.belongsTo(models.Rol, { foreignKey: "id_rol", as: "rol" });
+models.Rol.hasMany(models.Usuario, { foreignKey: "id_rol", as: "usuarios" });
 
 // Aguinaldos
 models.Aguinaldo.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });

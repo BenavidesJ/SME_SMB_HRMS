@@ -7,7 +7,7 @@ import type { Token, EmployeeRow, EmployeeUserInfo } from "../types";
 interface AuthPayload extends JwtPayload {
   data: {
     id: EmployeeRow["id"],
-    roles: EmployeeUserInfo["roles"]
+    rol: EmployeeUserInfo["rol"]
   }
 }
 

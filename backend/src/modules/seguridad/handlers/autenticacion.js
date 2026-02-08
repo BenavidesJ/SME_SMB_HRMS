@@ -17,13 +17,9 @@ export const autenticarUsuario = async ({ username, password }) => {
 			"requiere_cambio_contrasena",
 			"id_colaborador",
 			"estado",
+			"id_rol"
 		],
 		include: [
-			{
-				model: models.Rol,
-				as: "roles",
-				attributes: ["nombre"],
-			},
 			{
 				model: models.Colaborador,
 				as: "colaborador",
@@ -51,9 +47,11 @@ export const autenticarUsuario = async ({ username, password }) => {
 
 	await user.update({ ultimo_acceso_en: dayjs().format("YYYY-MM-DD HH:mm:ss") });
 
+	const rol = await models.Rol.findByPk(user.id_rol);
+
 	const payload = {
 		id: user.id_usuario,
-		roles: (user.roles ?? []).map((rol) => rol.nombre),
+		rol
 	};
 
 	const access_token = genJWT(payload);

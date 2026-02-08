@@ -2,12 +2,12 @@ import express from "express";
 
 import { authorization } from "../middlewares/authorization.js";
 import { estadoControllers } from "../modules/mantenimientos_consultas/estado/controller/estado.controller.js";
-import { cantonControllers } from "../modules/mantenimientos_consultas/canton/controllers/canton.controller.js";
+import { cantonControllers, getCantonesPorProvinciaController } from "../modules/mantenimientos_consultas/canton/controllers/canton.controller.js";
 import { causaLiquidacionControllers } from "../modules/mantenimientos_consultas/causa_liquidacion/controllers/causa_liquidacion.controller.js";
 import { cicloPagoControllers } from "../modules/mantenimientos_consultas/ciclo_pago/controllers/ciclo_pago.controller.js";
 import { deduccionControllers } from "../modules/mantenimientos_consultas/deduccion/controllers/deduccion.controller.js";
 import { departamentoControllers } from "../modules/mantenimientos_consultas/departamento/controllers/departamento.controller.js";
-import { distritoControllers } from "../modules/mantenimientos_consultas/distrito/controllers/distrito.controller.js";
+import { distritoControllers, getDistritosPorCantonController } from "../modules/mantenimientos_consultas/distrito/controllers/distrito.controller.js";
 import { estadoCivilControllers } from "../modules/mantenimientos_consultas/estado_civil/controllers/estado_civil.controller.js";
 import { feriadoControllers } from "../modules/mantenimientos_consultas/feriado/controllers/feriado.controller.js";
 import { provinciaControllers } from "../modules/mantenimientos_consultas/provincia/controllers/provincia.controller.js";
@@ -50,6 +50,9 @@ const bindCrudRoutes = (basePath, controllers) => {
 	{ path: "/tipos-jornada", controllers: tipoJornadaControllers },
 	{ path: "/tipos-marca", controllers: tipoMarcaControllers },
 ].forEach(({ path, controllers }) => bindCrudRoutes(path, controllers));
+
+router.get("/provincias/:id_provincia/cantones", authorization, getCantonesPorProvinciaController);
+router.get("/cantones/:id_canton/distritos", authorization, getDistritosPorCantonController);
 
 router.get("/empleados/:id/contratos", authorization, contratoControllers.listByColaborador);
 router.post("/empleados/:id/contratos", authorization, contratoControllers.createForColaborador);
