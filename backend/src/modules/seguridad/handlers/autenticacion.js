@@ -51,7 +51,7 @@ export const autenticarUsuario = async ({ username, password }) => {
 
 	const payload = {
 		id: user.id_usuario,
-		rol
+		rol: rol.nombre
 	};
 
 	const access_token = genJWT(payload);

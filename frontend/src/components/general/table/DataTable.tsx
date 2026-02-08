@@ -16,8 +16,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
     columns,
     data,
 
-    stickyHeader = false,
-    enableStickyColumns = false,
+    stickyHeader = true,
+    enableStickyColumns = true,
 
     striped = false,
     variant = "outline",
@@ -26,6 +26,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     selection,
     pagination,
     actionBar,
+    actionColumn,
 
     getRowProps,
     isDataLoading,
@@ -65,12 +66,16 @@ export function DataTable<T>(props: DataTableProps<T>) {
     selection.onChange(next);
   };
 
-  const showStickyCss = stickyHeader && enableStickyColumns;
+  const hasActionColumn = Boolean(actionColumn);
+  const showStickyCss = (stickyHeader && enableStickyColumns) || hasActionColumn;
+
+  const totalColSpan =
+    visibleColumns.length + (selectionEnabled ? 1 : 0) + (hasActionColumn ? 1 : 0);
 
   const bodyRows =
     data.length === 0 ? (
       <Table.Row>
-        <Table.Cell colSpan={visibleColumns.length + (selectionEnabled ? 1 : 0)} height="460px">
+        <Table.Cell colSpan={totalColSpan} height="460px">
           <TableEmptyState isLoading={isDataLoading} />
         </Table.Cell>
       </Table.Row>
@@ -166,6 +171,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 </Table.Cell>
               );
             })}
+
+            {actionColumn && (
+              <Table.Cell
+                data-sticky="end"
+                insetInlineEnd={0}
+                w={actionColumn.w ?? "140px"}
+                textAlign="end"
+              >
+                {actionColumn.cell(row)}
+              </Table.Cell>
+            )}
           </Table.Row>
         );
       })
@@ -225,6 +241,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
               </Table.ColumnHeader>
             );
           })}
+
+          {actionColumn && (
+            <Table.ColumnHeader
+              data-sticky="start"
+              insetInlineEnd={0}
+              w={actionColumn.w ?? "140px"}
+              textAlign="end"
+            >
+              {actionColumn.header ?? "Acciones"}
+            </Table.ColumnHeader>
+          )}
         </Table.Row>
       </Table.Header>
 
@@ -245,13 +272,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
       {/* Pagination */}
       <TablePagination pagination={pagination} />
 
-      {/* Action bar */}
-      <TableActionBar
-        hasSelection={hasSelection}
-        selectedKeys={selectedKeys}
-        selectionEnabled={selectionEnabled}
-        actionBar={actionBar}
-      />
+      {/* Action bar — hidden when actionColumn is in use */}
+      {!hasActionColumn && (
+        <TableActionBar
+          hasSelection={hasSelection}
+          selectedKeys={selectedKeys}
+          selectionEnabled={selectionEnabled}
+          actionBar={actionBar}
+        />
+      )}
     </>
   );
 }

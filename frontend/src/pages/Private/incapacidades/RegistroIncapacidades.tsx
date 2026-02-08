@@ -37,10 +37,10 @@ interface JornadaIncapacidadItem {
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
   const userID = user?.id;
-  const loggedUserRole = user?.usuario?.roles;
+  const loggedUserRole = user?.usuario?.rol;
 
   const hasAdminPermission = useMemo(
-    () => (loggedUserRole ?? []).some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN"),
+    () => (loggedUserRole ? ["ADMIN", "SUPER_ADMIN"].includes(loggedUserRole) : false),
     [loggedUserRole],
   );
 

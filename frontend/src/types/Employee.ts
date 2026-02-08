@@ -46,10 +46,7 @@ export interface EmployeeUserInfo {
   username: string;
   estado: number | string;
   requiere_cambio_contrasena: boolean;
-  rol: {
-    id_rol: number,
-    nombre: string
-  }
+  rol?: string
 }
 
 export interface EmployeeRow {
@@ -128,7 +125,7 @@ export interface Contrato {
   tipo_jornada: string
   horas_semanales: string
   salario_base: string
-  ciclo_pago: string
+  estado: string | null
   horarios: Horario[]
 }
 

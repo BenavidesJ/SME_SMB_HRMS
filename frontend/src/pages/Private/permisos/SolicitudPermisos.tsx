@@ -115,11 +115,11 @@ const estadoBadgeProps = (estado?: string) => {
 export const SolicitudPermisos = () => {
   const { user } = useAuth();
   const userID = user?.id;
-  const loggedUserRole = user?.usuario?.roles;
+  const loggedUserRole = user?.usuario?.rol;
   const [activeTab, setActiveTab] = useState<"mine" | "others">("mine");
 
   const hasAdminPermission = useMemo(
-    () => (loggedUserRole ?? []).some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN"),
+    () => (loggedUserRole ? ["ADMINISTRADOR", "SUPER_ADMIN"].includes(loggedUserRole) : false),
     [loggedUserRole],
   );
 
@@ -175,9 +175,10 @@ export const SolicitudPermisos = () => {
   const adminOptions = useMemo(
     () =>
       (employees ?? [])
-        .filter((colaborador) =>
-          (colaborador.usuario?.roles ?? []).some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN"),
-        )
+        .filter((colaborador) => {
+          const roleName = colaborador.usuario?.rol;
+          return roleName === "ADMINISTRADOR" || roleName === "SUPER_ADMIN";
+        })
         .map((colaborador) => {
           const collaboratorId = colaborador.id;
           const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]

@@ -9,7 +9,6 @@ import {
   normalizeFechaInicio,
   normalizeHorasSemanales,
   normalizeSalario,
-  resolveCicloPago,
   resolvePuesto,
   resolveTipoContrato,
   resolveTipoJornada,
@@ -23,7 +22,6 @@ const ALLOWED_FIELDS = new Set([
   "tipo_contrato",
   "tipo_jornada",
   "salario_base",
-  "ciclo_pago",
   "horas_semanales",
   "estado",
 ]);
@@ -60,9 +58,8 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
     let puesto = await models.Puesto.findByPk(contratoActual.id_puesto, { transaction });
     let tipoContrato = await models.TipoContrato.findByPk(contratoActual.id_tipo_contrato, { transaction });
     let tipoJornada = await models.TipoJornada.findByPk(contratoActual.id_tipo_jornada, { transaction });
-    let cicloPago = await models.CicloPago.findByPk(contratoActual.id_ciclo_pago, { transaction });
 
-    if (!puesto || !tipoContrato || !tipoJornada || !cicloPago || !estadoActual) {
+    if (!puesto || !tipoContrato || !tipoJornada || !estadoActual) {
       throw new Error("No fue posible resolver la información actual del contrato");
     }
 
@@ -70,7 +67,6 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       id_puesto: contratoActual.id_puesto,
       id_tipo_contrato: contratoActual.id_tipo_contrato,
       id_tipo_jornada: contratoActual.id_tipo_jornada,
-      id_ciclo_pago: contratoActual.id_ciclo_pago,
       fecha_inicio: contratoActual.fecha_inicio,
       horas_semanales: contratoActual.horas_semanales,
       salario_base: contratoActual.salario_base,
@@ -90,11 +86,6 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
     if (patch.tipo_jornada !== undefined) {
       tipoJornada = await resolveTipoJornada(patch.tipo_jornada, transaction);
       next.id_tipo_jornada = tipoJornada.id_tipo_jornada;
-    }
-
-    if (patch.ciclo_pago !== undefined) {
-      cicloPago = await resolveCicloPago(patch.ciclo_pago, transaction);
-      next.id_ciclo_pago = cicloPago.id_ciclo_pago;
     }
 
     if (patch.fecha_inicio !== undefined) {
@@ -131,7 +122,6 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       id_puesto: next.id_puesto,
       id_tipo_contrato: next.id_tipo_contrato,
       id_tipo_jornada: next.id_tipo_jornada,
-      id_ciclo_pago: next.id_ciclo_pago,
       fecha_inicio: next.fecha_inicio,
       horas_semanales: next.horas_semanales,
       salario_base: next.salario_base,

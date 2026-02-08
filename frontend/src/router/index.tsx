@@ -30,7 +30,6 @@ import CausasLiquidacion from "../pages/Private/mantenimientos/causasLiquidacion
 import TiposIncapacidad from "../pages/Private/mantenimientos/tiposIncapacidad/TiposIncapacidad";
 import TiposMarca from "../pages/Private/mantenimientos/tiposMarca/TiposMarca";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
-import UIdocs from "../pages/Private/UIdocs";
 import NotFoundPage from "../pages/Public/NotFoundPage";
 import { SolicitudVacaciones } from "../pages/Private/vacaciones/SolicitudVacaciones";
 import { GestionVacaciones } from "../pages/Private/vacaciones/GestionVacaciones";
@@ -278,12 +277,6 @@ export const router = createBrowserRouter([
         path: "/mantenimientos-consultas/causas_liquidacion",
         element: <CausasLiquidacion />,
         handle: { crumb: "Causas de liquidación" },
-      },
-
-      {
-        path: "/ui-docs",
-        element: <UIdocs />,
-        handle: { crumb: "Documentación UI" },
       },
     ],
   },

@@ -1,6 +1,7 @@
 import type { JSX } from "react";
-import { FiUsers, FiCode, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome, FiUser } from "react-icons/fi";
+import { FiUsers, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome, FiUser } from "react-icons/fi";
 import { PiBank, PiCalendarCheck, PiCalendarPlus, PiHospital, PiMoney } from "react-icons/pi";
+import { rolesForPath } from "../../../auth/accessControl";
 
 /*
   El item de navegacion a renderizar en AppNavigation
@@ -47,41 +48,40 @@ export const NAV_MAIN: NavItem[] = [
     label: "Mantenimientos y Consultas",
     icon: <FiTable />,
     path: "/mantenimientos-consultas",
-    roles: ["SUPER_ADMIN", "ADMIN"]
+    roles: rolesForPath("/mantenimientos-consultas"),
   },
   {
     label: "Planillas",
     icon: <PiMoney />,
     path: "/planillas",
-    roles: ["SUPER_ADMIN", "ADMIN"]
+    roles: rolesForPath("/planillas"),
   },
   {
     label: "Asistencia",
     icon: <PiCalendarCheck />,
     path: "/asistencia",
-    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
+    roles: rolesForPath("/asistencia"),
     children: [
-      { label: "Marcar Asistencia", path: "/asistencia/marca", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
-      { label: "Gestionar Asistencias", path: "/asistencia/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
+      { label: "Marcar Asistencia", path: "/asistencia/marca", roles: rolesForPath("/asistencia/marca") },
+      { label: "Gestionar Asistencias", path: "/asistencia/gestion", roles: rolesForPath("/asistencia/gestion") },
     ],
-    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
+    childrenRoles: rolesForPath("/asistencia/gestion"),
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/asistencia/marca",
       },
     },
-  }
-  ,
+  },
   {
     label: "Vacaciones",
     icon: <FiBatteryCharging />,
     path: "/vacaciones",
-    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
+    roles: rolesForPath("/vacaciones"),
     children: [
-      { label: "Solicitud", path: "/vacaciones/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
-      { label: "Gestionar Solcitudes", path: "/vacaciones/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
+      { label: "Solicitud", path: "/vacaciones/solicitud", roles: rolesForPath("/vacaciones/solicitud") },
+      { label: "Gestionar Solcitudes", path: "/vacaciones/gestion", roles: rolesForPath("/vacaciones/gestion") },
     ],
-    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
+    childrenRoles: rolesForPath("/vacaciones/gestion"),
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/vacaciones/solicitud",
@@ -92,18 +92,18 @@ export const NAV_MAIN: NavItem[] = [
     label: "Aguinaldos",
     icon: <PiBank />,
     path: "/aguinaldos",
-    roles: ["SUPER_ADMIN", "ADMIN"]
+    roles: rolesForPath("/aguinaldos"),
   },
   {
     label: "Horas Extra",
     icon: <PiCalendarPlus />,
     path: "/horas-extra",
-    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
+    roles: rolesForPath("/horas-extra"),
     children: [
-      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
-      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
+      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: rolesForPath("/horas-extra/solicitud") },
+      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: rolesForPath("/horas-extra/gestion") },
     ],
-    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
+    childrenRoles: rolesForPath("/horas-extra/gestion"),
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/horas-extra/solicitud",
@@ -114,30 +114,30 @@ export const NAV_MAIN: NavItem[] = [
     label: "Liquidaciones",
     icon: <FiScissors />,
     path: "/liquidaciones",
-    roles: ["SUPER_ADMIN", "ADMIN"]
+    roles: rolesForPath("/liquidaciones"),
   },
   {
     label: "Evaluación de Desempeño",
     icon: <FiAward />,
     path: "/evaluacion",
-    roles: ["SUPER_ADMIN", "ADMIN"]
+    roles: rolesForPath("/evaluacion"),
   },
   {
     label: "Incapacidades",
     icon: <PiHospital />,
     path: "/incapacidades",
-    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"]
+    roles: rolesForPath("/incapacidades"),
   },
   {
     label: "Permisos",
     icon: <FiUsers />,
     path: "/permisos",
-    roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"],
+    roles: rolesForPath("/permisos"),
     children: [
-      { label: "Solicitud", path: "/permisos/solicitud", roles: ["EMPLEADO", "ADMIN", "SUPER_ADMIN"] },
-      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: ["ADMIN", "SUPER_ADMIN"] },
+      { label: "Solicitud", path: "/permisos/solicitud", roles: rolesForPath("/permisos/solicitud") },
+      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: rolesForPath("/permisos/gestion") },
     ],
-    childrenRoles: ["ADMIN", "SUPER_ADMIN"],
+    childrenRoles: rolesForPath("/permisos/gestion"),
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/permisos/solicitud",
@@ -148,5 +148,4 @@ export const NAV_MAIN: NavItem[] = [
 
 export const NAV_SETTINGS: NavItem[] = [
   { label: "Perfil de Usuario", icon: <FiUser />, path: "/perfil" },
-  { label: "Documentacion UI", icon: <FiCode />, path: "/ui-docs", roles: ["SUPER_ADMIN"] },
 ];

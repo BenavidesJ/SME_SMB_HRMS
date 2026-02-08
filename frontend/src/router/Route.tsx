@@ -1,6 +1,7 @@
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { AppLoader } from "../components/layout/loading";
+import { getAllowedRolesForPath } from "../auth/accessControl";
 
 type RouteMode = "public" | "private" | "role";
 
@@ -18,11 +19,6 @@ interface RouteProps {
   authenticatedRedirectTo?: string;
 
   /**
-   * Roles permitidos
-   */
-  allowedRoles?: string[];
-
-  /**
    * Redirección si usuario está autenticado pero no tiene rol permitido
    */
   unauthorizedRedirectTo?: string;
@@ -32,10 +28,10 @@ export function Route({
   mode,
   unauthenticatedRedirectTo = "/login",
   authenticatedRedirectTo = "/",
-  allowedRoles = [],
   unauthorizedRedirectTo = "/",
 }: RouteProps) {
   const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) return <AppLoader />;
 
@@ -47,24 +43,19 @@ export function Route({
     );
   }
 
-  if (mode === "private") {
-    return isAuthenticated ? <Outlet /> : <Navigate to={unauthenticatedRedirectTo} replace />;
-  }
-
   if (!isAuthenticated) {
     return <Navigate to={unauthenticatedRedirectTo} replace />;
   }
 
+  const autoRoles = getAllowedRolesForPath(location.pathname) ?? [];
+  if (autoRoles.length === 0) return <Outlet />;
+
   const roleName =
-    user?.usuario?.rol?.nombre ??
-    (typeof user?.usuario?.rol.id_rol === "string" ? user?.usuario?.rol.id_rol : undefined);
+    user?.usuario?.rol ??
+    (typeof user?.usuario?.rol === "string" ? user?.usuario?.rol : undefined);
 
   const userRoles: string[] = roleName ? [roleName] : [];
-
-  const hasAccess =
-    allowedRoles.length === 0
-      ? true
-      : allowedRoles.some((r) => userRoles.includes(r));
+  const hasAccess = autoRoles.some((r) => userRoles.includes(r));
 
   return hasAccess ? <Outlet /> : <Navigate to={unauthorizedRedirectTo} replace />;
 }

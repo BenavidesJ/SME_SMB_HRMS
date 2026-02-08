@@ -179,7 +179,7 @@ export const Planillas = () => {
 
     try {
       setPendingDeleteId(period.id);
-      await deletePeriodoPlanilla(period.id, undefined);
+      await deletePeriodoPlanilla(period.id);
       await refetch();
       showToast("Periodo eliminado.", "success");
     } catch (error) {

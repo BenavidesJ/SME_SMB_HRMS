@@ -42,6 +42,10 @@ export const getAllContractsByEmployee = (id: number) => {
   return api.get<ApiResponse<Contrato[]>>(`empleados/${id}/contratos`);
 };
 
+export const patchContract = (colaboradorId: number, contratoId: number, patch: Record<string, unknown>) => {
+  return api.patch(`empleados/${colaboradorId}/contratos/${contratoId}`, patch);
+};
+
 export const getCantonesPorProvincia = (id_provincia: number) => {
   return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`mantenimientos/provincias/${id_provincia}/cantones`);
 };

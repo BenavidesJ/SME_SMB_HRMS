@@ -140,7 +140,7 @@ const GestionEmpleados = () => {
   const editDefaultValues = useMemo(() => {
     if (!employeeFull) return undefined;
 
-    const role = employeeFull.usuario?.roles?.[0] ?? "";
+    const role = employeeFull.usuario?.rol ?? "";
 
     return {
       nombre: employeeFull.nombre ?? "",

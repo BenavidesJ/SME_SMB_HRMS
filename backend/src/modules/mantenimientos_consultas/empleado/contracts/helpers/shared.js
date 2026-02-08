@@ -9,6 +9,7 @@ export const contractInclude = [
   { model: models.Puesto, as: "puesto", attributes: ["nombre", "es_jefe", "id_departamento"] },
   { model: models.TipoContrato, as: "tipoContrato", attributes: ["tipo_contrato"] },
   { model: models.TipoJornada, as: "tipoJornada", attributes: ["tipo", "max_horas_diarias", "max_horas_semanales"] },
+  { model: models.Estado, as: "estadoRef", attributes: ["id_estado", "estado"] },
   {
     model: models.HorarioLaboral,
     as: "horarios",
@@ -41,6 +42,7 @@ export function serializeContract(instance) {
     tipo_jornada: plain.tipoJornada?.tipo ?? null,
     horas_semanales: plain.horas_semanales,
     salario_base: plain.salario_base,
+    estado: plain.estadoRef?.estado ?? null,
     horarios: (plain.horarios ?? []).map((horario) => ({
       id_horario: horario.id_horario,
       hora_inicio: horario.hora_inicio,

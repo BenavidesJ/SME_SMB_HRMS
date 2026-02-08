@@ -239,7 +239,7 @@ export function serializeEmpleado(instance) {
           username: usuario.username,
           estado: usuario.estado,
           requiere_cambio_contrasena: Boolean(usuario.requiere_cambio_contrasena),
-          roles: rol ? [rol.nombre] : [],
+          rol: rol.nombre,
         }
       : null,
   };

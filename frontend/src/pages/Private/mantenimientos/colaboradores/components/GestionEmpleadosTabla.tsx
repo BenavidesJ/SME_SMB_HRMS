@@ -28,8 +28,6 @@ export const GestionEmpleadosTabla = ({
   const nav = useNavigate();
   const pageSize = 10;
 
-  console.log(selection)
-
   const pagedEmployees = useMemo(() => {
     const start = (page - 1) * pageSize;
     return employees.slice(start, start + pageSize);
@@ -77,15 +75,14 @@ export const GestionEmpleadosTabla = ({
         header: "Rol",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => (
-          <HStack gap="2" wrap="wrap">
-            {(r.usuario?.roles ?? []).map((role) => (
-              <Badge key={role} variant="surface">
-                {role}
-              </Badge>
-            ))}
-          </HStack>
-        ),
+        cell: (r) => {
+          const roleName = r.usuario?.rol;
+          return roleName ? (
+            <HStack gap="2" wrap="wrap">
+              <Badge variant="surface">{roleName}</Badge>
+            </HStack>
+          ) : null;
+        },
       },
       {
         id: "estado",
