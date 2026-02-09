@@ -54,7 +54,6 @@ export async function listarPermisosPorColaboradorController(req, res, next) {
   try {
     const idColaborador = req.params?.id_colaborador ?? req.params?.id;
     const usuarioId = req.user?.id;
-    const roles = Array.isArray(req.user?.roles) ? req.user.roles : [];
 
     if (!usuarioId) {
       throw new Error("No se pudo identificar al usuario autenticado");
@@ -73,16 +72,6 @@ export async function listarPermisosPorColaboradorController(req, res, next) {
 
     if (!Number.isInteger(targetColaboradorId) || targetColaboradorId <= 0) {
       throw new Error("id_colaborador debe ser un entero positivo");
-    }
-
-    const isAdmin = roles.some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN");
-
-    if (actorColaboradorId !== targetColaboradorId && !isAdmin) {
-      return res.status(HTTP_CODES.ERROR.CLIENT.FORBIDDEN).json({
-        success: false,
-        status_code: HTTP_CODES.ERROR.CLIENT.FORBIDDEN,
-        message: "No tiene permisos para consultar solicitudes de otros colaboradores",
-      });
     }
 
     const data = await listarPermisosPorColaborador({

@@ -8,6 +8,8 @@ import {
   deletePeriodoPlanillaController,
   generarPlanillaController,
   obtenerDetallePlanillaController,
+  eliminarPlanillaController,
+  editarPlanillaController,
 } from "../modules/planillas/planillas.controller.js";
 
 const router = Router();
@@ -20,5 +22,7 @@ router.delete("/periodo_planilla/:id", authorization, deletePeriodoPlanillaContr
 
 router.post("/detalle", authorization, obtenerDetallePlanillaController);
 router.post("/", authorization, generarPlanillaController);
+router.delete("/:id", authorization, eliminarPlanillaController);
+router.patch("/:id", authorization, editarPlanillaController);
 
 export default router;

@@ -9,4 +9,6 @@ export {
 export {
   generarPlanillaController,
   obtenerDetallePlanillaController,
+  eliminarPlanillaController,
+  editarPlanillaController,
 } from "./controllers/payroll.controller.js";

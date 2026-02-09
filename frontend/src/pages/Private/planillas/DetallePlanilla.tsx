@@ -1,13 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Badge,
+  Box,
   Button,
   Card,
   EmptyState,
+  Flex,
   Heading,
+  Separator,
   SimpleGrid,
   Spinner,
   Stack,
+  Table,
   Text,
 } from "@chakra-ui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,19 +31,42 @@ import { showToast } from "../../../services/toast/toastService";
 import { useAuth } from "../../../context/AuthContext";
 import type { EmployeeRow } from "../../../types";
 
+type HorasMonto = {
+  cantidad: number;
+  monto: number;
+};
+
+type DeduccionDetalle = {
+  id_deduccion: number;
+  nombre: string;
+  porcentaje: number;
+  monto: number;
+};
+
+type RentaInfo = {
+  monto_quincenal: number;
+  proyectado_mensual: number;
+};
+
 type PayrollDetail = {
   id_detalle: number;
   id_periodo: number;
   id_colaborador: number;
   id_contrato: number;
-  horas_ordinarias: number;
-  horas_extra: number;
-  horas_feriado: number;
-  horas_nocturnas: number;
-  bruto: number;
-  deducciones: number;
-  neto: number;
-  generado_por?: number;
+  salario_mensual: number;
+  salario_quincenal: number;
+  salario_diario: number;
+  tarifa_hora: number;
+  horas_ordinarias: HorasMonto;
+  horas_extra: HorasMonto;
+  horas_nocturnas: HorasMonto;
+  horas_feriado: HorasMonto;
+  salario_devengado: number;
+  deducciones: DeduccionDetalle[];
+  total_cargas_sociales: number;
+  renta: RentaInfo;
+  total_deducciones: number;
+  salario_neto: number;
 };
 
 type PayrollDetailsPayload = {
@@ -322,19 +349,24 @@ export const DetallePlanilla = () => {
           <Text color="fg.muted">Consultando detalle del periodo…</Text>
         </Stack>
       ) : hasDetails ? (
-        <Stack gap="4">
+        <Stack gap="6">
           {detailList.map((detail) => {
             const fullName =
               collaboratorNameMap.get(detail.id_colaborador) ??
               `Colaborador #${detail.id_colaborador}`;
 
+            const horasOrd = detail.horas_ordinarias ?? { cantidad: 0, monto: 0 };
+            const horasExt = detail.horas_extra ?? { cantidad: 0, monto: 0 };
+            const horasNoc = detail.horas_nocturnas ?? { cantidad: 0, monto: 0 };
+            const horasFer = detail.horas_feriado ?? { cantidad: 0, monto: 0 };
+            const deduccionesList = Array.isArray(detail.deducciones) ? detail.deducciones : [];
+            const renta = detail.renta ?? { monto_quincenal: 0, proyectado_mensual: 0 };
+
             return (
               <Card.Root
                 key={detail.id_detalle}
                 borderLeftWidth={6}
-                style={{
-                  borderLeftColor: "var(--chakra-colors-blue-500)",
-                }}
+                style={{ borderLeftColor: "var(--chakra-colors-blue-500)" }}
               >
                 <Card.Header>
                   <Card.Title>{fullName}</Card.Title>
@@ -344,75 +376,136 @@ export const DetallePlanilla = () => {
                 </Card.Header>
 
                 <Card.Body>
-                  <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap="4">
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Horas ordinarias
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {decimalFormatter.format(
-                          Number(detail.horas_ordinarias ?? 0),
-                        )}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Horas extra
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {decimalFormatter.format(
-                          Number(detail.horas_extra ?? 0),
-                        )}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Horas feriado
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {decimalFormatter.format(
-                          Number(detail.horas_feriado ?? 0),
-                        )}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Horas nocturnas
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {decimalFormatter.format(
-                          Number(detail.horas_nocturnas ?? 0),
-                        )}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Salario bruto
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {currencyFormatter.format(Number(detail.bruto ?? 0))}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="xs" color="fg.muted">
-                        Salario neto
-                      </Text>
-                      <Text fontWeight="semibold">
-                        {currencyFormatter.format(Number(detail.neto ?? 0))}
-                      </Text>
-                    </Stack>
-                  </SimpleGrid>
-                </Card.Body>
+                  <Stack gap="5">
+                    {/* ── Tarifas de referencia ── */}
+                    <SimpleGrid columns={{ base: 2, md: 4 }} gap="3">
+                      <Box>
+                        <Text textStyle="xs" color="fg.muted">Salario mensual</Text>
+                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_mensual ?? 0)}</Text>
+                      </Box>
+                      <Box>
+                        <Text textStyle="xs" color="fg.muted">Salario quincenal</Text>
+                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_quincenal ?? 0)}</Text>
+                      </Box>
+                      <Box>
+                        <Text textStyle="xs" color="fg.muted">Salario diario</Text>
+                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_diario ?? 0)}</Text>
+                      </Box>
+                      <Box>
+                        <Text textStyle="xs" color="fg.muted">Tarifa por hora</Text>
+                        <Text fontWeight="semibold">{currencyFormatter.format(detail.tarifa_hora ?? 0)}</Text>
+                      </Box>
+                    </SimpleGrid>
 
-                <Card.Footer justifyContent="space-between">
-                  <Badge variant="surface">
-                    Generado por {detail.generado_por ? `#${detail.generado_por}` : "No disponible"}
-                  </Badge>
-                  <Badge colorPalette="red" variant="subtle">
-                    Deducciones:{" "}
-                    {currencyFormatter.format(Number(detail.deducciones ?? 0))}
-                  </Badge>
-                </Card.Footer>
+                    <Separator />
+
+                    {/* ── Horas + montos ── */}
+                    <Table.Root size="sm" variant="outline">
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.ColumnHeader>Concepto</Table.ColumnHeader>
+                          <Table.ColumnHeader textAlign="right">Horas</Table.ColumnHeader>
+                          <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        <Table.Row>
+                          <Table.Cell>Horas ordinarias (salario base)</Table.Cell>
+                          <Table.Cell textAlign="right">{decimalFormatter.format(horasOrd.cantidad)}</Table.Cell>
+                          <Table.Cell textAlign="right">{currencyFormatter.format(horasOrd.monto)}</Table.Cell>
+                        </Table.Row>
+                        {horasExt.cantidad > 0 && (
+                          <Table.Row>
+                            <Table.Cell>Horas extra (×1.5)</Table.Cell>
+                            <Table.Cell textAlign="right">{decimalFormatter.format(horasExt.cantidad)}</Table.Cell>
+                            <Table.Cell textAlign="right">{currencyFormatter.format(horasExt.monto)}</Table.Cell>
+                          </Table.Row>
+                        )}
+                        {horasNoc.cantidad > 0 && (
+                          <Table.Row>
+                            <Table.Cell>Horas nocturnas (×0.25)</Table.Cell>
+                            <Table.Cell textAlign="right">{decimalFormatter.format(horasNoc.cantidad)}</Table.Cell>
+                            <Table.Cell textAlign="right">{currencyFormatter.format(horasNoc.monto)}</Table.Cell>
+                          </Table.Row>
+                        )}
+                        {horasFer.cantidad > 0 && (
+                          <Table.Row>
+                            <Table.Cell>Horas feriado trabajado</Table.Cell>
+                            <Table.Cell textAlign="right">{decimalFormatter.format(horasFer.cantidad)}</Table.Cell>
+                            <Table.Cell textAlign="right">{currencyFormatter.format(horasFer.monto)}</Table.Cell>
+                          </Table.Row>
+                        )}
+                        <Table.Row bg="blue.50">
+                          <Table.Cell colSpan={2}>
+                            <Text fontWeight="bold">Salario devengado (bruto)</Text>
+                          </Table.Cell>
+                          <Table.Cell textAlign="right">
+                            <Text fontWeight="bold">{currencyFormatter.format(detail.salario_devengado ?? 0)}</Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      </Table.Body>
+                    </Table.Root>
+
+                    {/* ── Deducciones ── */}
+                    <Table.Root size="sm" variant="outline">
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.ColumnHeader>Deducción</Table.ColumnHeader>
+                          <Table.ColumnHeader textAlign="right">Porcentaje</Table.ColumnHeader>
+                          <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {deduccionesList.map((ded, idx) => (
+                          <Table.Row key={ded.id_deduccion ?? idx}>
+                            <Table.Cell>{ded.nombre}</Table.Cell>
+                            <Table.Cell textAlign="right">{decimalFormatter.format(ded.porcentaje)}%</Table.Cell>
+                            <Table.Cell textAlign="right" color="red.600">
+                              -{currencyFormatter.format(ded.monto)}
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                        {renta.monto_quincenal > 0 && (
+                          <Table.Row>
+                            <Table.Cell>Impuesto sobre la renta</Table.Cell>
+                            <Table.Cell textAlign="right">
+                              <Text textStyle="xs" color="fg.muted">
+                                Proyectado: {currencyFormatter.format(renta.proyectado_mensual)}/mes
+                              </Text>
+                            </Table.Cell>
+                            <Table.Cell textAlign="right" color="red.600">
+                              -{currencyFormatter.format(renta.monto_quincenal)}
+                            </Table.Cell>
+                          </Table.Row>
+                        )}
+                        <Table.Row bg="red.50">
+                          <Table.Cell colSpan={2}>
+                            <Text fontWeight="bold">Total deducciones</Text>
+                          </Table.Cell>
+                          <Table.Cell textAlign="right">
+                            <Text fontWeight="bold" color="red.600">
+                              -{currencyFormatter.format(detail.total_deducciones ?? 0)}
+                            </Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      </Table.Body>
+                    </Table.Root>
+
+                    {/* ── Neto ── */}
+                    <Flex
+                      justify="space-between"
+                      align="center"
+                      bg="green.50"
+                      p="4"
+                      borderRadius="lg"
+                    >
+                      <Heading size="md">Salario neto a pagar</Heading>
+                      <Heading size="md" color="green.700">
+                        {currencyFormatter.format(detail.salario_neto ?? 0)}
+                      </Heading>
+                    </Flex>
+                  </Stack>
+                </Card.Body>
               </Card.Root>
             );
           })}

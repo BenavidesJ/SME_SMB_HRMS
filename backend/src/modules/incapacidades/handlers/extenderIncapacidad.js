@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -18,23 +17,15 @@ const SUPPORTED_TYPES = Object.freeze({
   LICENCIA_MATERNIDAD: "LICENCIA_MATERNIDAD",
 });
 
-function normalizeTipo(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw) throw new Error("tipo_incap es obligatorio");
-  return raw.replace(/\s+/g, "_").toUpperCase();
-}
-
 function assertDate(value, fieldName) {
   const str = String(value ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     throw new Error(`${fieldName} debe tener formato YYYY-MM-DD`);
   }
-
   const date = dayjs(str, "YYYY-MM-DD", true);
   if (!date.isValid()) {
     throw new Error(`${fieldName} es una fecha inválida`);
   }
-
   return date;
 }
 
@@ -42,12 +33,10 @@ function listDatesInclusive(startDate, endDate) {
   const dates = [];
   let cursor = startDate.clone();
   const limit = endDate.clone();
-
   while (cursor.isBefore(limit) || cursor.isSame(limit)) {
     dates.push(cursor.format("YYYY-MM-DD"));
     cursor = cursor.add(1, "day");
   }
-
   return dates;
 }
 
@@ -96,57 +85,107 @@ function buildRestDaysSet(horario) {
   return new Set(template.restDays ?? []);
 }
 
-export async function registrarIncapacidad({
-  id_colaborador,
-  fecha_inicio,
-  fecha_fin,
-  tipo_incap,
-}) {
+/**
+ * Cuenta los días pagables que ya existen en el grupo para continuar el contador.
+ * Reconstruye la lógica: recorre las jornadas existentes del grupo en orden cronológico,
+ * y por cada día laboral (no de descanso) incrementa el contador.
+ */
+async function countExistingPayableDays({ grupo, tipo, restDays, tx }) {
+  const existingRecords = await Incapacidad.findAll({
+    where: { grupo },
+    include: [{ model: JornadaDiaria, as: "jornadas", attributes: ["fecha"] }],
+    order: [["id_incapacidad", "ASC"]],
+    transaction: tx,
+  });
+
+  let count = 0;
+
+  for (const record of existingRecords) {
+    const jornadas = record.jornadas ?? [];
+    for (const jornada of jornadas) {
+      const dateStr = String(jornada.fecha);
+      const dayIdx = getDayIndex(dateStr);
+      const isRestDay = restDays.has(dayIdx);
+
+      if (tipo === SUPPORTED_TYPES.LICENCIA_MATERNIDAD) {
+        count += 1;
+      } else if (tipo === SUPPORTED_TYPES.CCSS && !isRestDay) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
+}
+
+export async function extenderIncapacidad({ grupo, fecha_fin }) {
   const tx = await sequelize.transaction();
 
   try {
-    const tipo = normalizeTipo(tipo_incap);
-    if (!Object.values(SUPPORTED_TYPES).includes(tipo)) {
-      throw new Error(`Tipo de incapacidad no soportado todavía: ${tipo}`);
+    if (!grupo || typeof grupo !== "string" || grupo.trim() === "") {
+      throw new Error("El grupo (UUID) de incapacidad es obligatorio");
     }
 
-    const idColaborador = Number(id_colaborador);
-    if (!Number.isInteger(idColaborador) || idColaborador <= 0) {
-      throw new Error("id_colaborador debe ser un número entero positivo");
-    }
+    const grupoId = grupo.trim();
 
-    const startDate = assertDate(fecha_inicio, "fecha_inicio");
-    const endDate = assertDate(fecha_fin, "fecha_fin");
-
-    if (endDate.isBefore(startDate)) {
-      throw new Error("fecha_fin no puede ser menor que fecha_inicio");
-    }
-
-    const dates = listDatesInclusive(startDate, endDate);
-
-    const grupo = uuidv4();
-    const fechaInicioStr = startDate.format("YYYY-MM-DD");
-    const fechaFinStr = endDate.format("YYYY-MM-DD");
-
-    const colaborador = await Colaborador.findByPk(idColaborador, {
+    // Obtener todos los registros existentes del grupo
+    const existingRecords = await Incapacidad.findAll({
+      where: { grupo: grupoId },
+      include: [
+        { model: TipoIncapacidad, as: "tipo", attributes: ["id_tipo_incap", "nombre"] },
+      ],
+      order: [["id_incapacidad", "ASC"]],
       transaction: tx,
       lock: tx.LOCK.UPDATE,
     });
 
-    if (!colaborador) {
-      throw new Error(`No existe colaborador con id ${idColaborador}`);
+    if (existingRecords.length === 0) {
+      throw new Error(`No existe un grupo de incapacidad con UUID ${grupoId}`);
     }
 
-    const tipoRow = await TipoIncapacidad.findOne({
-      where: { nombre: tipo },
+    const firstRecord = existingRecords[0];
+    const tipoRow = firstRecord.tipo;
+    const tipoNombre = tipoRow?.nombre;
+
+    if (!tipoNombre || !Object.values(SUPPORTED_TYPES).includes(tipoNombre)) {
+      throw new Error(`Tipo de incapacidad no soportado: ${tipoNombre}`);
+    }
+
+    // Determinar el rango actual del grupo
+    const fechaInicioGrupo = firstRecord.fecha_inicio;
+    const fechaFinActual = firstRecord.fecha_fin;
+
+    const newEndDate = assertDate(fecha_fin, "fecha_fin");
+    const currentEndDate = dayjs(fechaFinActual, "YYYY-MM-DD", true);
+
+    if (!newEndDate.isAfter(currentEndDate)) {
+      throw new Error(
+        `La nueva fecha_fin (${fecha_fin}) debe ser posterior a la fecha_fin actual (${fechaFinActual})`,
+      );
+    }
+
+    // Días nuevos: desde el día siguiente al fin actual hasta la nueva fecha_fin
+    const extensionStartDate = currentEndDate.add(1, "day");
+    const newDates = listDatesInclusive(extensionStartDate, newEndDate);
+
+    if (newDates.length === 0) {
+      throw new Error("No hay días nuevos para registrar en la extensión");
+    }
+
+    // Obtener id_colaborador desde la jornada vinculada al primer registro
+    const firstJornada = await JornadaDiaria.findOne({
+      where: { incapacidad: firstRecord.id_incapacidad },
+      attributes: ["id_colaborador"],
       transaction: tx,
-      lock: tx.LOCK.UPDATE,
     });
 
-    if (!tipoRow) {
-      throw new Error(`No existe el tipo de incapacidad ${tipo}`);
+    if (!firstJornada) {
+      throw new Error("No se encontró la jornada diaria vinculada al grupo de incapacidad");
     }
 
+    const idColaborador = Number(firstJornada.id_colaborador);
+
+    // Obtener contrato y horario activo
     const estadoActivo = await Estado.findOne({
       where: { estado: "ACTIVO" },
       attributes: ["id_estado"],
@@ -161,10 +200,7 @@ export async function registrarIncapacidad({
     const estadoActivoId = Number(estadoActivo.id_estado);
 
     const contratoActivo = await Contrato.findOne({
-      where: {
-        id_colaborador: idColaborador,
-        estado: estadoActivoId,
-      },
+      where: { id_colaborador: idColaborador, estado: estadoActivoId },
       order: [["fecha_inicio", "DESC"]],
       transaction: tx,
       lock: tx.LOCK.UPDATE,
@@ -175,10 +211,7 @@ export async function registrarIncapacidad({
     }
 
     const horarioActivo = await HorarioLaboral.findOne({
-      where: {
-        id_contrato: contratoActivo.id_contrato,
-        estado: estadoActivoId,
-      },
+      where: { id_contrato: contratoActivo.id_contrato, estado: estadoActivoId },
       order: [["fecha_actualizacion", "DESC"]],
       transaction: tx,
       lock: tx.LOCK.UPDATE,
@@ -190,10 +223,19 @@ export async function registrarIncapacidad({
 
     const restDays = buildRestDaysSet(horarioActivo);
 
+    // Contar días pagables existentes para continuar el contador
+    let payableDayCounter = await countExistingPayableDays({
+      grupo: grupoId,
+      tipo: tipoNombre,
+      restDays,
+      tx,
+    });
+
+    // Obtener jornadas existentes en el rango de extensión
     const existingJornadas = await JornadaDiaria.findAll({
       where: {
         id_colaborador: idColaborador,
-        fecha: { [Op.in]: dates },
+        fecha: { [Op.in]: newDates },
       },
       transaction: tx,
       lock: tx.LOCK.UPDATE,
@@ -204,22 +246,22 @@ export async function registrarIncapacidad({
       jornadasByDate.set(String(jornada.fecha), jornada);
     }
 
+    const newFechaFinStr = newEndDate.format("YYYY-MM-DD");
     const registros = [];
-    let payableDayCounter = 0;
 
-    for (const dateStr of dates) {
+    for (const dateStr of newDates) {
       const dayIdx = getDayIndex(dateStr);
       const isRestDay = restDays.has(dayIdx);
-      const isPayableDay = tipo === SUPPORTED_TYPES.LICENCIA_MATERNIDAD || !isRestDay;
+      const isPayableDay = tipoNombre === SUPPORTED_TYPES.LICENCIA_MATERNIDAD || !isRestDay;
 
-      if (tipo === SUPPORTED_TYPES.CCSS && isRestDay) {
+      if (tipoNombre === SUPPORTED_TYPES.CCSS && isRestDay) {
         // no incrementa contador
       } else if (isPayableDay) {
         payableDayCounter += 1;
       }
 
       const { porcentaje_patrono, porcentaje_ccss } = computePercentages({
-        tipo,
+        tipo: tipoNombre,
         isRestDay,
         payableDayCounter,
       });
@@ -229,9 +271,9 @@ export async function registrarIncapacidad({
           id_tipo_incap: Number(tipoRow.id_tipo_incap),
           porcentaje_patrono,
           porcentaje_ccss,
-          grupo,
-          fecha_inicio: fechaInicioStr,
-          fecha_fin: fechaFinStr,
+          grupo: grupoId,
+          fecha_inicio: fechaInicioGrupo,
+          fecha_fin: newFechaFinStr,
         },
         { transaction: tx },
       );
@@ -278,15 +320,22 @@ export async function registrarIncapacidad({
       });
     }
 
+    // Actualizar fecha_fin en todos los registros previos del grupo
+    await Incapacidad.update(
+      { fecha_fin: newFechaFinStr },
+      { where: { grupo: grupoId }, transaction: tx },
+    );
+
     await tx.commit();
 
     return {
       id_colaborador: idColaborador,
-      grupo,
-      tipo_incapacidad: tipoRow.nombre,
-      fecha_inicio: fechaInicioStr,
-      fecha_fin: fechaFinStr,
-      fechas_registradas: registros,
+      grupo: grupoId,
+      tipo_incapacidad: tipoNombre,
+      fecha_inicio: fechaInicioGrupo,
+      fecha_fin: newFechaFinStr,
+      dias_previos: payableDayCounter - registros.filter((r) => r.es_dia_laboral).length,
+      fechas_extendidas: registros,
     };
   } catch (error) {
     if (!tx.finished) {

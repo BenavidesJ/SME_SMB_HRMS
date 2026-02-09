@@ -11,6 +11,7 @@ import { MarcasAsistenciaColaborador } from "../pages/Private/asistencias/Marcas
 import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasExtra";
 import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
 import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIncapacidades";
+import DetalleIncapacidad from "../pages/Private/incapacidades/DetalleIncapacidad";
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/page/GestionEmpleados";
 import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/page/ColaboradorDetalle";
@@ -160,6 +161,14 @@ export const router = createBrowserRouter([
         path: "/incapacidades",
         element: <RegistroIncapacidades />,
         handle: { crumb: "Incapacidades" },
+      },
+      {
+        path: "/incapacidades/:grupo",
+        element: <DetalleIncapacidad />,
+        handle: {
+          crumb: ({ params }: { params: Record<string, string> }) =>
+            `Detalle (${shortId(params.grupo)})`,
+        },
       },
 
       {

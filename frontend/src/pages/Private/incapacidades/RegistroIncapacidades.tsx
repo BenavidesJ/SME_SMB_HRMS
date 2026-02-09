@@ -1,10 +1,11 @@
-import { Box, Wrap, Grid, GridItem, Heading, Stack, Text, ScrollArea, Tabs } from "@chakra-ui/react";
+import { Box, Wrap, Grid, GridItem, Heading, Stack, Text, ScrollArea, Tabs, Badge, HStack } from "@chakra-ui/react";
 import { Form, InputField } from "../../../components/forms";
 import { Layout } from "../../../components/layout";
 import { Button } from "../../../components/general/button/Button";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useCallback, useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { toTitleCase } from "../../../utils";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { EmptyStateIndicator } from "../../../components/general";
@@ -25,17 +26,38 @@ interface CrearIncapacidadPayload {
   tipo_incap: string;
 }
 
-interface JornadaIncapacidadItem {
+interface DiaIncapacidad {
   id_jornada: number;
   fecha: string;
   id_incapacidad: number | null;
-  tipo_incapacidad: string | null;
   porcentaje_patrono: number;
   porcentaje_ccss: number;
 }
 
+interface IncapacidadGrupo {
+  grupo: string | null;
+  tipo_incapacidad: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  dias: DiaIncapacidad[];
+}
+
+const formatDateLong = (iso?: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const formatted = d.toLocaleDateString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
+
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const userID = user?.id;
   const loggedUserRole = user?.usuario?.rol;
 
@@ -46,7 +68,7 @@ export const RegistroIncapacidades = () => {
 
   const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "mantenimientos/tipos-incapacidad" });
   const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<CrearIncapacidadPayload, void>({ url: "/incapacidades", method: "POST" });
-  const { data: incapacidades = [], isLoading: isLoadingList, refetch: refetchIncapacidades } = useApiQuery<JornadaIncapacidadItem[]>({
+  const { data: incapacidades = [], isLoading: isLoadingList, refetch: refetchIncapacidades } = useApiQuery<IncapacidadGrupo[]>({
     url: `incapacidades/colaborador/${userID}`,
     enabled: Boolean(userID),
   });
@@ -115,7 +137,7 @@ export const RegistroIncapacidades = () => {
     data: otherIncapacidades = [],
     isLoading: isLoadingOtherIncapacidades,
     refetch: refetchOtherIncapacidades,
-  } = useApiQuery<JornadaIncapacidadItem[]>({
+  } = useApiQuery<IncapacidadGrupo[]>({
     url: `incapacidades/colaborador/${selectedCollaboratorId}`,
     enabled: hasAdminPermission && Boolean(selectedCollaboratorId),
   });
@@ -133,7 +155,7 @@ export const RegistroIncapacidades = () => {
   }, [hasAdminPermission, selectedCollaboratorId, refetchOtherIncapacidades]);
 
   const renderIncapacidadesList = useCallback(
-    (items: JornadaIncapacidadItem[], isLoading: boolean, emptyMessage: string) => (
+    (items: IncapacidadGrupo[], isLoading: boolean, emptyMessage: string) => (
       <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
         <ScrollArea.Viewport>
           <Stack gap={4}>
@@ -146,19 +168,30 @@ export const RegistroIncapacidades = () => {
                   ? tipoRaw
                   : toTitleCase(tipoRaw)
                 : "Tipo no definido";
-              const keyValue = item.id_incapacidad ?? item.id_jornada;
+
+              const titulo = `Incapacidad - ${formatDateLong(item.fecha_inicio)} hasta ${formatDateLong(item.fecha_fin)}`;
 
               return (
-                <Box key={`${keyValue}-${item.fecha}`} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
-                  <Box flex="1">
-                    <Text fontWeight="semibold">{tipoLabel}</Text>
-                    <Text fontSize="sm" color="gray.600">
-                      Día: {item.fecha}
-                    </Text>
-                    <Text mt={2} fontSize="xs" color="gray.500">
-                      Porcentajes: Patrono {item.porcentaje_patrono}% · CCSS {item.porcentaje_ccss}%
-                    </Text>
-                  </Box>
+                <Box
+                  key={item.grupo ?? `${item.fecha_inicio}-${item.fecha_fin}`}
+                  p={4}
+                  borderRadius="lg"
+                  bg="gray.50"
+                  _hover={{ bg: "gray.100", cursor: "pointer" }}
+                  onClick={() => item.grupo && navigate(`/incapacidades/${item.grupo}`)}
+                  transition="background 0.15s"
+                >
+                  <Text fontWeight="semibold" fontSize="sm">{titulo}</Text>
+                  <Text fontSize="xs" color="gray.600" mt="1">
+                    {tipoLabel}
+                  </Text>
+                  <HStack gap="1" mt="3" wrap="wrap">
+                    {item.dias.map((dia) => (
+                      <Badge key={dia.id_jornada} variant="surface" colorPalette="blue" size="sm">
+                        {formatDateLong(dia.fecha)}
+                      </Badge>
+                    ))}
+                  </HStack>
                 </Box>
               );
             })}
@@ -167,7 +200,7 @@ export const RegistroIncapacidades = () => {
         <ScrollArea.Scrollbar orientation="vertical" />
       </ScrollArea.Root>
     ),
-    [],
+    [navigate],
   );
 
   const handleOtherCollaboratorSubmit = useCallback(
@@ -192,7 +225,7 @@ export const RegistroIncapacidades = () => {
 
   return (
     <Layout pageTitle="Registro Incapacidades">
-      <Grid templateColumns={{ base: "1fr", lg: "500px 1fr" }} gap={{ base: 4, lg: 6 }}>
+      <Grid templateColumns={{ base: "1fr", lg: "750px 1fr" }} gap={{ base: 4, lg: 6 }}>
         <GridItem>
           <Box bg="white" borderRadius="xl" boxShadow="md" p={6} h={{ base: "auto", lg: "full" }}>
             <Heading size="sm" mb={4}>

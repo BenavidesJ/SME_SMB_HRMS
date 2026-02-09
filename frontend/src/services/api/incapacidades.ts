@@ -14,3 +14,10 @@ export const getTipoIncapacidad = (id: number) => {
 export const deleteTipoIncapacidad = (id: number) => {
   return api.delete(`generos/${id}`);
 };
+
+export const extenderIncapacidad = (
+  grupo: string,
+  data: { fecha_fin: string },
+) => {
+  return api.patch<ApiResponse>(`incapacidades/${grupo}`, data);
+};

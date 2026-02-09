@@ -23,6 +23,18 @@ export function Incapacidad(sequelize) {
         type: DataTypes.DECIMAL(5, 2),
         allowNull: false,
       },
+      grupo: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      fecha_inicio: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+      },
+      fecha_fin: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+      },
     },
     {
       tableName: "incapacidad",
@@ -30,6 +42,7 @@ export function Incapacidad(sequelize) {
       indexes: [
         { name: "PRIMARY", unique: true, using: "BTREE", fields: ["id_incapacidad"] },
         { name: "idx_incapacidad_tipo", using: "BTREE", fields: ["id_tipo_incap"] },
+        { name: "idx_incapacidad_grupo", using: "BTREE", fields: ["grupo"] },
       ],
     }
   );

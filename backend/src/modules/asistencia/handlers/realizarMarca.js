@@ -9,12 +9,13 @@ import {
   TipoMarca,
   MarcaAsistencia,
   JornadaDiaria,
-  TipoJornada,
   SolicitudHoraExtra,
   SolicitudVacaciones,
   SolicitudPermisos,
 } from "../../../models/index.js";
 import { getDayInitial } from "./helpers/obtenerInicialDia.js";
+
+const MAX_HORAS_LEGALES = 12;
 
 /**
  * Registrar marca de asistencia
@@ -33,7 +34,7 @@ export const registrarMarcaAsistencia = async ({
   const tx = await sequelize.transaction();
 
   try {
-    // Validar identificación
+    // ── Validaciones de entrada ──────────────────────────────────────
     if (
       identificacion === undefined ||
       identificacion === null ||
@@ -47,7 +48,6 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("La identificación debe ser numérica");
     }
 
-    // Validar tipo de marca
     const tipoTxt = String(tipo_marca ?? "").trim().toUpperCase();
     if (!tipoTxt) throw new Error("El tipo de marca es obligatorio");
     if (tipoTxt !== "ENTRADA" && tipoTxt !== "SALIDA") {
@@ -63,6 +63,7 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("El timestamp no es una fecha válida");
     }
 
+    // ── Colaborador ──────────────────────────────────────────────────
     const colaborador = await Colaborador.findOne({
       where: { identificacion: identNum },
       transaction: tx,
@@ -72,6 +73,7 @@ export const registrarMarcaAsistencia = async ({
       throw new Error(`No existe un colaborador con identificación ${identNum}`);
     }
 
+    // ── Estados catálogo ─────────────────────────────────────────────
     const estadoActivo = await Estado.findOne({
       where: { estado: "ACTIVO" },
       attributes: ["id_estado", "estado"],
@@ -92,6 +94,7 @@ export const registrarMarcaAsistencia = async ({
 
     const ESTADO_APROBADO_ID = estadoAprobado?.id_estado ?? null;
 
+    // ── Contrato activo ──────────────────────────────────────────────
     const contratoActivo = await Contrato.findOne({
       where: {
         id_colaborador: colaborador.id_colaborador,
@@ -104,6 +107,7 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("El colaborador no tiene un contrato ACTIVO");
     }
 
+    // ── Horario activo ───────────────────────────────────────────────
     const horarioActivo = await HorarioLaboral.findOne({
       where: {
         id_contrato: contratoActivo.id_contrato,
@@ -116,8 +120,10 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("El contrato activo no tiene un horario ACTIVO asignado");
     }
 
+    // ── Bloqueo por incapacidad / vacaciones / permiso ───────────────
     const fechaDia = dayjs(timestampDate).format("YYYY-MM-DD");
-    const bloqueoMensaje = "Existe una incapacidad/solicitud de vacaciones aprobada /permiso aprobado para este día, contáctese con recursos humanos";
+    const bloqueoMensaje =
+      "Existe una incapacidad/solicitud de vacaciones aprobada /permiso aprobado para este día, contáctese con recursos humanos";
 
     const jornadaBloqueada = await JornadaDiaria.findOne({
       where: {
@@ -169,37 +175,24 @@ export const registrarMarcaAsistencia = async ({
       }
     }
 
-    const tipoJornada = await TipoJornada.findByPk(contratoActivo.id_tipo_jornada, {
-      attributes: ["id_tipo_jornada", "max_horas_diarias"],
-      transaction: tx,
-    });
-
-    if (!tipoJornada) {
-      throw new Error("No se encontró el tipo de jornada asociado al contrato activo");
-    }
-
-    const maxHorasDiarias = Number(tipoJornada.max_horas_diarias ?? 0);
-
-    // Validar si es día laboral
+    // ── Validar día laboral ──────────────────────────────────────────
     const dayInitial = getDayInitial(timestampDate);
     const diasLibres = horarioActivo.dias_libres ?? "";
     const diasLaborales = horarioActivo.dias_laborales ?? "";
 
-    // Verificar si el día es día libre
     if (diasLibres.includes(dayInitial)) {
       throw new Error(
         `No se puede registrar marca: ${dayInitial} es día libre según el horario laboral del colaborador`
       );
     }
 
-    // Verificar si el día está dentro de días laborales (optional stricter check)
     if (diasLaborales && !diasLaborales.includes(dayInitial)) {
       throw new Error(
         `No se puede registrar marca: ${dayInitial} no es día laboral según el horario laboral del colaborador`
       );
     }
 
-    // Obtener tipos de marca del catálogo
+    // ── Tipos de marca del catálogo ──────────────────────────────────
     const tiposMarca = await TipoMarca.findAll({
       where: {
         nombre: {
@@ -221,7 +214,7 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("No existen ENTRADA y/o SALIDA en el catálogo tipo_marca");
     }
 
-    // Obtener marcas existentes del día
+    // ── Marcas existentes del día ────────────────────────────────────
     const startOfDay = dayjs(timestampDate).startOf("day").toDate();
     const endOfDay = dayjs(timestampDate).endOf("day").toDate();
 
@@ -250,7 +243,6 @@ export const registrarMarcaAsistencia = async ({
       (m) => String(m.tipoMarca?.nombre ?? "").toUpperCase() === "SALIDA"
     );
 
-    // Validar regla de ENTRADA/SALIDA
     if (tipoTxt === "ENTRADA" && hasEntrada) {
       throw new Error("Ya existe una marca de ENTRADA para este día");
     }
@@ -263,18 +255,21 @@ export const registrarMarcaAsistencia = async ({
       throw new Error("Ya existe una marca de SALIDA para este día");
     }
 
-    // Crear marca de asistencia
+    // ── Crear marca de asistencia ────────────────────────────────────
     const marcaCreada = await MarcaAsistencia.create(
       {
         id_colaborador: colaborador.id_colaborador,
-        id_tipo_marca: tipoTxt === "ENTRADA" ? tipoEntradaDb.id_tipo_marca : tipoSalidaDb.id_tipo_marca,
+        id_tipo_marca:
+          tipoTxt === "ENTRADA"
+            ? tipoEntradaDb.id_tipo_marca
+            : tipoSalidaDb.id_tipo_marca,
         timestamp: timestampDate,
         observaciones: "N/A",
       },
       { transaction: tx }
     );
 
-    //  Si hay ENTRADA y SALIDA, crear registro de JornadaDiaria
+    // ── Calcular jornada cuando hay ENTRADA + SALIDA ─────────────────
     let horasOrdinarias = 0.0;
     let horasExtra = 0.0;
 
@@ -296,10 +291,10 @@ export const registrarMarcaAsistencia = async ({
       transaction: tx,
     });
 
-    let totalWorkedMinutes = 0;
     let primeraEntradaMarca = null;
     let ultimaSalidaMarca = null;
     let entradaAbierta = null;
+    let totalWorkedMinutes = 0;
 
     for (const marca of marcasActualizadas) {
       const tipoNombre = String(marca.tipoMarca?.nombre ?? "").toUpperCase();
@@ -326,17 +321,47 @@ export const registrarMarcaAsistencia = async ({
     const salidaMarca = ultimaSalidaMarca;
 
     if (entradaMarca && salidaMarca && totalWorkedMinutes > 0) {
-      const totalHoras = Math.max(totalWorkedMinutes / 60, 0);
+      // ── Calcular horas ordinarias basadas en el horario laboral ────
+      // hora_inicio y hora_fin del horario definen el turno ordinario
+      // Ejemplo: hora_inicio = "08:00:00", hora_fin = "17:00:00"
+      const [hiH, hiM] = String(horarioActivo.hora_inicio).split(":").map(Number);
+      const [hfH, hfM] = String(horarioActivo.hora_fin).split(":").map(Number);
 
-      const limiteOrdinario = maxHorasDiarias > 0 && Number.isFinite(maxHorasDiarias)
-        ? Number(maxHorasDiarias)
-        : totalHoras;
+      // Construir datetime del inicio y fin del turno ordinario para este día
+      const inicioTurno = dayjs(fechaDia).hour(hiH).minute(hiM).second(0);
+      const finTurno = dayjs(fechaDia).hour(hfH).minute(hfM).second(0);
 
-      horasOrdinarias = Number(Math.min(totalHoras, limiteOrdinario).toFixed(2));
+      // Duración del turno ordinario en horas (ej: 08:00→17:00 = 9 horas)
+      const duracionTurnoMinutos = finTurno.diff(inicioTurno, "minutes");
+      const duracionTurnoHoras = Math.max(duracionTurnoMinutos / 60, 0);
+
+      // La entrada real del colaborador
+      const entradaReal = dayjs(entradaMarca.timestamp);
+      const salidaReal = dayjs(salidaMarca.timestamp);
+
+      // Horas ordinarias = tiempo trabajado DENTRO del turno
+      // Inicio efectivo = max(entrada_real, inicio_turno)
+      // Fin efectivo ordinario = min(salida_real, fin_turno)
+      const inicioEfectivo = entradaReal.isAfter(inicioTurno) ? entradaReal : inicioTurno;
+      const finEfectivoOrdinario = salidaReal.isBefore(finTurno) ? salidaReal : finTurno;
+
+      const minutosOrdinarios = Math.max(
+        finEfectivoOrdinario.diff(inicioEfectivo, "minutes"),
+        0
+      );
+      horasOrdinarias = Number((minutosOrdinarios / 60).toFixed(2));
+
+      // ── Horas extra: tiempo trabajado DESPUÉS de hora_fin ──────────
+      // Solo se contabilizan si hay solicitud aprobada
+      const minutosPostTurno = Math.max(
+        salidaReal.diff(finTurno, "minutes"),
+        0
+      );
+      const horasPotencialesExtra = Number((minutosPostTurno / 60).toFixed(2));
 
       let horasExtraAprobadas = 0;
 
-      if (ESTADO_APROBADO_ID) {
+      if (ESTADO_APROBADO_ID && horasPotencialesExtra > 0) {
         const solicitudesAprobadas = await SolicitudHoraExtra.findAll({
           where: {
             id_colaborador: colaborador.id_colaborador,
@@ -355,13 +380,17 @@ export const registrarMarcaAsistencia = async ({
         horasExtraAprobadas = Number(horasExtraAprobadas.toFixed(2));
       }
 
-      if (horasExtraAprobadas > 0) {
-        const potencialExtra = Math.max(totalHoras - horasOrdinarias, 0);
-        horasExtra = Number(Math.min(potencialExtra, horasExtraAprobadas).toFixed(2));
+      if (horasExtraAprobadas > 0 && horasPotencialesExtra > 0) {
+        // Limitar a lo aprobado y al tope legal
+        const topeExtra = Math.max(MAX_HORAS_LEGALES - horasOrdinarias, 0);
+        horasExtra = Number(
+          Math.min(horasPotencialesExtra, horasExtraAprobadas, topeExtra).toFixed(2)
+        );
       } else {
         horasExtra = 0.0;
       }
 
+      // ── Persistir jornada diaria ──────────────────────────────────
       const jornadaExistente = await JornadaDiaria.findOne({
         where: {
           id_colaborador: colaborador.id_colaborador,
