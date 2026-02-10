@@ -7,11 +7,13 @@ export function EvaluacionRubro(sequelize) {
       id_evaluacion: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: { model: "evaluacion", key: "id_evaluacion" },
       },
       id_rubro_evaluacion: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: { model: "rubro_evaluacion", key: "id_rubro_evaluacion" },
       },
     },

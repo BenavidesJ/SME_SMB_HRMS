@@ -39,6 +39,7 @@ import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
 import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
 import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
+import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -183,6 +184,12 @@ export const router = createBrowserRouter([
           crumb: ({ params }: { params: Record<string, string> }) =>
             `Periodo (${shortId(params.id)})`,
         },
+      },
+
+      {
+        path: "/evaluacion",
+        element: <GeneracionEvaluaciones />,
+        handle: { crumb: "Evaluaciones de Desempeño" },
       },
 
       {

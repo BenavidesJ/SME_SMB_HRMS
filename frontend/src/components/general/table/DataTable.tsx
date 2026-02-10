@@ -244,7 +244,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
           {actionColumn && (
             <Table.ColumnHeader
-              data-sticky="start"
+              data-sticky="end"
               insetInlineEnd={0}
               w={actionColumn.w ?? "140px"}
               textAlign="end"
