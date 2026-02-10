@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import axios from "axios";
 import api from "./api";
 import { ApiError } from "./apiError";
 import type { HttpMethod } from "../../types";
@@ -29,7 +30,8 @@ export async function apiRequest<TResponse, TBody = unknown>(opts: {
 
     return (envelope?.data ?? null) as TResponse;
   } catch (err: any) {
-    if (err?.name === "AbortError") {
+    // Handle both native AbortError and Axios cancellation
+    if (err?.name === "AbortError" || axios.isCancel(err)) {
       throw err;
     }
 
