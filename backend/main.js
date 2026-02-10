@@ -13,6 +13,8 @@ import incapacidadesRoutes from "./src/routes/incapacidades.route.js"
 // import estadosRoutes from "./src/routes/estado.route.js"
 import permisosRoutes from "./src/routes/permisos.route.js"
 import vacacionesRoutes from "./src/routes/vacaciones.route.js"
+import planillasRoutes from "./src/routes/planillas.route.js"
+import evaluacionDesempenoRoutes from "./src/routes/evaluacion_desempeno.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -24,6 +26,8 @@ app.use(
   cors({
     credentials: true,
     origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -39,6 +43,7 @@ const rateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
 app.use(rateLimiter);
 // API V1 Routes
 app.use(`/${API_VERSION}/auth`, securityRoutes);
@@ -51,6 +56,8 @@ app.use(`/${API_VERSION}/incapacidades`, incapacidadesRoutes);
 // app.use(`/${API_VERSION}/estados`, estadosRoutes);
 app.use(`/${API_VERSION}/permisos`, permisosRoutes);
 app.use(`/${API_VERSION}/vacaciones`, vacacionesRoutes);
+app.use(`/${API_VERSION}/planillas`, planillasRoutes);
+app.use(`/${API_VERSION}/evaluacion-desempeno`, evaluacionDesempenoRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

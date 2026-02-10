@@ -11,3 +11,15 @@ export const getCanton = async ({ id }) => {
   if (!canton) throw new Error(`No existe cantón con id ${cid}`);
   return { id: canton.id_canton, id_provincia: canton.id_provincia, nombre: canton.nombre };
 };
+
+export const getCantonPorProvincia = async ({ id_provincia }) => {
+  const pid = requirePositiveInt(id_provincia, "id_provincia");
+  return (await models.Canton.findAll({
+    where: { id_provincia: pid },
+    order: [["id_canton", "ASC"]],
+  })).map((canton) => ({
+    id: canton.id_canton,
+    id_provincia: canton.id_provincia,
+    nombre: canton.nombre,
+  }));
+};

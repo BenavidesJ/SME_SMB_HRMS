@@ -30,6 +30,12 @@ export function Usuario(sequelize) {
         allowNull: false,
         references: { model: "colaborador", key: "id_colaborador" },
       },
+      id_rol: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: "rol",
+        references: { model: "rol", key: "id_rol" },
+      },
       estado: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -43,6 +49,7 @@ export function Usuario(sequelize) {
         { name: "PRIMARY", unique: true, using: "BTREE", fields: ["id_usuario"] },
         { name: "uq_usuario_username", unique: true, using: "BTREE", fields: ["username"] },
         { name: "idx_usuario_colaborador", using: "BTREE", fields: ["id_colaborador"] },
+        { name: "idx_usuario_rol", using: "BTREE", fields: ["rol"] },
         { name: "idx_usuario_estado", using: "BTREE", fields: ["estado"] },
       ],
     }

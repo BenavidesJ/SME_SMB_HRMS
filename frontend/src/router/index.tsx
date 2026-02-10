@@ -11,6 +11,7 @@ import { MarcasAsistenciaColaborador } from "../pages/Private/asistencias/Marcas
 import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasExtra";
 import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
 import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIncapacidades";
+import DetalleIncapacidad from "../pages/Private/incapacidades/DetalleIncapacidad";
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/page/GestionEmpleados";
 import ColaboradorDetalle from "../pages/Private/mantenimientos/colaboradores/page/ColaboradorDetalle";
@@ -30,7 +31,6 @@ import CausasLiquidacion from "../pages/Private/mantenimientos/causasLiquidacion
 import TiposIncapacidad from "../pages/Private/mantenimientos/tiposIncapacidad/TiposIncapacidad";
 import TiposMarca from "../pages/Private/mantenimientos/tiposMarca/TiposMarca";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
-import UIdocs from "../pages/Private/UIdocs";
 import NotFoundPage from "../pages/Public/NotFoundPage";
 import { SolicitudVacaciones } from "../pages/Private/vacaciones/SolicitudVacaciones";
 import { GestionVacaciones } from "../pages/Private/vacaciones/GestionVacaciones";
@@ -39,6 +39,7 @@ import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
 import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
 import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
+import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -162,6 +163,14 @@ export const router = createBrowserRouter([
         element: <RegistroIncapacidades />,
         handle: { crumb: "Incapacidades" },
       },
+      {
+        path: "/incapacidades/:grupo",
+        element: <DetalleIncapacidad />,
+        handle: {
+          crumb: ({ params }: { params: Record<string, string> }) =>
+            `Detalle (${shortId(params.grupo)})`,
+        },
+      },
 
       {
         path: "/planillas",
@@ -175,6 +184,12 @@ export const router = createBrowserRouter([
           crumb: ({ params }: { params: Record<string, string> }) =>
             `Periodo (${shortId(params.id)})`,
         },
+      },
+
+      {
+        path: "/evaluacion",
+        element: <GeneracionEvaluaciones />,
+        handle: { crumb: "Evaluaciones de Desempeño" },
       },
 
       {
@@ -278,12 +293,6 @@ export const router = createBrowserRouter([
         path: "/mantenimientos-consultas/causas_liquidacion",
         element: <CausasLiquidacion />,
         handle: { crumb: "Causas de liquidación" },
-      },
-
-      {
-        path: "/ui-docs",
-        element: <UIdocs />,
-        handle: { crumb: "Documentación UI" },
       },
     ],
   },

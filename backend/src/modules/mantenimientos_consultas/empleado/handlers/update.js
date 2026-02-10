@@ -1,4 +1,3 @@
-import { Op } from "sequelize";
 import { runInTransaction } from "../../shared/transaction.js";
 import {
   requirePositiveInt,
@@ -19,9 +18,10 @@ import {
   ensureUniqueIdentificacion,
   fetchEmpleadoById,
   findUsuarioPorColaborador,
+  resolveRol,
 } from "./shared.js";
 
-const { Colaborador, Direccion, Rol } = empleadoModels;
+const { Colaborador, Direccion } = empleadoModels;
 
 export const updateEmpleado = ({ id, patch }) =>
   runInTransaction(async (transaction) => {
@@ -125,16 +125,12 @@ export const updateEmpleado = ({ id, patch }) =>
       if (!usuario) throw new Error("El colaborador no tiene usuario asociado");
 
       if (payload.rol === null) {
-        await Rol.destroy({ where: { id_usuario: usuario.id_usuario }, transaction });
-      } else {
-        const rolNombre = optionalUppercaseString(payload.rol, "rol");
-        await Rol.destroy({ where: { id_usuario: usuario.id_usuario, nombre: { [Op.ne]: rolNombre } }, transaction });
-        await Rol.findOrCreate({
-          where: { id_usuario: usuario.id_usuario, nombre: rolNombre },
-          defaults: { id_usuario: usuario.id_usuario, nombre: rolNombre },
-          transaction,
-        });
+        throw new Error("El rol es obligatorio para el usuario");
       }
+
+      const rolNombre = optionalUppercaseString(payload.rol, "rol");
+      const rol = await resolveRol(rolNombre, transaction);
+      await usuario.update({ id_rol: rol.id_rol }, { transaction });
     }
 
     const empleado = await fetchEmpleadoById(empleadoId, transaction);

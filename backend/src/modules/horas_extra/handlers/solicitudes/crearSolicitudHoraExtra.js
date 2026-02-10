@@ -176,7 +176,7 @@ export const crearSolicitudHoraExtra = async ({
         include: [
           {
             model: Rol,
-            as: "roles",
+            as: "rol",
             attributes: ["nombre"],
             where: { nombre: { [Op.in]: ["ADMINISTRADOR", "SUPER_ADMIN"] } },
             required: true,

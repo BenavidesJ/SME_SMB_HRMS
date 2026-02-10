@@ -1,4 +1,5 @@
-export const hasAnyRole = (userRoles: string[], itemRoles?: string[]) => {
-  if (!itemRoles || itemRoles.length === 0) return true;
-  return itemRoles.some((r) => userRoles.includes(r));
+export const hasAnyRole = (roleName: string, allowedRoles?: string[]) => {
+  if (!allowedRoles || allowedRoles.length === 0) return true;
+  if (!roleName) return false;
+  return allowedRoles.includes(roleName);
 };

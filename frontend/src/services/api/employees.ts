@@ -34,19 +34,24 @@ export const getAllContractTypes = () => {
 };
 
 export const createAndAssignContract = (contract: ContractPayload) => {
-  return api.post("contratos", contract);
+  const { id_colaborador, ...payload } = contract;
+  return api.post(`empleados/${id_colaborador}/contratos`, payload);
 };
 
 export const getAllContractsByEmployee = (id: number) => {
-  return api.get<ApiResponse<Contrato[]>>(`contratos/colaborador/${id}`);
+  return api.get<ApiResponse<Contrato[]>>(`empleados/${id}/contratos`);
+};
+
+export const patchContract = (colaboradorId: number, contratoId: number, patch: Record<string, unknown>) => {
+  return api.patch(`empleados/${colaboradorId}/contratos/${contratoId}`, patch);
 };
 
 export const getCantonesPorProvincia = (id_provincia: number) => {
-  return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`provincias/${id_provincia}/cantones`);
+  return api.get<ApiResponse<CantonesPorProvinciaResponse>>(`mantenimientos/provincias/${id_provincia}/cantones`);
 };
 
-export const getDistritosPorCanton = (id_provincia: number) => {
-  return api.get<ApiResponse<DistritosPorCantonResponse>>(`cantones/${id_provincia}/distritos`);
+export const getDistritosPorCanton = (id_canton: number) => {
+  return api.get<ApiResponse<DistritosPorCantonResponse>>(`mantenimientos/cantones/${id_canton}/distritos`);
 };
 
 export const deleteJornada = (id: number) => {

@@ -1,5 +1,4 @@
-// EmployeeFormFields.tsx
-import { Box, Heading, SimpleGrid } from "@chakra-ui/react";
+import { Box, SimpleGrid } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
 import { InputField } from "../../../../../components/forms";
 import { Button } from "../../../../../components/general/button/Button";
@@ -137,15 +136,6 @@ export function Formularios({
 
         <InputField
           fieldType="date"
-          label="Fecha de Ingreso"
-          name="fecha_ingreso"
-          helperText={dateHelper}
-          required
-          rules={{ required: "El campo es obligatorio" }}
-        />
-
-        <InputField
-          fieldType="date"
           label="Fecha de Nacimiento"
           name="fecha_nacimiento"
           helperText={dateHelper}
@@ -193,10 +183,6 @@ export function Formularios({
           rules={{ required: "El campo es obligatorio" }}
         />
       </SimpleGrid>
-
-      <Heading as="h3" size="md">
-        Dirección
-      </Heading>
 
       <DireccionFields provincias={provincias} mode={isCreate ? undefined : "edit"} />
 

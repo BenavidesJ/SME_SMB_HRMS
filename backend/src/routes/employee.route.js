@@ -1,6 +1,6 @@
 import express from 'express';
 import { authorization } from '../middlewares/authorization.js';
-import { empleadoControllers } from '../modules/mantenimientos_consultas/empleado/empleado.controller.js';
+import { empleadoControllers, contratoControllers } from '../modules/mantenimientos_consultas/empleado/empleado.controller.js';
 
 const router = express.Router();
 // Gestión de Empleados
@@ -8,6 +8,9 @@ router.post('/empleados', authorization, empleadoControllers.createController);
 router.get('/empleados', authorization, empleadoControllers.listController);
 router.get('/empleados/:id', authorization, empleadoControllers.detailController);
 router.patch('/empleados/:id', authorization, empleadoControllers.updateController);
+router.get('/empleados/:id/contratos', authorization, contratoControllers.listByColaborador);
+router.post('/empleados/:id/contratos', authorization, contratoControllers.createForColaborador);
+router.patch('/empleados/:id/contratos/:contratoId', authorization, contratoControllers.updateForColaborador);
 
 // // - Estado civil
 // router.post('/estado_civil', authorization, crearEstadoCivil);

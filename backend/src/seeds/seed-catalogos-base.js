@@ -10,6 +10,8 @@ const {
   CicloPago,
   TipoIncapacidad,
   TipoMarca,
+  Feriado,
+  Deduccion,
 } = models;
 
 async function ensureEstado(value, transaction) {
@@ -23,6 +25,28 @@ async function ensureEstado(value, transaction) {
 async function upsertRows(model, rows, transaction) {
   for (const row of rows) {
     await model.upsert(row, { transaction });
+  }
+}
+
+async function upsertFeriados(rows, transaction) {
+  for (const row of rows) {
+    const existing = await Feriado.findOne({ where: { fecha: row.fecha }, transaction });
+    if (existing) {
+      await existing.update(row, { transaction });
+    } else {
+      await Feriado.create(row, { transaction });
+    }
+  }
+}
+
+async function upsertDeducciones(rows, transaction) {
+  for (const row of rows) {
+    const existing = await Deduccion.findOne({ where: { nombre: row.nombre }, transaction });
+    if (existing) {
+      await existing.update(row, { transaction });
+    } else {
+      await Deduccion.create(row, { transaction });
+    }
   }
 }
 
@@ -167,6 +191,53 @@ export async function seedCatalogosBase() {
     await upsertRows(
       TipoMarca,
       [{ nombre: "ENTRADA" }, { nombre: "SALIDA" }],
+      t,
+    );
+
+    await upsertFeriados(
+      [
+        { fecha: "2025-01-01", nombre: "Año Nuevo", es_obligatorio: true },
+        { fecha: "2025-04-11", nombre: "Día de Juan Santamaría", es_obligatorio: true },
+        { fecha: "2025-04-17", nombre: "Jueves Santo", es_obligatorio: true },
+        { fecha: "2025-04-18", nombre: "Viernes Santo", es_obligatorio: true },
+        { fecha: "2025-05-01", nombre: "Día Internacional del Trabajo", es_obligatorio: true },
+        { fecha: "2025-07-25", nombre: "Anexión del Partido de Nicoya", es_obligatorio: true },
+        { fecha: "2025-08-02", nombre: "Virgen de los Ángeles", es_obligatorio: true },
+        { fecha: "2025-08-15", nombre: "Día de la Madre", es_obligatorio: true },
+        { fecha: "2025-09-15", nombre: "Día de la Independencia", es_obligatorio: true },
+        { fecha: "2025-12-25", nombre: "Navidad", es_obligatorio: true },
+        { fecha: "2026-01-01", nombre: "Año Nuevo", es_obligatorio: true },
+        { fecha: "2026-04-11", nombre: "Día de Juan Santamaría", es_obligatorio: true },
+        { fecha: "2026-04-02", nombre: "Jueves Santo", es_obligatorio: true },
+        { fecha: "2026-04-03", nombre: "Viernes Santo", es_obligatorio: true },
+        { fecha: "2026-05-01", nombre: "Día Internacional del Trabajo", es_obligatorio: true },
+        { fecha: "2026-07-25", nombre: "Anexión del Partido de Nicoya", es_obligatorio: true },
+        { fecha: "2026-08-02", nombre: "Virgen de los Ángeles", es_obligatorio: true },
+        { fecha: "2026-08-15", nombre: "Día de la Madre", es_obligatorio: true },
+        { fecha: "2026-09-15", nombre: "Día de la Independencia", es_obligatorio: true },
+        { fecha: "2026-12-25", nombre: "Navidad", es_obligatorio: true },
+      ],
+      t,
+    );
+
+    await upsertDeducciones(
+      [
+        {
+          nombre: "CCSS SEM (Enfermedad y Maternidad)",
+          valor: 5.5,
+          es_voluntaria: false,
+        },
+        {
+          nombre: "CCSS IVM (Invalidez Vejez Muerte)",
+          valor: 4.33,
+          es_voluntaria: false,
+        },
+        {
+          nombre: "Banco Popular - Aporte trabajador",
+          valor: 1.0,
+          es_voluntaria: false,
+        },
+      ],
       t,
     );
 

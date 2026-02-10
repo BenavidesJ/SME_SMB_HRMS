@@ -55,7 +55,7 @@ async function resolveAprobador({ providedId, transaction, estadoActivoId }) {
     include: [
       {
         model: Rol,
-        as: "roles",
+        as: "rol",
         attributes: [],
         required: true,
         where: {

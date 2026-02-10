@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -57,11 +58,18 @@ function getDayIndex(dateStr) {
 
 function computePercentages({ tipo, isRestDay, payableDayCounter }) {
   if (tipo === SUPPORTED_TYPES.LICENCIA_MATERNIDAD) {
-    return { porcentaje_patrono: 50, porcentaje_ccss: 50 };
+    // Licencia de maternidad: 100% CCSS, 0% patrono (no suma a nómina)
+    return { porcentaje_patrono: 0, porcentaje_ccss: 100 };
   }
 
   if (tipo === SUPPORTED_TYPES.CCSS) {
-    if (isRestDay) return { porcentaje_patrono: 0, porcentaje_ccss: 0 };
+    if (isRestDay) {
+      // Después de los 3 primeros días pagables, CCSS cubre también días de descanso
+      if (payableDayCounter >= 3) {
+        return { porcentaje_patrono: 0, porcentaje_ccss: 60 };
+      }
+      return { porcentaje_patrono: 0, porcentaje_ccss: 0 };
+    }
 
     if (payableDayCounter <= 3) {
       return { porcentaje_patrono: 50, porcentaje_ccss: 50 };
@@ -115,6 +123,10 @@ export async function registrarIncapacidad({
     }
 
     const dates = listDatesInclusive(startDate, endDate);
+
+    const grupo = uuidv4();
+    const fechaInicioStr = startDate.format("YYYY-MM-DD");
+    const fechaFinStr = endDate.format("YYYY-MM-DD");
 
     const colaborador = await Colaborador.findByPk(idColaborador, {
       transaction: tx,
@@ -217,6 +229,9 @@ export async function registrarIncapacidad({
           id_tipo_incap: Number(tipoRow.id_tipo_incap),
           porcentaje_patrono,
           porcentaje_ccss,
+          grupo,
+          fecha_inicio: fechaInicioStr,
+          fecha_fin: fechaFinStr,
         },
         { transaction: tx },
       );
@@ -227,28 +242,16 @@ export async function registrarIncapacidad({
         if (Number(jornadaExistente.incapacidad)) {
           throw new Error(`Ya existe una incapacidad en jornada ${dateStr}`);
         }
-        if (Number(jornadaExistente.vacaciones)) {
-          throw new Error(`La fecha ${dateStr} ya está asociada a vacaciones`);
-        }
-        if (Number(jornadaExistente.permiso)) {
-          throw new Error(`La fecha ${dateStr} ya está asociada a un permiso`);
-        }
-        if (
-          Number(jornadaExistente.horas_ordinarias) > 0 ||
-          Number(jornadaExistente.horas_extra) > 0 ||
-          Number(jornadaExistente.horas_nocturnas) > 0
-        ) {
-          throw new Error(
-            `La jornada del ${dateStr} ya tiene horas registradas; limpie la jornada antes de asociar la incapacidad`,
-          );
-        }
 
+        // Incapacidad tiene prioridad: sobrescribe vacaciones, permisos y horas
         await jornadaExistente.update(
           {
             horas_ordinarias: 0,
             horas_extra: 0,
             horas_nocturnas: 0,
             incapacidad: Number(incapacidad.id_incapacidad),
+            vacaciones: null,
+            permiso: null,
           },
           { transaction: tx },
         );
@@ -279,7 +282,10 @@ export async function registrarIncapacidad({
 
     return {
       id_colaborador: idColaborador,
+      grupo,
       tipo_incapacidad: tipoRow.nombre,
+      fecha_inicio: fechaInicioStr,
+      fecha_fin: fechaFinStr,
       fechas_registradas: registros,
     };
   } catch (error) {

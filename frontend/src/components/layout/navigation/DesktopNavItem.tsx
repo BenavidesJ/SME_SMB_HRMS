@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { Box, Flex, List, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router";
@@ -10,20 +9,20 @@ import { hasAnyRole } from "./helpers/hasAnyRole";
 
 export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: boolean }) => {
   const { user } = useAuth();
-  const userRoles = user?.usuario?.roles ?? [];
+  const roleName = user?.usuario?.rol ?? "";
 
   const [open, setOpen] = useState(false);
 
   const visibleChildren = useMemo(() => {
     const children = item.children ?? [];
-    return children.filter((c: Omit<NavItem, "icon">) => hasAnyRole(userRoles, c.roles));
-  }, [item.children, userRoles]);
+    return children.filter((c: Omit<NavItem, "icon">) => hasAnyRole(roleName, c.roles));
+  }, [item.children, roleName]);
 
   const canSeeChildren = useMemo(() => {
     if (!item.children || item.children.length === 0) return false;
     if (!item.childrenRoles) return visibleChildren.length > 0;
-    return hasAnyRole(userRoles, item.childrenRoles) && visibleChildren.length > 0;
-  }, [item.children, item.childrenRoles, userRoles, visibleChildren.length]);
+    return hasAnyRole(roleName, item.childrenRoles) && visibleChildren.length > 0;
+  }, [item.children, item.childrenRoles, roleName, visibleChildren.length]);
 
   const parentBehavior = item.parentClickBehavior;
 
@@ -36,15 +35,11 @@ export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: 
     if (!parentBehavior) return item.path;
 
     if (parentBehavior.defaultChildPathForRoles) {
-      for (const role of userRoles) {
-        const hit = parentBehavior.defaultChildPathForRoles[role];
-        if (hit) return hit;
-      }
+      const hit = parentBehavior.defaultChildPathForRoles[roleName];
+      if (hit) return hit;
     }
-  }, [parentBehavior, item.path, userRoles]);
-
-  const Wrapper = parentShouldNavigate ? RouterLink : Box;
-  const wrapperProps = parentShouldNavigate ? ({ to: parentHref } as any) : {};
+    return item.path;
+  }, [parentBehavior, item.path, roleName]);
 
   const isExpandable = canSeeChildren;
 
@@ -54,31 +49,56 @@ export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: 
         onMouseEnter={isExpandable && !collapsed ? () => setOpen(true) : undefined}
         onMouseLeave={isExpandable && !collapsed ? () => setOpen(false) : undefined}
       >
-        <Wrapper {...wrapperProps}>
-          <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
-            <Flex
-              alignItems="center"
-              justifyContent="center"
-              gap="3"
-              px="3"
-              py="2"
-              borderRadius="lg"
-              cursor="pointer"
-              _hover={{ bg: "brand.green.25" }}
-              onClick={!parentShouldNavigate && isExpandable ? () => setOpen((s) => !s) : undefined}
-            >
-              <Box fontSize="20px" color="gray.600">{item.icon}</Box>
-              {!collapsed && (
-                <Flex w="full" alignItems="center" justifyContent="space-between">
-                  <Text fontSize="sm" fontWeight="medium">{item.label}</Text>
-                </Flex>
-              )}
-            </Flex>
-          </Tooltip>
-        </Wrapper>
+        {parentShouldNavigate ? (
+          <RouterLink to={parentHref}>
+            <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
+              <Flex
+                alignItems="center"
+                justifyContent="center"
+                gap="3"
+                px="3"
+                py="2"
+                borderRadius="lg"
+                cursor="pointer"
+                _hover={{ bg: "brand.green.25" }}
+                onClick={!parentShouldNavigate && isExpandable ? () => setOpen((s) => !s) : undefined}
+              >
+                <Box fontSize="20px" color="gray.600">{item.icon}</Box>
+                {!collapsed && (
+                  <Flex w="full" alignItems="center" justifyContent="space-between">
+                    <Text fontSize="sm" fontWeight="medium">{item.label}</Text>
+                  </Flex>
+                )}
+              </Flex>
+            </Tooltip>
+          </RouterLink>
+        ) : (
+          <Box>
+            <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
+              <Flex
+                alignItems="center"
+                justifyContent="center"
+                gap="3"
+                px="3"
+                py="2"
+                borderRadius="lg"
+                cursor="pointer"
+                _hover={{ bg: "brand.green.25" }}
+                onClick={!parentShouldNavigate && isExpandable ? () => setOpen((s) => !s) : undefined}
+              >
+                <Box fontSize="20px" color="gray.600">{item.icon}</Box>
+                {!collapsed && (
+                  <Flex w="full" alignItems="center" justifyContent="space-between">
+                    <Text fontSize="sm" fontWeight="medium">{item.label}</Text>
+                  </Flex>
+                )}
+              </Flex>
+            </Tooltip>
+          </Box>
+        )}
 
         {isExpandable && !collapsed && (
-          <Box overflow="hidden" transition="max-height 0.15s ease" maxH={open ? "400px" : "0"} ml="10">
+          <Box overflow="hidden" transition="max-height 0.75s ease" maxH={open ? "400px" : "0"} ml="10">
             <List.Root mt="1" gap="1">
               {visibleChildren.map((child: Omit<NavItem, "icon">) => (
                 <List.Item key={child.label} listStyle="none">

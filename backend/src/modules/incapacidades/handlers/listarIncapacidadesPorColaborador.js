@@ -37,23 +37,43 @@ export async function listarIncapacidadesPorColaborador({ id_colaborador }) {
       },
     ],
     order: [
-      ["fecha", "DESC"],
-      ["id_jornada", "DESC"],
+      ["fecha", "ASC"],
+      ["id_jornada", "ASC"],
     ],
   });
 
-  return rows.map((row) => {
+  // Agrupar por UUID de grupo para devolver un solo evento por incapacidad
+  const gruposMap = new Map();
+
+  for (const row of rows) {
     const plain = row.get({ plain: true });
     const incapacidad = plain.incapacidadRef ?? {};
     const tipo = incapacidad.tipo ?? {};
+    const grupoKey = incapacidad.grupo ?? `sin_grupo_${incapacidad.id_incapacidad}`;
 
-    return {
+    if (!gruposMap.has(grupoKey)) {
+      gruposMap.set(grupoKey, {
+        grupo: incapacidad.grupo ?? null,
+        tipo_incapacidad: tipo.nombre ? String(tipo.nombre) : null,
+        fecha_inicio: incapacidad.fecha_inicio ?? null,
+        fecha_fin: incapacidad.fecha_fin ?? null,
+        dias: [],
+      });
+    }
+
+    const entry = gruposMap.get(grupoKey);
+
+    entry.dias.push({
       id_jornada: Number(plain.id_jornada),
       fecha: String(plain.fecha),
       id_incapacidad: Number(incapacidad.id_incapacidad ?? 0) || null,
-      tipo_incapacidad: tipo.nombre ? String(tipo.nombre) : null,
       porcentaje_patrono: Number(incapacidad.porcentaje_patrono ?? 0),
       porcentaje_ccss: Number(incapacidad.porcentaje_ccss ?? 0),
-    };
-  });
+    });
+  }
+
+  // Convertir a array y ordenar por fecha_inicio DESC (más recientes primero)
+  return Array.from(gruposMap.values()).sort((a, b) =>
+    String(b.fecha_inicio ?? "").localeCompare(String(a.fecha_inicio ?? "")),
+  );
 }

@@ -11,3 +11,15 @@ export const getDistrito = async ({ id }) => {
   if (!distrito) throw new Error(`No existe distrito con id ${did}`);
   return { id: distrito.id_distrito, id_canton: distrito.id_canton, nombre: distrito.nombre };
 };
+
+export const getDistritosPorCanton = async ({ id_canton }) => {
+  const cid = requirePositiveInt(id_canton, "id_canton");
+  return (await models.Distrito.findAll({
+    where: { id_canton: cid },
+    order: [["id_distrito", "ASC"]],
+  })).map((distrito) => ({
+    id: distrito.id_distrito,
+    id_canton: distrito.id_canton,
+    nombre: distrito.nombre,
+  }));
+};

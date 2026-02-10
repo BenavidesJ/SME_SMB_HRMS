@@ -1,17 +1,19 @@
 import { DataTypes } from "sequelize";
 
 export function DeduccionPlanilla(sequelize) {
-  return sequelize.define(
+  const model = sequelize.define(
     "deduccion_planilla",
     {
       id_planilla: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: { model: "planilla", key: "id_detalle" },
       },
       id_deduccion: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: { model: "deduccion", key: "id_deduccion" },
       },
     },
@@ -32,4 +34,6 @@ export function DeduccionPlanilla(sequelize) {
       ],
     }
   );
+  model.removeAttribute("id");
+  return model;
 }
