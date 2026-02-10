@@ -9,9 +9,9 @@ export interface Credentials {
 // Cambio de password.
 export interface ChangePassword {
   // Password actual o temporal.
-  password_anterior: Pick<Credentials, "password">;
+  password_anterior: string;
   // Nuevo Password. 
-  password_nuevo: Pick<Credentials, "password">;
+  password_nuevo: string;
 }
 
 // Token de acceso para ingresar al sistema.
