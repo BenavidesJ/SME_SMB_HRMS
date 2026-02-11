@@ -6,7 +6,9 @@ import {
   getPeriodoPlanillaController,
   updatePeriodoPlanillaController,
   deletePeriodoPlanillaController,
+  simularPlanillaController,
   generarPlanillaController,
+  recalcularPlanillaController,
   obtenerDetallePlanillaController,
   eliminarPlanillaController,
   editarPlanillaController,
@@ -20,8 +22,10 @@ router.get("/periodo_planilla/:id", authorization, getPeriodoPlanillaController)
 router.patch("/periodo_planilla/:id", authorization, updatePeriodoPlanillaController);
 router.delete("/periodo_planilla/:id", authorization, deletePeriodoPlanillaController);
 
+router.post("/simular", authorization, simularPlanillaController);
 router.post("/detalle", authorization, obtenerDetallePlanillaController);
 router.post("/", authorization, generarPlanillaController);
+router.patch("/recalcular", authorization, recalcularPlanillaController);
 router.delete("/:id", authorization, eliminarPlanillaController);
 router.patch("/:id", authorization, editarPlanillaController);
 

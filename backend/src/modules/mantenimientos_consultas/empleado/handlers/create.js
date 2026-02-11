@@ -3,7 +3,7 @@ import { runInTransaction } from "../../shared/transaction.js";
 import { requireUppercaseString } from "../../shared/validators.js";
 import { generateTempPassword } from "../../../../common/genTempPassword.js";
 import { generateUsername } from "../../../../common/genUsername.js";
-import { plantillaEmailBienvenida } from "../../../../common/htmlLayouts/plantillaEmailBienvenida.js";
+import { plantillaEmailBienvenida } from "../../../../common/plantillasEmail/emailTemplate.js";
 import { sendEmail } from "../../../../services/mail.js";
 import {
   empleadoModels,

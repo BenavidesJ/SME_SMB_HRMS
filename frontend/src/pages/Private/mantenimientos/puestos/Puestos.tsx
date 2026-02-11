@@ -16,16 +16,12 @@ import type { Status } from "../../../../types";
 interface CreateJobPositionPayload {
   nombre?: string;
   departamento?: string;
-  sal_base_referencia_min?: number;
-  sal_base_referencia_max?: number;
   estado?: string;
 };
 
 type CreateJobPositionFormValues = {
   nombre: string;
   departamento: string;
-  sal_base_referencia_min: number | string;
-  sal_base_referencia_max: number | string;
   estado?: string;
 };
 
@@ -130,24 +126,10 @@ export default function Puestos() {
 
   const handleCreate = async (values: CreateJobPositionFormValues) => {
     try {
-      const min = Number(String(values.sal_base_referencia_min ?? "").replace(/,/g, "").trim());
-      const max = Number(String(values.sal_base_referencia_max ?? "").replace(/,/g, "").trim());
-
-      if (!Number.isFinite(min) || !Number.isFinite(max)) {
-        throw new Error("Salarios inválidos");
-      }
-      if (min <= 0 || max <= 0) {
-        throw new Error("Los salarios deben ser mayores a 0");
-      }
-      if (min > max) {
-        throw new Error("El salario mínimo no puede ser mayor al máximo");
-      }
 
       const payload: CreateJobPositionPayload = {
         nombre: String(values.nombre ?? "").trim().toUpperCase(),
         departamento: String(values.departamento ?? "").trim(),
-        sal_base_referencia_min: min,
-        sal_base_referencia_max: max,
       };
 
       await createPuesto(payload);
@@ -172,8 +154,6 @@ export default function Puestos() {
       const payload = {
         nombre: String(values.nombre ?? "").trim().toUpperCase(),
         departamento: String(values.departamento ?? "").trim().toUpperCase(),
-        sal_base_referencia_min: Number(values.sal_base_referencia_min),
-        sal_base_referencia_max: Number(values.sal_base_referencia_max)
       };
 
       await patchPuesto(selectedId, payload);

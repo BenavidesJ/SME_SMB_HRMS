@@ -11,6 +11,7 @@ import {
   Feriado,
 } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
+import { plantillaSolicitudVacaciones } from "../../../common/plantillasEmail/emailTemplate.js";
 import {
   assertId,
   assertDate,
@@ -200,9 +201,12 @@ export async function solicitarVacaciones({
       .trim();
 
     const subject = "Tienes una solicitud de vacaciones";
-    const message = `Hola ${aprobador.nombre},<br/><br/>` +
-      `${solicitanteNombre || `Colaborador ${idColaborador}`} ha solicitado vacaciones del ${startStr} al ${endStr}.<br/><br/>` +
-      `Por favor ingresa al sistema para revisarla.`;
+    const message = plantillaSolicitudVacaciones({
+      solicitanteNombre: solicitanteNombre || `Colaborador ${idColaborador}`,
+      fechaInicio: startStr,
+      fechaFin: endStr,
+      diasSolicitados: String(requestedDates.length),
+    });
 
     try {
       if (aprobador.correo_electronico) {

@@ -7,7 +7,9 @@ export {
 } from "./controllers/periodos.controller.js";
 
 export {
+  simularPlanillaController,
   generarPlanillaController,
+  recalcularPlanillaController,
   obtenerDetallePlanillaController,
   eliminarPlanillaController,
   editarPlanillaController,

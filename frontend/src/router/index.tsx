@@ -41,6 +41,7 @@ import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
 import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
 import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
 import { Aguinaldos } from "../pages/Private/aguinaldos/Aguinaldos";
+import { Liquidaciones } from "../pages/Private/liquidaciones/Liquidaciones";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -197,6 +198,12 @@ export const router = createBrowserRouter([
         path: "/aguinaldos",
         element: <Aguinaldos />,
         handle: { crumb: "Aguinaldos" },
+      },
+
+      {
+        path: "/liquidaciones",
+        element: <Liquidaciones />,
+        handle: { crumb: "Liquidaciones" },
       },
 
       {

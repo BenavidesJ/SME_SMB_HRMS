@@ -12,7 +12,7 @@ import {
   Colaborador,
 } from "../../../../models/index.js";
 import { sendEmail } from "../../../../services/mail.js";
-import { plantillaSolicitudHorasExtra } from "../../../../common/htmlLayouts/plantillaSolicitudHorasExtra.js";
+import { plantillaSolicitudHorasExtra } from "../../../../common/plantillasEmail/emailTemplate.js";
 
 const MAX_JUSTIFICACION_LENGTH = 100;
 

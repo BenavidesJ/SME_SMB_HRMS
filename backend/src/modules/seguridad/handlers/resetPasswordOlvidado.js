@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { generateTempPassword } from "../../../common/genTempPassword.js";
-import { plantillaEmailResetContrasena } from "../../../common/htmlLayouts/plantillaEmailResetContrasena.js";
+import { plantillaEmailResetContrasena } from "../../../common/plantillasEmail/emailTemplate.js";
 import { models, sequelize } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
 import { requireNonEmptyString } from "../../mantenimientos_consultas/shared/validators.js";

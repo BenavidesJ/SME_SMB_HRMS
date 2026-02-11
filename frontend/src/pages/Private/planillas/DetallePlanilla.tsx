@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   EmptyState,
   Flex,
   Heading,
@@ -14,10 +15,10 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useFormContext, useWatch } from "react-hook-form";
-import { FiUser } from "react-icons/fi";
+import { FiUser, FiRefreshCw, FiDollarSign } from "react-icons/fi";
 import { Layout } from "../../../components/layout";
 import { Form } from "../../../components/forms/Form/Form";
 import {
@@ -26,10 +27,23 @@ import {
 } from "../../../components/forms/InputField/InputField";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase } from "../../../utils";
+import { toTitleCase, formatCRC } from "../../../utils";
 import { showToast } from "../../../services/toast/toastService";
 import { useAuth } from "../../../context/AuthContext";
 import type { EmployeeRow } from "../../../types";
+
+// ── Helpers ──
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "N/D";
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(
+    parsed,
+  );
+}
+
+// ── Types ──
 
 type HorasMonto = {
   cantidad: number;
@@ -37,7 +51,7 @@ type HorasMonto = {
 };
 
 type DeduccionDetalle = {
-  id_deduccion: number;
+  id: number;
   nombre: string;
   porcentaje: number;
   monto: number;
@@ -46,6 +60,58 @@ type DeduccionDetalle = {
 type RentaInfo = {
   monto_quincenal: number;
   proyectado_mensual: number;
+};
+
+type SimulacionResultado = {
+  id_colaborador: number;
+  nombre_completo: string;
+  identificacion: string | null;
+  salario_mensual: number;
+  salario_quincenal_base: number;
+  salario_diario: number;
+  tarifa_hora: number;
+  descuentos_dias: {
+    ausencias: { dias: number; monto: number };
+    incapacidad: { dias: number; monto: number };
+    total: number;
+  };
+  horas_extra: HorasMonto;
+  horas_nocturnas: HorasMonto;
+  horas_feriado: HorasMonto;
+  salario_devengado: number;
+  deducciones_detalle: DeduccionDetalle[];
+  renta: RentaInfo;
+  total_deducciones: number;
+  salario_neto: number;
+  error: string | null;
+};
+
+type SimulacionResponse = {
+  id_periodo: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  total_colaboradores: number;
+  total_neto: number;
+  resultados: SimulacionResultado[];
+  errores: {
+    id_colaborador: number;
+    nombre_completo: string;
+    motivo: string;
+  }[];
+};
+
+type GenerateFormValues = {
+  colaboradores: (string | number)[];
+};
+
+type PayrollPeriod = {
+  id: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_pago: string | null;
+  id_ciclo_pago: number | null;
+  estado: string | null;
+  descripcion: string | null;
 };
 
 type PayrollDetail = {
@@ -62,7 +128,12 @@ type PayrollDetail = {
   horas_nocturnas: HorasMonto;
   horas_feriado: HorasMonto;
   salario_devengado: number;
-  deducciones: DeduccionDetalle[];
+  deducciones: {
+    id_deduccion: number;
+    nombre: string;
+    porcentaje: number;
+    monto: number;
+  }[];
   total_cargas_sociales: number;
   renta: RentaInfo;
   total_deducciones: number;
@@ -80,69 +151,55 @@ type PayrollDetailsResponse = {
   detalles: PayrollDetail[];
 };
 
-type GenerateFormValues = {
-  colaboradores: (string | number)[];
+type SimularPayload = {
+  id_periodo: number;
+  colaboradores: number[];
 };
 
-type PayrollPeriod = {
-  id: number;
-  fecha_inicio: string;
-  fecha_fin: string;
-  fecha_pago: string | null;
-  id_ciclo_pago: number | null;
-  estado: string | null;
-  descripcion: string | null;
-};
-
-type GeneratePayrollPayload = PayrollDetailsPayload & {
+type GenerarPayload = {
+  id_periodo: number;
+  colaboradores: number[];
   generado_por: number;
-  fecha_inicio: string;
-  fecha_fin: string;
 };
 
-const parsePayrollDetailsResponse = (
-  value: unknown,
-): PayrollDetailsResponse | null => {
-  if (!value || typeof value !== "object") return null;
-
-  if ("detalles" in value && Array.isArray((value as any).detalles)) {
-    return value as PayrollDetailsResponse;
-  }
-
-  if ("data" in value) {
-    return parsePayrollDetailsResponse((value as { data?: unknown }).data);
-  }
-
-  return null;
+type RecalcularPayload = {
+  id_periodo: number;
+  colaboradores: number[];
+  generado_por?: number;
 };
+
+// ── Component ──
 
 export const DetallePlanilla = () => {
   const { id } = useParams<{ id: string }>();
   const periodoId = Number(id);
   const periodoIdIsValid = Number.isInteger(periodoId) && periodoId > 0;
   const { user } = useAuth();
+  const existentesRef = useRef<HTMLDivElement>(null);
 
-  const {
-    data: periodoData,
-    isLoading: isPeriodoLoading,
-  } = useApiQuery<PayrollPeriod | null>({
-    url: periodoIdIsValid ? `planillas/periodo_planilla/${periodoId}` : "",
-    enabled: periodoIdIsValid,
-  });
+  // ── Period data ──
+  const { data: periodoData, isLoading: isPeriodoLoading } =
+    useApiQuery<PayrollPeriod | null>({
+      url: periodoIdIsValid ? `planillas/periodo_planilla/${periodoId}` : "",
+      enabled: periodoIdIsValid,
+    });
 
   const periodo = periodoData ?? null;
 
+  // ── Employees data ──
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
-  const options = useMemo<SelectOption[]>(() => {
-    return employees.map((emp) => ({
-      label: toTitleCase(
-        `${emp.nombre} ${emp.primer_apellido} ${emp.segundo_apellido}`.trim(),
-      ),
-      value: String(emp.id),
-    }));
-  }, [employees]);
+  const options = useMemo<SelectOption[]>(
+    () =>
+      employees.map((emp) => ({
+        label: toTitleCase(
+          `${emp.nombre} ${emp.primer_apellido} ${emp.segundo_apellido}`.trim(),
+        ),
+        value: String(emp.id),
+      })),
+    [employees],
+  );
 
   const collaboratorNameMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -165,124 +222,149 @@ export const DetallePlanilla = () => {
 
   const hasEmployees = allCollaboratorIds.length > 0;
 
-  const {
-    mutate: fetchPayrollDetails,
-    isLoading: fetchingDetails,
-  } = useApiMutation<PayrollDetailsPayload, PayrollDetailsResponse>({
-    url: "planillas/detalle",
-    method: "POST",
-  });
+  // ── Simulation ──
+  const { mutate: simularCalculo, isLoading: isSimulating } = useApiMutation<
+    SimularPayload,
+    SimulacionResponse
+  >({ url: "planillas/simular", method: "POST" });
 
-  const {
-    mutate: generatePayroll,
-    isLoading: isGenerating,
-  } = useApiMutation<GeneratePayrollPayload, void>({
-    url: "planillas",
-    method: "POST",
-  });
+  const [simulacion, setSimulacion] = useState<SimulacionResultado[]>([]);
+  const [simulacionMeta, setSimulacionMeta] = useState<{
+    fecha_inicio: string;
+    fecha_fin: string;
+    total_neto: number;
+  } | null>(null);
 
+  // ── Create ──
+  const { mutate: generarPlanilla, isLoading: isGenerating } = useApiMutation<
+    GenerarPayload,
+    any
+  >({ url: "planillas", method: "POST" });
+
+  // ── Recalculate ──
+  const { mutate: recalcularPlanilla, isLoading: isRecalculating } =
+    useApiMutation<RecalcularPayload, any>({
+      url: "planillas/recalcular",
+      method: "PATCH",
+    });
+
+  // ── Existing records ──
+  const { mutate: fetchPayrollDetails, isLoading: fetchingDetails } =
+    useApiMutation<PayrollDetailsPayload, PayrollDetailsResponse>({
+      url: "planillas/detalle",
+      method: "POST",
+    });
+
+  const [existingDetails, setExistingDetails] =
+    useState<PayrollDetailsResponse | null>(null);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
-  const [hasAttempted, setHasAttempted] = useState(false);
-  const [details, setDetails] = useState<PayrollDetailsResponse | null>(null);
-
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("es-CR", {
-        style: "currency",
-        currency: "CRC",
-        maximumFractionDigits: 2,
-      }),
-    [],
-  );
-
-  const decimalFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("es-CR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-    [],
-  );
-
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-CR", {
-        dateStyle: "medium",
-      }),
-    [],
-  );
-
-  const renderDate = useCallback(
-    (value: string | null | undefined) => {
-      if (!value) return "No disponible";
-      const parsed = new Date(`${value}T00:00:00`);
-      return Number.isNaN(parsed.getTime()) ? value : dateFormatter.format(parsed);
-    },
-    [dateFormatter],
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<number>>(
+    new Set(),
   );
 
   const periodoRangeLabel = useMemo(() => {
     if (!periodo) return "No disponible";
-    return `${renderDate(periodo.fecha_inicio)} al ${renderDate(periodo.fecha_fin)}`;
-  }, [periodo, renderDate]);
+    return `${formatDate(periodo.fecha_inicio)} al ${formatDate(periodo.fecha_fin)}`;
+  }, [periodo]);
 
-  const loadDetails = useCallback(
-    async (collaboratorIds: number[], options: { silent?: boolean } = {}) => {
-      if (!periodoIdIsValid || collaboratorIds.length === 0) {
-        if (!options.silent && collaboratorIds.length === 0) {
-          showToast(
-            "No hay colaboradores disponibles para consultar.",
-            "info",
-          );
-        }
-        setDetails(null);
-        return null;
+  // ── Load existing details ──
+  const loadExistingDetails = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!periodoIdIsValid || allCollaboratorIds.length === 0) {
+        setExistingDetails(null);
+        return;
       }
 
       try {
         const response = await fetchPayrollDetails({
           id_periodo: periodoId,
-          colaboradores: collaboratorIds,
+          colaboradores: allCollaboratorIds,
         });
 
-        const payload = parsePayrollDetailsResponse(response);
-
-        setDetails(payload);
-        return payload;
-      } catch (error) {
-        console.error(error)
-        if (!options.silent) {
+        const data =
+          (response as any)?.data ?? (response as any) ?? null;
+        if (data && "detalles" in data) {
+          setExistingDetails(data as PayrollDetailsResponse);
+        } else {
+          setExistingDetails(null);
+        }
+      } catch {
+        if (!opts.silent) {
           showToast(
-            "No se logró consultar los detalles de planilla. Intente nuevamente.",
+            "No se logró consultar los detalles de planilla.",
             "error",
           );
         }
-        setDetails(null);
-        return null;
+        setExistingDetails(null);
       }
     },
-    [fetchPayrollDetails, periodoId, periodoIdIsValid],
+    [fetchPayrollDetails, periodoId, periodoIdIsValid, allCollaboratorIds],
   );
 
   useEffect(() => {
     if (!periodoIdIsValid || !hasEmployees || initialFetchDone) return;
     setInitialFetchDone(true);
-    setHasAttempted(true);
-    loadDetails(allCollaboratorIds, { silent: true });
-  }, [
-    periodoIdIsValid,
-    hasEmployees,
-    initialFetchDone,
-    allCollaboratorIds,
-    loadDetails,
-  ]);
+    loadExistingDetails({ silent: true });
+  }, [periodoIdIsValid, hasEmployees, initialFetchDone, loadExistingDetails]);
 
-  const handleGeneratePayroll = async (values: GenerateFormValues) => {
-    setHasAttempted(true);
+  // ── Handlers ──
 
+  const handleSimular = async (values: GenerateFormValues) => {
     if (!periodoIdIsValid) {
       showToast("El identificador del periodo es inválido.", "error");
       return false;
+    }
+
+    const collaboratorIds = (values.colaboradores ?? [])
+      .map((v) => Number(v))
+      .filter((v) => Number.isInteger(v) && v > 0);
+
+    if (collaboratorIds.length === 0) {
+      showToast("Seleccione al menos un colaborador.", "error");
+      return false;
+    }
+
+    try {
+      const response = await simularCalculo({
+        id_periodo: periodoId,
+        colaboradores: collaboratorIds,
+      });
+
+      const data =
+        (response as any)?.resultados ??
+        (response as any)?.data?.resultados ??
+        [];
+      const meta = {
+        fecha_inicio:
+          (response as any)?.fecha_inicio ??
+          (response as any)?.data?.fecha_inicio ??
+          periodo?.fecha_inicio ??
+          "",
+        fecha_fin:
+          (response as any)?.fecha_fin ??
+          (response as any)?.data?.fecha_fin ??
+          periodo?.fecha_fin ??
+          "",
+        total_neto:
+          (response as any)?.total_neto ??
+          (response as any)?.data?.total_neto ??
+          0,
+      };
+
+      setSimulacion(data);
+      setSimulacionMeta(meta);
+      return true;
+    } catch {
+      setSimulacion([]);
+      setSimulacionMeta(null);
+      return false;
+    }
+  };
+
+  const handleCrear = async (values: GenerateFormValues) => {
+    if (!periodoIdIsValid) {
+      showToast("El identificador del periodo es inválido.", "error");
+      return;
     }
 
     if (!user?.id) {
@@ -290,243 +372,98 @@ export const DetallePlanilla = () => {
         "No se pudo identificar al usuario autenticado. Inicie sesión nuevamente.",
         "error",
       );
-      return false;
+      return;
     }
 
     const collaboratorIds = (values.colaboradores ?? [])
-      .map((value) => Number(value))
-      .filter((value) => Number.isInteger(value) && value > 0);
+      .map((v) => Number(v))
+      .filter((v) => Number.isInteger(v) && v > 0);
 
     if (collaboratorIds.length === 0) {
       showToast("Seleccione al menos un colaborador.", "error");
-      return false;
-    }
-
-    if (!periodo || !periodo.fecha_inicio || !periodo.fecha_fin) {
-      showToast("No se pudo determinar el rango del periodo seleccionado.", "error");
-      return false;
+      return;
     }
 
     try {
-      await generatePayroll({
+      await generarPlanilla({
         id_periodo: periodoId,
         colaboradores: collaboratorIds,
         generado_por: Number(user.id),
-        fecha_inicio: periodo.fecha_inicio,
-        fecha_fin: periodo.fecha_fin,
       });
 
       showToast("Planilla generada exitosamente.", "success");
-
-      await loadDetails(allCollaboratorIds, { silent: false });
-      return true;
-    } catch (error) {
-      console.log(error);
-      showToast(
-        "No se pudo generar la planilla. Verifique los datos e intente nuevamente.",
-        "error",
-      );
-      return false;
+      setSimulacion([]);
+      setSimulacionMeta(null);
+      loadExistingDetails();
+    } catch (err: any) {
+      if (err?.status === 409 || err?.response?.status === 409) {
+        showToast(
+          "Algunos colaboradores ya tienen planilla para este periodo. Utilice la opción de recalcular.",
+          "warning",
+        );
+        setTimeout(() => {
+          existentesRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+        loadExistingDetails();
+      }
     }
   };
 
-  const detailList = details?.detalles ?? [];
-  const hasDetails = detailList.length > 0;
-  const shouldShowForm = !fetchingDetails && !hasDetails;
+  const existingDetailsList = existingDetails?.detalles ?? [];
+  const hasExistingDetails = existingDetailsList.length > 0;
 
-  const emptyStateTitle = hasAttempted
-    ? "No se encontraron detalles"
-    : "Consulta en progreso";
-  const emptyStateDescription = hasAttempted
-    ? "No existen registros de planilla para los colaboradores seleccionados en este periodo."
-    : "Estamos consultando la información del periodo seleccionado.";
+  const handleRecalcular = async () => {
+    if (selectedRecordIds.size === 0) {
+      showToast("Seleccione al menos un registro para recalcular.", "info");
+      return;
+    }
 
-  const detailsSection = (
-    <Stack flex="1" gap="4">
-      {fetchingDetails ? (
-        <Stack align="center" py="10" gap="3">
-          <Spinner size="lg" />
-          <Text color="fg.muted">Consultando detalle del periodo…</Text>
-        </Stack>
-      ) : hasDetails ? (
-        <Stack gap="6">
-          {detailList.map((detail) => {
-            const fullName =
-              collaboratorNameMap.get(detail.id_colaborador) ??
-              `Colaborador #${detail.id_colaborador}`;
+    if (!periodoIdIsValid) return;
 
-            const horasOrd = detail.horas_ordinarias ?? { cantidad: 0, monto: 0 };
-            const horasExt = detail.horas_extra ?? { cantidad: 0, monto: 0 };
-            const horasNoc = detail.horas_nocturnas ?? { cantidad: 0, monto: 0 };
-            const horasFer = detail.horas_feriado ?? { cantidad: 0, monto: 0 };
-            const deduccionesList = Array.isArray(detail.deducciones) ? detail.deducciones : [];
-            const renta = detail.renta ?? { monto_quincenal: 0, proyectado_mensual: 0 };
+    const colaboradorIds = existingDetailsList
+      .filter((d) => selectedRecordIds.has(d.id_detalle))
+      .map((d) => d.id_colaborador);
 
-            return (
-              <Card.Root
-                key={detail.id_detalle}
-                borderLeftWidth={6}
-                style={{ borderLeftColor: "var(--chakra-colors-blue-500)" }}
-              >
-                <Card.Header>
-                  <Card.Title>{fullName}</Card.Title>
-                  <Card.Description>
-                    Contrato #{detail.id_contrato} • Detalle #{detail.id_detalle}
-                  </Card.Description>
-                </Card.Header>
+    try {
+      await recalcularPlanilla({
+        id_periodo: periodoId,
+        colaboradores: colaboradorIds,
+        generado_por: user?.id ? Number(user.id) : undefined,
+      });
 
-                <Card.Body>
-                  <Stack gap="5">
-                    {/* ── Tarifas de referencia ── */}
-                    <SimpleGrid columns={{ base: 2, md: 4 }} gap="3">
-                      <Box>
-                        <Text textStyle="xs" color="fg.muted">Salario mensual</Text>
-                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_mensual ?? 0)}</Text>
-                      </Box>
-                      <Box>
-                        <Text textStyle="xs" color="fg.muted">Salario quincenal</Text>
-                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_quincenal ?? 0)}</Text>
-                      </Box>
-                      <Box>
-                        <Text textStyle="xs" color="fg.muted">Salario diario</Text>
-                        <Text fontWeight="semibold">{currencyFormatter.format(detail.salario_diario ?? 0)}</Text>
-                      </Box>
-                      <Box>
-                        <Text textStyle="xs" color="fg.muted">Tarifa por hora</Text>
-                        <Text fontWeight="semibold">{currencyFormatter.format(detail.tarifa_hora ?? 0)}</Text>
-                      </Box>
-                    </SimpleGrid>
+      setSelectedRecordIds(new Set());
+      loadExistingDetails();
+    } catch {
+      // toast automático vía interceptor
+    }
+  };
 
-                    <Separator />
+  const toggleRecordSelection = (detId: number) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(detId)) next.delete(detId);
+      else next.add(detId);
+      return next;
+    });
+  };
 
-                    {/* ── Horas + montos ── */}
-                    <Table.Root size="sm" variant="outline">
-                      <Table.Header>
-                        <Table.Row>
-                          <Table.ColumnHeader>Concepto</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Horas</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
-                        </Table.Row>
-                      </Table.Header>
-                      <Table.Body>
-                        <Table.Row>
-                          <Table.Cell>Horas ordinarias (salario base)</Table.Cell>
-                          <Table.Cell textAlign="right">{decimalFormatter.format(horasOrd.cantidad)}</Table.Cell>
-                          <Table.Cell textAlign="right">{currencyFormatter.format(horasOrd.monto)}</Table.Cell>
-                        </Table.Row>
-                        {horasExt.cantidad > 0 && (
-                          <Table.Row>
-                            <Table.Cell>Horas extra (×1.5)</Table.Cell>
-                            <Table.Cell textAlign="right">{decimalFormatter.format(horasExt.cantidad)}</Table.Cell>
-                            <Table.Cell textAlign="right">{currencyFormatter.format(horasExt.monto)}</Table.Cell>
-                          </Table.Row>
-                        )}
-                        {horasNoc.cantidad > 0 && (
-                          <Table.Row>
-                            <Table.Cell>Horas nocturnas (×0.25)</Table.Cell>
-                            <Table.Cell textAlign="right">{decimalFormatter.format(horasNoc.cantidad)}</Table.Cell>
-                            <Table.Cell textAlign="right">{currencyFormatter.format(horasNoc.monto)}</Table.Cell>
-                          </Table.Row>
-                        )}
-                        {horasFer.cantidad > 0 && (
-                          <Table.Row>
-                            <Table.Cell>Horas feriado trabajado</Table.Cell>
-                            <Table.Cell textAlign="right">{decimalFormatter.format(horasFer.cantidad)}</Table.Cell>
-                            <Table.Cell textAlign="right">{currencyFormatter.format(horasFer.monto)}</Table.Cell>
-                          </Table.Row>
-                        )}
-                        <Table.Row bg="blue.50">
-                          <Table.Cell colSpan={2}>
-                            <Text fontWeight="bold">Salario devengado (bruto)</Text>
-                          </Table.Cell>
-                          <Table.Cell textAlign="right">
-                            <Text fontWeight="bold">{currencyFormatter.format(detail.salario_devengado ?? 0)}</Text>
-                          </Table.Cell>
-                        </Table.Row>
-                      </Table.Body>
-                    </Table.Root>
+  const toggleSelectAll = () => {
+    if (selectedRecordIds.size === existingDetailsList.length) {
+      setSelectedRecordIds(new Set());
+    } else {
+      setSelectedRecordIds(
+        new Set(existingDetailsList.map((d) => d.id_detalle)),
+      );
+    }
+  };
 
-                    {/* ── Deducciones ── */}
-                    <Table.Root size="sm" variant="outline">
-                      <Table.Header>
-                        <Table.Row>
-                          <Table.ColumnHeader>Deducción</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Porcentaje</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
-                        </Table.Row>
-                      </Table.Header>
-                      <Table.Body>
-                        {deduccionesList.map((ded, idx) => (
-                          <Table.Row key={ded.id_deduccion ?? idx}>
-                            <Table.Cell>{ded.nombre}</Table.Cell>
-                            <Table.Cell textAlign="right">{decimalFormatter.format(ded.porcentaje)}%</Table.Cell>
-                            <Table.Cell textAlign="right" color="red.600">
-                              -{currencyFormatter.format(ded.monto)}
-                            </Table.Cell>
-                          </Table.Row>
-                        ))}
-                        {renta.monto_quincenal > 0 && (
-                          <Table.Row>
-                            <Table.Cell>Impuesto sobre la renta</Table.Cell>
-                            <Table.Cell textAlign="right">
-                              <Text textStyle="xs" color="fg.muted">
-                                Proyectado: {currencyFormatter.format(renta.proyectado_mensual)}/mes
-                              </Text>
-                            </Table.Cell>
-                            <Table.Cell textAlign="right" color="red.600">
-                              -{currencyFormatter.format(renta.monto_quincenal)}
-                            </Table.Cell>
-                          </Table.Row>
-                        )}
-                        <Table.Row bg="red.50">
-                          <Table.Cell colSpan={2}>
-                            <Text fontWeight="bold">Total deducciones</Text>
-                          </Table.Cell>
-                          <Table.Cell textAlign="right">
-                            <Text fontWeight="bold" color="red.600">
-                              -{currencyFormatter.format(detail.total_deducciones ?? 0)}
-                            </Text>
-                          </Table.Cell>
-                        </Table.Row>
-                      </Table.Body>
-                    </Table.Root>
-
-                    {/* ── Neto ── */}
-                    <Flex
-                      justify="space-between"
-                      align="center"
-                      bg="green.50"
-                      p="4"
-                      borderRadius="lg"
-                    >
-                      <Heading size="md">Salario neto a pagar</Heading>
-                      <Heading size="md" color="green.700">
-                        {currencyFormatter.format(detail.salario_neto ?? 0)}
-                      </Heading>
-                    </Flex>
-                  </Stack>
-                </Card.Body>
-              </Card.Root>
-            );
-          })}
-        </Stack>
-      ) : (
-        <EmptyState.Root
-          colorPalette="blue"
-          border="0.15rem dashed"
-          borderColor="blue.600"
-          py="12"
-        >
-          <EmptyState.Content>
-            <EmptyState.Title>{emptyStateTitle}</EmptyState.Title>
-            <EmptyState.Description>
-              {emptyStateDescription}
-            </EmptyState.Description>
-          </EmptyState.Content>
-        </EmptyState.Root>
-      )}
-    </Stack>
+  // ── Computed ──
+  const totalSimulado = useMemo(
+    () => simulacion.reduce((acc, r) => acc + (r.salario_neto ?? 0), 0),
+    [simulacion],
   );
+
+  // ── Render ──
 
   return (
     <Layout
@@ -536,38 +473,40 @@ export const DetallePlanilla = () => {
           : "Detalle de periodo de planilla"
       }
     >
-      <Stack gap="6">
-        {shouldShowForm ? (
+      <Stack gap="8">
+        {/* ──────── SECCIÓN: SIMULACIÓN ──────── */}
+        <Form<GenerateFormValues>
+          onSubmit={handleSimular}
+          defaultValues={{
+            colaboradores: defaultSelectedCollaborators,
+          }}
+        >
           <Stack
             direction={{ base: "column", xl: "row" }}
             align="flex-start"
             gap="6"
           >
-            <Form<GenerateFormValues>
-              onSubmit={handleGeneratePayroll}
-              defaultValues={{
-                colaboradores: defaultSelectedCollaborators,
-              }}
-              resetOnSuccess
+            {/* ── Panel izquierdo: Formulario ── */}
+            <Card.Root
+              as="section"
+              w={{ base: "full", xl: "560px" }}
+              flexShrink={0}
             >
-              <Card.Root
-                as="section"
-                w={{ base: "full", xl: "320px" }}
-                flexShrink={0}
-              >
-                <Card.Header>
-                  <Card.Title>Generar detalle de planilla</Card.Title>
-                  <Card.Description>
-                    Calcula los montos del periodo seleccionado seleccionando
-                    colaboradores y rango de fechas.
-                  </Card.Description>
-                </Card.Header>
+              <Card.Header>
+                <Card.Title>Calcular planilla quincenal</Card.Title>
+                <Card.Description>
+                  Seleccione los colaboradores para simular el cálculo de
+                  planilla del periodo seleccionado. Puede revisar los montos
+                  antes de confirmar la generación.
+                </Card.Description>
+              </Card.Header>
 
-                <Card.Body>
-                  <Stack gap="4">
+              <Card.Body>
+                <Stack gap="4">
+                  <SimpleGrid columns={2} gap="3">
                     <Stack gap="0">
                       <Text textStyle="sm" color="fg.muted">
-                        Periodo seleccionado
+                        Periodo
                       </Text>
                       <Heading size="sm">
                         {periodoIdIsValid ? `#${periodoId}` : "No disponible"}
@@ -576,75 +515,579 @@ export const DetallePlanilla = () => {
 
                     <Stack gap="0">
                       <Text textStyle="sm" color="fg.muted">
-                        Rango del periodo
+                        Rango
                       </Text>
                       <Text fontWeight="semibold">
                         {isPeriodoLoading ? "Cargando…" : periodoRangeLabel}
                       </Text>
                     </Stack>
+                  </SimpleGrid>
 
-                    <InputField
-                      fieldType="select"
-                      name="colaboradores"
-                      label="Colaboradores"
-                      required
-                      disableSelectPortal
-                      options={options}
-                      placeholder={
-                        employeesLoading
-                          ? "Cargando colaboradores..."
-                          : options.length === 0
-                            ? "Sin colaboradores disponibles"
-                            : "Seleccione uno o varios"
-                      }
-                      selectRootProps={{
-                        multiple: true,
-                        disabled:
-                          employeesLoading ||
-                          !hasEmployees ||
-                          !periodoIdIsValid,
-                      }}
-                      rules={{
-                        validate: (value) =>
-                          Array.isArray(value) && value.length > 0
-                            ? true
-                            : "Seleccione al menos un colaborador.",
-                        setValueAs: (value) =>
-                          Array.isArray(value) ? value : value ? [value] : [],
-                      }}
-                    />
-
-                    <SelectedCollaboratorsBadges
-                      collaboratorNameMap={collaboratorNameMap}
-                    />
-                  </Stack>
-                </Card.Body>
-
-                <Card.Footer justifyContent="flex-end">
-                  <Button
-                    type="submit"
-                    colorPalette="blue"
-                    loading={isGenerating}
-                    disabled={
-                      !periodoIdIsValid ||
-                      employeesLoading ||
-                      !hasEmployees ||
-                      isGenerating
+                  <InputField
+                    fieldType="select"
+                    name="colaboradores"
+                    label="Colaboradores"
+                    required
+                    disableSelectPortal
+                    options={options}
+                    placeholder={
+                      employeesLoading
+                        ? "Cargando colaboradores..."
+                        : options.length === 0
+                          ? "Sin colaboradores disponibles"
+                          : "Seleccione uno o varios"
                     }
-                  >
-                    Generar planilla
-                  </Button>
-                </Card.Footer>
-              </Card.Root>
-            </Form>
+                    selectRootProps={{
+                      multiple: true,
+                      disabled:
+                        employeesLoading ||
+                        !hasEmployees ||
+                        !periodoIdIsValid,
+                    }}
+                    rules={{
+                      validate: (value: any) =>
+                        Array.isArray(value) && value.length > 0
+                          ? true
+                          : "Seleccione al menos un colaborador.",
+                      setValueAs: (value: any) =>
+                        Array.isArray(value)
+                          ? value
+                          : value
+                            ? [value]
+                            : [],
+                    }}
+                  />
 
-            {detailsSection}
+                  <SelectedCollaboratorsBadges
+                    collaboratorNameMap={collaboratorNameMap}
+                  />
+                </Stack>
+              </Card.Body>
+
+              <Card.Footer justifyContent="flex-end" gap="3">
+                <SubmitButtons
+                  isSimulating={isSimulating}
+                  isCreating={isGenerating}
+                  hasSimulacion={simulacion.length > 0}
+                  disabled={
+                    !periodoIdIsValid ||
+                    employeesLoading ||
+                    !hasEmployees
+                  }
+                  onCrear={handleCrear}
+                />
+              </Card.Footer>
+            </Card.Root>
+
+            {/* ── Panel derecho: Resultados de simulación ── */}
+            <Stack flex="1" gap="4" w="full">
+              {isSimulating ? (
+                <Stack align="center" py="10" gap="3">
+                  <Spinner size="lg" />
+                  <Text color="fg.muted">Calculando planilla…</Text>
+                </Stack>
+              ) : simulacion.length > 0 ? (
+                <Stack gap="4">
+                  {/* Resumen */}
+                  <Card.Root>
+                    <Card.Body>
+                      <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
+                        <Box>
+                          <Text textStyle="xs" color="fg.muted">
+                            Colaboradores
+                          </Text>
+                          <Heading size="md">{simulacion.length}</Heading>
+                        </Box>
+                        <Box>
+                          <Text textStyle="xs" color="fg.muted">
+                            Período
+                          </Text>
+                          <Text fontWeight="semibold">
+                            {formatDate(simulacionMeta?.fecha_inicio)} –{" "}
+                            {formatDate(simulacionMeta?.fecha_fin)}
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text textStyle="xs" color="fg.muted">
+                            Total bruto
+                          </Text>
+                          <Heading size="md">
+                            {formatCRC(
+                              simulacion.reduce(
+                                (acc, r) => acc + (r.salario_devengado ?? 0),
+                                0,
+                              ),
+                            )}
+                          </Heading>
+                        </Box>
+                        <Box>
+                          <Text textStyle="xs" color="fg.muted">
+                            Total neto
+                          </Text>
+                          <Heading size="md" color="green.600">
+                            {formatCRC(totalSimulado)}
+                          </Heading>
+                        </Box>
+                      </SimpleGrid>
+                    </Card.Body>
+                  </Card.Root>
+
+                  {/* Tabla resumen de simulación */}
+                  <Card.Root>
+                    <Card.Header>
+                      <Card.Title>Vista previa del cálculo</Card.Title>
+                    </Card.Header>
+                    <Card.Body p="0">
+                      <Table.Root size="sm" variant="outline">
+                        <Table.Header>
+                          <Table.Row>
+                            <Table.ColumnHeader>Colaborador</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">
+                              Salario quincenal
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">
+                              Bruto
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">
+                              Deducciones
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">
+                              Neto
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader>Estado</Table.ColumnHeader>
+                          </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                          {simulacion.map((item) => (
+                            <Table.Row key={item.id_colaborador}>
+                              <Table.Cell>
+                                {toTitleCase(item.nombre_completo)}
+                              </Table.Cell>
+                              <Table.Cell textAlign="right">
+                                {formatCRC(item.salario_quincenal_base)}
+                              </Table.Cell>
+                              <Table.Cell textAlign="right">
+                                {formatCRC(item.salario_devengado)}
+                              </Table.Cell>
+                              <Table.Cell textAlign="right" color="red.600">
+                                -{formatCRC(item.total_deducciones)}
+                              </Table.Cell>
+                              <Table.Cell textAlign="right">
+                                <Text fontWeight="bold" color="green.600">
+                                  {formatCRC(item.salario_neto)}
+                                </Text>
+                              </Table.Cell>
+                              <Table.Cell>
+                                {item.error ? (
+                                  <Badge colorPalette="red" variant="subtle">
+                                    Error
+                                  </Badge>
+                                ) : (
+                                  <Badge colorPalette="green" variant="subtle">
+                                    OK
+                                  </Badge>
+                                )}
+                              </Table.Cell>
+                            </Table.Row>
+                          ))}
+                        </Table.Body>
+                      </Table.Root>
+                    </Card.Body>
+                  </Card.Root>
+
+                  {/* Desglose individual por colaborador */}
+                  {simulacion.map((item) => (
+                    <SimulacionColaboradorCard
+                      key={item.id_colaborador}
+                      item={item}
+                    />
+                  ))}
+                </Stack>
+              ) : (
+                <EmptyState.Root
+                  colorPalette="blue"
+                  border="0.15rem dashed"
+                  borderColor="blue.600"
+                  py="12"
+                >
+                  <EmptyState.Content>
+                    <EmptyState.Indicator>
+                      <FiDollarSign />
+                    </EmptyState.Indicator>
+                    <EmptyState.Title>
+                      Simule el cálculo de planilla
+                    </EmptyState.Title>
+                    <EmptyState.Description>
+                      Seleccione colaboradores y presione &quot;Simular
+                      cálculo&quot; para obtener una vista previa de los montos
+                      antes de generar la planilla.
+                    </EmptyState.Description>
+                  </EmptyState.Content>
+                </EmptyState.Root>
+              )}
+            </Stack>
           </Stack>
-        ) : (
-          detailsSection
-        )}
+        </Form>
+
+        <Separator />
+
+        {/* ──────── SECCIÓN: REGISTROS EXISTENTES ──────── */}
+        <div ref={existentesRef}>
+          <Card.Root>
+            <Card.Header>
+              <Flex
+                justify="space-between"
+                align="center"
+                wrap="wrap"
+                gap="3"
+              >
+                <Box>
+                  <Card.Title>Planillas generadas</Card.Title>
+                  <Card.Description>
+                    Registros de planilla generados previamente para este
+                    periodo. Seleccione uno o varios para recalcular.
+                  </Card.Description>
+                </Box>
+                <Button
+                  colorPalette="orange"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRecalcular}
+                  loading={isRecalculating}
+                  disabled={selectedRecordIds.size === 0 || isRecalculating}
+                >
+                  <FiRefreshCw />
+                  Recalcular seleccionados ({selectedRecordIds.size})
+                </Button>
+              </Flex>
+            </Card.Header>
+
+            <Card.Body p="0">
+              {fetchingDetails ? (
+                <Stack align="center" py="10" gap="3">
+                  <Spinner size="lg" />
+                  <Text color="fg.muted">Cargando registros…</Text>
+                </Stack>
+              ) : hasExistingDetails ? (
+                <Table.Root size="sm" variant="outline">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader w="40px">
+                        <Checkbox.Root
+                          checked={
+                            selectedRecordIds.size ===
+                            existingDetailsList.length &&
+                            existingDetailsList.length > 0
+                          }
+                          onCheckedChange={toggleSelectAll}
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                        </Checkbox.Root>
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader>Colaborador</Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="right">
+                        Salario mensual
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="right">
+                        Bruto
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="right">
+                        Deducciones
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="right">
+                        Neto
+                      </Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {existingDetailsList.map((detail) => {
+                      const fullName =
+                        collaboratorNameMap.get(detail.id_colaborador) ??
+                        `Colaborador #${detail.id_colaborador}`;
+                      return (
+                        <Table.Row
+                          key={detail.id_detalle}
+                          bg={
+                            selectedRecordIds.has(detail.id_detalle)
+                              ? "blue.50"
+                              : undefined
+                          }
+                          cursor="pointer"
+                          onClick={() =>
+                            toggleRecordSelection(detail.id_detalle)
+                          }
+                        >
+                          <Table.Cell>
+                            <Checkbox.Root
+                              checked={selectedRecordIds.has(
+                                detail.id_detalle,
+                              )}
+                              onCheckedChange={() =>
+                                toggleRecordSelection(detail.id_detalle)
+                              }
+                            >
+                              <Checkbox.HiddenInput />
+                              <Checkbox.Control />
+                            </Checkbox.Root>
+                          </Table.Cell>
+                          <Table.Cell>{toTitleCase(fullName)}</Table.Cell>
+                          <Table.Cell textAlign="right">
+                            {formatCRC(detail.salario_mensual)}
+                          </Table.Cell>
+                          <Table.Cell textAlign="right">
+                            {formatCRC(detail.salario_devengado)}
+                          </Table.Cell>
+                          <Table.Cell textAlign="right" color="red.600">
+                            -{formatCRC(detail.total_deducciones)}
+                          </Table.Cell>
+                          <Table.Cell textAlign="right">
+                            <Text fontWeight="semibold" color="green.600">
+                              {formatCRC(detail.salario_neto)}
+                            </Text>
+                          </Table.Cell>
+                        </Table.Row>
+                      );
+                    })}
+                    {/* Total row */}
+                    <Table.Row bg="gray.50">
+                      <Table.Cell colSpan={5}>
+                        <Text fontWeight="bold">TOTAL NETO</Text>
+                      </Table.Cell>
+                      <Table.Cell textAlign="right">
+                        <Heading size="md" color="green.600">
+                          {formatCRC(existingDetails?.total ?? 0)}
+                        </Heading>
+                      </Table.Cell>
+                    </Table.Row>
+                  </Table.Body>
+                </Table.Root>
+              ) : (
+                <EmptyState.Root py="10">
+                  <EmptyState.Content>
+                    <EmptyState.Title>Sin registros</EmptyState.Title>
+                    <EmptyState.Description>
+                      No hay planillas generadas para este periodo. Utilice la
+                      sección superior para simular y crear registros.
+                    </EmptyState.Description>
+                  </EmptyState.Content>
+                </EmptyState.Root>
+              )}
+            </Card.Body>
+          </Card.Root>
+        </div>
       </Stack>
     </Layout>
+  );
+};
+
+// ── Sub-components ──
+
+const SimulacionColaboradorCard = ({
+  item,
+}: {
+  item: SimulacionResultado;
+}) => {
+  const deduccionesList = Array.isArray(item.deducciones_detalle)
+    ? item.deducciones_detalle
+    : [];
+  const renta = item.renta ?? { monto_quincenal: 0, proyectado_mensual: 0 };
+
+  return (
+    <Card.Root
+      borderLeftWidth={6}
+      style={{ borderLeftColor: "var(--chakra-colors-blue-500)" }}
+    >
+      <Card.Header>
+        <Card.Title>{toTitleCase(item.nombre_completo)}</Card.Title>
+        <Card.Description>
+          {item.identificacion ?? "Sin identificación"}
+        </Card.Description>
+      </Card.Header>
+
+      <Card.Body>
+        <Stack gap="5">
+          {/* Tarifas de referencia */}
+          <SimpleGrid columns={{ base: 2, md: 4 }} gap="3">
+            <Box>
+              <Text textStyle="xs" color="fg.muted">
+                Salario mensual
+              </Text>
+              <Text fontWeight="semibold">
+                {formatCRC(item.salario_mensual)}
+              </Text>
+            </Box>
+            <Box>
+              <Text textStyle="xs" color="fg.muted">
+                Salario quincenal
+              </Text>
+              <Text fontWeight="semibold">
+                {formatCRC(item.salario_quincenal_base)}
+              </Text>
+            </Box>
+            <Box>
+              <Text textStyle="xs" color="fg.muted">
+                Salario diario
+              </Text>
+              <Text fontWeight="semibold">
+                {formatCRC(item.salario_diario)}
+              </Text>
+            </Box>
+            <Box>
+              <Text textStyle="xs" color="fg.muted">
+                Tarifa por hora
+              </Text>
+              <Text fontWeight="semibold">
+                {formatCRC(item.tarifa_hora)}
+              </Text>
+            </Box>
+          </SimpleGrid>
+
+          <Separator />
+
+          {/* Horas + montos */}
+          <Table.Root size="sm" variant="outline">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Concepto</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">
+                  Horas/Días
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {item.descuentos_dias.ausencias.dias > 0 && (
+                <Table.Row>
+                  <Table.Cell>Ausencias injustificadas</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {item.descuentos_dias.ausencias.dias} días
+                  </Table.Cell>
+                  <Table.Cell textAlign="right" color="red.600">
+                    -{formatCRC(item.descuentos_dias.ausencias.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {item.descuentos_dias.incapacidad.dias > 0 && (
+                <Table.Row>
+                  <Table.Cell>Incapacidad (no cubierta)</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {item.descuentos_dias.incapacidad.dias} días
+                  </Table.Cell>
+                  <Table.Cell textAlign="right" color="red.600">
+                    -{formatCRC(item.descuentos_dias.incapacidad.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {item.horas_extra.cantidad > 0 && (
+                <Table.Row>
+                  <Table.Cell>Horas extra (×1.5)</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {item.horas_extra.cantidad}
+                  </Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {formatCRC(item.horas_extra.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {item.horas_nocturnas.cantidad > 0 && (
+                <Table.Row>
+                  <Table.Cell>Horas nocturnas (×0.25)</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {item.horas_nocturnas.cantidad}
+                  </Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {formatCRC(item.horas_nocturnas.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              {item.horas_feriado.cantidad > 0 && (
+                <Table.Row>
+                  <Table.Cell>Horas feriado trabajado</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {item.horas_feriado.cantidad}
+                  </Table.Cell>
+                  <Table.Cell textAlign="right">
+                    {formatCRC(item.horas_feriado.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              <Table.Row bg="blue.50">
+                <Table.Cell colSpan={2}>
+                  <Text fontWeight="bold">Salario devengado (bruto)</Text>
+                </Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold">
+                    {formatCRC(item.salario_devengado)}
+                  </Text>
+                </Table.Cell>
+              </Table.Row>
+            </Table.Body>
+          </Table.Root>
+
+          {/* Deducciones */}
+          <Table.Root size="sm" variant="outline">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Deducción</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">
+                  Porcentaje
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {deduccionesList.map((ded, idx) => (
+                <Table.Row key={ded.id ?? idx}>
+                  <Table.Cell>{ded.nombre}</Table.Cell>
+                  <Table.Cell textAlign="right">{ded.porcentaje}%</Table.Cell>
+                  <Table.Cell textAlign="right" color="red.600">
+                    -{formatCRC(ded.monto)}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+              {renta.monto_quincenal > 0 && (
+                <Table.Row>
+                  <Table.Cell>Impuesto sobre la renta</Table.Cell>
+                  <Table.Cell textAlign="right">
+                    <Text textStyle="xs" color="fg.muted">
+                      Proy: {formatCRC(renta.proyectado_mensual)}/mes
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell textAlign="right" color="red.600">
+                    -{formatCRC(renta.monto_quincenal)}
+                  </Table.Cell>
+                </Table.Row>
+              )}
+              <Table.Row bg="red.50">
+                <Table.Cell colSpan={2}>
+                  <Text fontWeight="bold">Total deducciones</Text>
+                </Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold" color="red.600">
+                    -{formatCRC(item.total_deducciones)}
+                  </Text>
+                </Table.Cell>
+              </Table.Row>
+            </Table.Body>
+          </Table.Root>
+
+          {/* Neto */}
+          <Flex
+            justify="space-between"
+            align="center"
+            bg="green.50"
+            p="4"
+            borderRadius="lg"
+          >
+            <Heading size="md">Salario neto a pagar</Heading>
+            <Heading size="md" color="green.700">
+              {formatCRC(item.salario_neto)}
+            </Heading>
+          </Flex>
+        </Stack>
+      </Card.Body>
+    </Card.Root>
   );
 };
 
@@ -672,7 +1115,7 @@ const SelectedCollaboratorsBadges = ({
           collaboratorNameMap.get(numericId) ?? `Colaborador #${numericId}`;
         return (
           <Badge
-            key={value}
+            key={String(value)}
             variant="solid"
             colorPalette="blue"
             display="inline-flex"
@@ -687,5 +1130,47 @@ const SelectedCollaboratorsBadges = ({
         );
       })}
     </Stack>
+  );
+};
+
+const SubmitButtons = ({
+  isSimulating,
+  isCreating,
+  hasSimulacion,
+  disabled,
+  onCrear,
+}: {
+  isSimulating: boolean;
+  isCreating: boolean;
+  hasSimulacion: boolean;
+  disabled: boolean;
+  // eslint-disable-next-line no-unused-vars
+  onCrear: (values: GenerateFormValues) => Promise<void>;
+}) => {
+  const { getValues } = useFormContext<GenerateFormValues>();
+
+  return (
+    <>
+      <Button
+        type="submit"
+        colorPalette="blue"
+        variant="outline"
+        loading={isSimulating}
+        disabled={disabled || isSimulating}
+      >
+        Simular cálculo
+      </Button>
+
+      {hasSimulacion && (
+        <Button
+          colorPalette="green"
+          loading={isCreating}
+          disabled={disabled || isCreating}
+          onClick={() => onCrear(getValues())}
+        >
+          Generar planilla
+        </Button>
+      )}
+    </>
   );
 };

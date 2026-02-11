@@ -10,6 +10,7 @@ import {
   HorarioLaboral,
 } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
+import { plantillaNotificacionSolicitud } from "../../../common/plantillasEmail/emailTemplate.js";
 import {
   assertId,
   assertDate,
@@ -31,14 +32,27 @@ async function notificarSolicitante({ colaborador, estadoDestino, fechaInicio, f
   }
 
   const nombre = buildNombreCompleto(colaborador) || `Colaborador ${colaborador.id_colaborador}`;
-  const estadoHumano = estadoDestino === "APROBADO" ? "aprobada" : "rechazada";
+  const esAprobado = estadoDestino === "APROBADO";
+  const estadoHumano = esAprobado ? "aprobada" : "rechazada";
   const subject = `Tu solicitud de permiso fue ${estadoHumano}`;
-  const message = `Hola ${nombre.split(" ")[0]},<br/><br/>` +
-    `Tu solicitud de permiso del ${fechaInicio} al ${fechaFin} ha sido ${estadoHumano}.<br/><br/>` +
-    `Si tienes dudas, comunícate con tu administrador.`;
 
   try {
-    await sendEmail({ recipient: colaborador.correo_electronico, subject, message });
+    await sendEmail({
+      recipient: colaborador.correo_electronico,
+      subject,
+      message: plantillaNotificacionSolicitud({
+        titulo: `Solicitud de permiso ${estadoHumano}`,
+        variante: esAprobado ? "success" : "danger",
+        subtitulo: `Hola ${nombre.split(" ")[0]}, tu solicitud de permiso fue <strong>${estadoHumano}</strong>.`,
+        detalles: [
+          { etiqueta: "Fecha de inicio", valor: fechaInicio },
+          { etiqueta: "Fecha de finalización", valor: fechaFin },
+        ],
+        mensaje: esAprobado
+          ? "Puedes revisar el detalle en el sistema."
+          : "Si tienes dudas, comunícate con tu administrador.",
+      }),
+    });
   } catch (error) {
     console.error("Error enviando correo de actualización de permiso:", error);
   }

@@ -10,7 +10,7 @@ import {
   Colaborador,
 } from "../../../../models/index.js";
 import { sendEmail } from "../../../../services/mail.js";
-import { plantillaNotificacionSolicitud } from "../../../../common/plantillasEmail/notificacionesSolicitudes.js";
+import { plantillaNotificacionSolicitud } from "../../../../common/plantillasEmail/emailTemplate.js";
 
 const MAX_JUSTIFICACION_LENGTH = 100;
 const ESTADOS_PERMITIDOS = ["PENDIENTE", "APROBADO", "RECHAZADO", "CANCELADO"];

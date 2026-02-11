@@ -10,12 +10,12 @@ import mantenimientosConsultasRoutes from "./src/routes/mantenimientos_consultas
 import asistenciaRoutes from "./src/routes/asistencia.route.js"
 import horasExtraRoutes from "./src/routes/horasExtra.route.js"
 import incapacidadesRoutes from "./src/routes/incapacidades.route.js"
-// import estadosRoutes from "./src/routes/estado.route.js"
 import permisosRoutes from "./src/routes/permisos.route.js"
 import vacacionesRoutes from "./src/routes/vacaciones.route.js"
 import planillasRoutes from "./src/routes/planillas.route.js"
 import evaluacionDesempenoRoutes from "./src/routes/evaluacion_desempeno.route.js"
 import aguinaldoRoutes from "./src/routes/aguinaldo.route.js"
+import liquidacionesRoutes from "./src/routes/liquidaciones.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -53,13 +53,12 @@ app.use(`/${API_VERSION}/mantenimientos`, mantenimientosConsultasRoutes);
 app.use(`/${API_VERSION}/asistencia`, asistenciaRoutes);
 app.use(`/${API_VERSION}/horas-extra`, horasExtraRoutes);
 app.use(`/${API_VERSION}/incapacidades`, incapacidadesRoutes);
-// app.use(`/${API_VERSION}/planillas`, planillasRoutes);
-// app.use(`/${API_VERSION}/estados`, estadosRoutes);
 app.use(`/${API_VERSION}/permisos`, permisosRoutes);
 app.use(`/${API_VERSION}/vacaciones`, vacacionesRoutes);
 app.use(`/${API_VERSION}/planillas`, planillasRoutes);
 app.use(`/${API_VERSION}/evaluacion-desempeno`, evaluacionDesempenoRoutes);
 app.use(`/${API_VERSION}/aguinaldos`, aguinaldoRoutes);
+app.use(`/${API_VERSION}/liquidaciones`, liquidacionesRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

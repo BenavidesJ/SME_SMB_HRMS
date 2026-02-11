@@ -11,7 +11,7 @@ import {
   Rol,
 } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
-import { plantillaSolicitudPermisos } from "../../../common/htmlLayouts/plantillaSolicitudPermisos.js";
+import { plantillaSolicitudPermisos } from "../../../common/plantillasEmail/emailTemplate.js";
 import {
   assertId,
   assertDate,
