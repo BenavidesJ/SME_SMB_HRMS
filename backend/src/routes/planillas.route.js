@@ -1,44 +1,32 @@
-import express from 'express';
-import { authorization } from '../middlewares/authorization.js';
+import { Router } from "express";
+import { authorization } from "../middlewares/authorization.js";
 import {
-  actualizarPeriodoController,
-  crearCicloPago,
-  crearPeriodoController,
-  desactivarPeriodoController,
-  generarDetallePlanillaController,
-  obtenerDetallesPlanillaController,
-  obtenerPeriodoController,
-  obtenerPeriodosController,
-  obtenerTodosCiclos,
-  crearTipoDeduccionController,
-  obtenerTiposDeduccionController,
-  obtenerTipoDeduccionController,
-  actualizarTipoDeduccionController,
-  eliminarTipoDeduccionController,
-} from "../controllers/planillas/planillas.controller.js";
+  createPeriodoPlanillaController,
+  listPeriodosPlanillaController,
+  getPeriodoPlanillaController,
+  updatePeriodoPlanillaController,
+  deletePeriodoPlanillaController,
+  simularPlanillaController,
+  generarPlanillaController,
+  recalcularPlanillaController,
+  obtenerDetallePlanillaController,
+  eliminarPlanillaController,
+  editarPlanillaController,
+} from "../modules/planillas/planillas.controller.js";
 
+const router = Router();
 
-const router = express.Router();
-// Módulo de Calculo de Planillas
-// Ciclos de pago
-router.post('/ciclos_pago', authorization, crearCicloPago);
-router.get('/ciclos_pago', authorization, obtenerTodosCiclos);
-// Generar Planillas
-router.post('/', authorization, generarDetallePlanillaController);
-router.post('/detalle', authorization, obtenerDetallesPlanillaController);
+router.get("/periodo_planilla", authorization, listPeriodosPlanillaController);
+router.post("/periodo_planilla", authorization, createPeriodoPlanillaController);
+router.get("/periodo_planilla/:id", authorization, getPeriodoPlanillaController);
+router.patch("/periodo_planilla/:id", authorization, updatePeriodoPlanillaController);
+router.delete("/periodo_planilla/:id", authorization, deletePeriodoPlanillaController);
 
-// Generar Periodo de planillas
-router.post('/periodo_planilla', authorization, crearPeriodoController);
-router.get('/periodo_planilla', authorization, obtenerPeriodosController);
-router.get('/periodo_planilla/:id', authorization, obtenerPeriodoController);
-router.patch('/periodo_planilla/:id', authorization, actualizarPeriodoController);
-router.patch('/periodo_planilla/:id/desactivar', authorization, desactivarPeriodoController);
-
-// Tipos de deducción
-router.post("/tipos_deduccion", authorization, crearTipoDeduccionController);
-router.get("/tipos_deduccion", authorization, obtenerTiposDeduccionController);
-router.get("/tipos_deduccion/:id", authorization, obtenerTipoDeduccionController);
-router.patch("/tipos_deduccion/:id", authorization, actualizarTipoDeduccionController);
-router.delete("/tipos_deduccion/:id", authorization, eliminarTipoDeduccionController);
+router.post("/simular", authorization, simularPlanillaController);
+router.post("/detalle", authorization, obtenerDetallePlanillaController);
+router.post("/", authorization, generarPlanillaController);
+router.patch("/recalcular", authorization, recalcularPlanillaController);
+router.delete("/:id", authorization, eliminarPlanillaController);
+router.patch("/:id", authorization, editarPlanillaController);
 
 export default router;

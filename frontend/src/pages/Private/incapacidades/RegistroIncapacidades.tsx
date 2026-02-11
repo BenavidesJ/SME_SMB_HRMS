@@ -1,15 +1,16 @@
-import { Box, Wrap, Grid, GridItem, Heading, Stack, Text, ScrollArea, Tabs } from "@chakra-ui/react";
+import { Box, Wrap, Grid, GridItem, Heading, Stack, Text, ScrollArea, Tabs, Badge, HStack } from "@chakra-ui/react";
 import { Form, InputField } from "../../../components/forms";
 import { Layout } from "../../../components/layout";
 import { Button } from "../../../components/general/button/Button";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useCallback, useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { toTitleCase } from "../../../utils";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { EmptyStateIndicator } from "../../../components/general";
 import { AppLoader } from "../../../components/layout/loading";
-import type { EmployeeRow } from "../../../types";
+import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { LuUser, LuUsers } from "react-icons/lu";
 
 interface TipoIncapacidad {
@@ -18,56 +19,80 @@ interface TipoIncapacidad {
   descripcion: string;
 }
 
-interface Incapacidad {
+interface CrearIncapacidadPayload {
   id_colaborador: number;
   fecha_inicio: string;
   fecha_fin: string;
   tipo_incap: string;
 }
 
-interface IncapacidadListItem extends Incapacidad {
-  id_incapacidad: number;
-  observaciones?: string;
-  porcentaje_patrono?: string;
-  porcentaje_ccss?: string;
-  tipo_incapacidad?: {
-    id_tipo_incap: number;
-    nombre: string;
-  };
+interface DiaIncapacidad {
+  id_jornada: number;
+  fecha: string;
+  id_incapacidad: number | null;
+  porcentaje_patrono: number;
+  porcentaje_ccss: number;
 }
 
-interface IncapacidadesResponse {
-  rows: IncapacidadListItem[];
-  events: unknown[];
+interface IncapacidadGrupo {
+  grupo: string | null;
+  tipo_incapacidad: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  dias: DiaIncapacidad[];
 }
+
+const formatDateLong = (iso?: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const formatted = d.toLocaleDateString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
 
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const userID = user?.id;
-  const loggedUserRole = user?.usuario?.roles;
+  const loggedUserRole = user?.usuario?.rol;
 
   const hasAdminPermission = useMemo(
-    () => (loggedUserRole ?? []).some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN"),
+    () => (loggedUserRole ? ["ADMIN", "SUPER_ADMIN"].includes(loggedUserRole) : false),
     [loggedUserRole],
   );
 
-  const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "incapacidades/tipos" });
-  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<Incapacidad, void>({ url: "/incapacidades", method: "POST" });
-  const { data: incapacidadesResponse = { rows: [], events: [] }, isLoading: isLoadingList, refetch: refecthIncapacidades } = useApiQuery<IncapacidadesResponse>({
+  const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "mantenimientos/tipos-incapacidad" });
+  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<CrearIncapacidadPayload, void>({ url: "/incapacidades", method: "POST" });
+  const { data: incapacidades = [], isLoading: isLoadingList, refetch: refetchIncapacidades } = useApiQuery<IncapacidadGrupo[]>({
     url: `incapacidades/colaborador/${userID}`,
     enabled: Boolean(userID),
   });
 
-  const incapacidades = incapacidadesResponse.rows;
-
   const { data: employees = [], isLoading: isEmployeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
+  const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
+    if (!usuario) return false;
+    if (typeof usuario.estado === "string") {
+      return usuario.estado.toUpperCase() === "ACTIVO";
+    }
+    if (typeof usuario.estado === "number") {
+      return usuario.estado === 1;
+    }
+    return Boolean(usuario.estado);
+  };
+
   const colaboradoresActivos = useMemo(
     () =>
-      (employees ?? []).filter((colaborador) =>
-        colaborador?.usuario?.activo ? colaborador.estado.toUpperCase() === "ACTIVO" : true,
-      ),
+      (employees ?? []).filter((colaborador) => {
+        const estadoNombre = (colaborador.estado?.nombre ?? "").toUpperCase();
+        return isUsuarioActivo(colaborador.usuario) ? estadoNombre === "ACTIVO" : true;
+      }),
     [employees],
   );
 
@@ -96,18 +121,6 @@ export const RegistroIncapacidades = () => {
     });
   }, [colaboradoresVisibles, userID]);
 
-  const getDurationLabel = useCallback((inicio: string, fin: string) => {
-    const MS_IN_DAY = 86_400_000;
-    const startDate = new Date(inicio);
-    const endDate = new Date(fin);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return "Duración desconocida";
-    }
-    const diffDays = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / MS_IN_DAY));
-    const totalDays = diffDays + 1;
-    return `${totalDays} ${totalDays === 1 ? "día" : "días"}`;
-  }, []);
-
   const tipoToOptions = useCallback(
     (items: TipoIncapacidad[]) => items.map((v) => ({ label: toTitleCase(v.nombre), value: v.nombre })),
     [],
@@ -121,11 +134,11 @@ export const RegistroIncapacidades = () => {
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
 
   const {
-    data: otherIncapacidadesResponse = { rows: [], events: [] },
+    data: otherIncapacidades = [],
     isLoading: isLoadingOtherIncapacidades,
     refetch: refetchOtherIncapacidades,
-  } = useApiQuery<IncapacidadesResponse>({
-    url: selectedCollaboratorId ? `incapacidades/colaborador/${selectedCollaboratorId}` : `incapacidades/colaborador/${userID}`,
+  } = useApiQuery<IncapacidadGrupo[]>({
+    url: `incapacidades/colaborador/${selectedCollaboratorId}`,
     enabled: hasAdminPermission && Boolean(selectedCollaboratorId),
   });
 
@@ -141,36 +154,53 @@ export const RegistroIncapacidades = () => {
     }
   }, [hasAdminPermission, selectedCollaboratorId, refetchOtherIncapacidades]);
 
-  const otherIncapacidades = otherIncapacidadesResponse.rows;
-
   const renderIncapacidadesList = useCallback(
-    (items: IncapacidadListItem[], isLoading: boolean, emptyMessage: string) => (
+    (items: IncapacidadGrupo[], isLoading: boolean, emptyMessage: string) => (
       <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
         <ScrollArea.Viewport>
           <Stack gap={4}>
             {isLoading && <AppLoader />}
             {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
-            {items.map((item) => (
-              <Box key={item.id_incapacidad} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
-                <Box flex="1">
-                  <Text fontWeight="semibold">
-                    {toTitleCase(item.tipo_incapacidad?.nombre ?? item.tipo_incap ?? "")}
+            {items.map((item) => {
+              const tipoRaw = item.tipo_incapacidad?.replace(/_/g, " ") ?? "";
+              const tipoLabel = tipoRaw
+                ? tipoRaw.toUpperCase() === tipoRaw
+                  ? tipoRaw
+                  : toTitleCase(tipoRaw)
+                : "Tipo no definido";
+
+              const titulo = `Incapacidad - ${formatDateLong(item.fecha_inicio)} hasta ${formatDateLong(item.fecha_fin)}`;
+
+              return (
+                <Box
+                  key={item.grupo ?? `${item.fecha_inicio}-${item.fecha_fin}`}
+                  p={4}
+                  borderRadius="lg"
+                  bg="gray.50"
+                  _hover={{ bg: "gray.100", cursor: "pointer" }}
+                  onClick={() => item.grupo && navigate(`/incapacidades/${item.grupo}`)}
+                  transition="background 0.15s"
+                >
+                  <Text fontWeight="semibold" fontSize="sm">{titulo}</Text>
+                  <Text fontSize="xs" color="gray.600" mt="1">
+                    {tipoLabel}
                   </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {item.fecha_inicio} → {item.fecha_fin}
-                  </Text>
-                  <Text mt={2} fontSize="xs" color="gray.500">
-                    Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
-                  </Text>
+                  <HStack gap="1" mt="3" wrap="wrap">
+                    {item.dias.map((dia) => (
+                      <Badge key={dia.id_jornada} variant="surface" colorPalette="blue" size="sm">
+                        {formatDateLong(dia.fecha)}
+                      </Badge>
+                    ))}
+                  </HStack>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Stack>
         </ScrollArea.Viewport>
         <ScrollArea.Scrollbar orientation="vertical" />
       </ScrollArea.Root>
     ),
-    [getDurationLabel],
+    [navigate],
   );
 
   const handleOtherCollaboratorSubmit = useCallback(
@@ -182,10 +212,10 @@ export const RegistroIncapacidades = () => {
     [],
   );
 
-  const handleCreateRequest = async (incapacidad: Incapacidad) => {
+  const handleCreateRequest = async (incapacidad: CrearIncapacidadPayload) => {
     try {
       await createIncapacidad(incapacidad);
-      await refecthIncapacidades();
+      await refetchIncapacidades();
       return true;
     } catch (error) {
       console.log(error);
@@ -195,7 +225,7 @@ export const RegistroIncapacidades = () => {
 
   return (
     <Layout pageTitle="Registro Incapacidades">
-      <Grid templateColumns={{ base: "1fr", lg: "500px 1fr" }} gap={{ base: 4, lg: 6 }}>
+      <Grid templateColumns={{ base: "1fr", lg: "750px 1fr" }} gap={{ base: 4, lg: 6 }}>
         <GridItem>
           <Box bg="white" borderRadius="xl" boxShadow="md" p={6} h={{ base: "auto", lg: "full" }}>
             <Heading size="sm" mb={4}>

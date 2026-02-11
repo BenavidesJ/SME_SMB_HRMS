@@ -9,48 +9,96 @@ import { AppLoader } from "../../../components/layout/loading";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
-import type { EmployeeRow } from "../../../types";
+import { showToast } from "../../../services/toast/toastService";
+import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { toTitleCase } from "../../../utils";
 
-interface TipoPermiso {
-  id: number;
-  tipo_solicitud: string;
-  es_licencia: boolean,
-  es_permiso: boolean
-}
+type PermisoTipo = "GOCE" | "SIN_GOCE";
 
 interface PermisoPayload {
   id_colaborador: number;
   id_aprobador: number;
-  tipo_solicitud: number;
   fecha_inicio: string;
   fecha_fin: string;
-  con_goce_salarial: boolean;
+  tipo_permiso: PermisoTipo;
   observaciones?: string;
 }
 
-interface PermisoListItem extends PermisoPayload {
+interface PermisoListItem {
   id_solicitud: number;
-  estado_solicitud?: number;
-  cantidad_horas?: string;
-  cantidad_dias?: string;
+  id_colaborador: number;
+  id_aprobador: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  estado_solicitud?: string | null;
+  con_goce_salarial: boolean;
+  cantidad_dias?: string | null;
+  cantidad_horas?: string | null;
+  tipo_permiso?: string | null;
   tiposSolicitud?: {
-    id_tipo_solicitud: number;
+    id_tipo_solicitud: number | null;
     tipo_solicitud: string;
     es_permiso: boolean;
     es_licencia: boolean;
-  };
+  } | null;
   estadoSolicitudPermisos?: {
     id_estado: number;
     estado: string;
-  };
+  } | null;
+  dias_solicitados?: string | null;
+  dias_aprobados?: string | null;
+  dias_solicitados_detalle?: string[];
+  dias_skipped_detalle?: Array<{
+    date: string;
+    reason: string;
+    holiday: string | null;
+  }>;
+  observaciones?: string | null;
+  meta_permiso?: {
+    chargeableDates: string[];
+    skippedDates: Array<{
+      date: string;
+      reason: string;
+      holiday: string | null;
+    }>;
+  } | null;
 }
 
-type CreatePermisoFormValues = Pick<PermisoPayload, "tipo_solicitud" | "fecha_inicio" | "fecha_fin" | "observaciones">;
+interface PermisoCreateResponse {
+  id_solicitud: number;
+  id_colaborador: number;
+  id_aprobador: number;
+  estado_solicitud: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  con_goce_salarial: boolean;
+  cantidad_dias: number;
+  cantidad_horas: number;
+  tipo_permiso: PermisoTipo;
+  warnings?: string[];
+}
+
+interface PermisoUpdateResponse {
+  id_solicitud: number;
+  estado_solicitud: string;
+  fechas_registradas?: string[];
+}
+
+type CreatePermisoFormValues = {
+  id_aprobador: string;
+  tipo_permiso: PermisoTipo | "";
+  fecha_inicio: string;
+  fecha_fin: string;
+  observaciones?: string;
+};
+
+const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
+  { code: "GOCE", label: "Permiso con goce salarial" },
+  { code: "SIN_GOCE", label: "Permiso sin goce salarial" },
+];
 
 const estadoBadgeProps = (estado?: string) => {
-  const key = estado?.toUpperCase();
-  switch (key) {
+  switch (estado?.toUpperCase()) {
     case "PENDIENTE":
       return { colorPalette: "yellow", variant: "subtle" as const };
     case "APROBADO":
@@ -65,17 +113,15 @@ const estadoBadgeProps = (estado?: string) => {
 };
 
 export const SolicitudPermisos = () => {
-
   const { user } = useAuth();
   const userID = user?.id;
-  const loggedUserRole = user?.usuario?.roles;
+  const loggedUserRole = user?.usuario?.rol;
+  const [activeTab, setActiveTab] = useState<"mine" | "others">("mine");
 
   const hasAdminPermission = useMemo(
-    () => (loggedUserRole ?? []).some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN"),
+    () => (loggedUserRole ? ["ADMINISTRADOR", "SUPER_ADMIN"].includes(loggedUserRole) : false),
     [loggedUserRole],
   );
-
-  const { data: tiposPermiso = [] } = useApiQuery<TipoPermiso[]>({ url: "permisos/tipos-solicitud" });
 
   const {
     data: permisosResponse = [],
@@ -88,11 +134,19 @@ export const SolicitudPermisos = () => {
 
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
+  const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
+    if (!usuario) return false;
+    if (typeof usuario.estado === "string") return usuario.estado.toUpperCase() === "ACTIVO";
+    if (typeof usuario.estado === "number") return usuario.estado === 1;
+    return Boolean(usuario.estado);
+  };
+
   const colaboradoresActivos = useMemo(
     () =>
-      (employees ?? []).filter((colaborador) =>
-        colaborador?.usuario?.activo ? colaborador.estado.toUpperCase() === "ACTIVO" : true,
-      ),
+      (employees ?? []).filter((colaborador) => {
+        const estadoNombre = (colaborador.estado?.nombre ?? "").toUpperCase();
+        return isUsuarioActivo(colaborador.usuario) ? estadoNombre === "ACTIVO" : true;
+      }),
     [employees],
   );
 
@@ -103,22 +157,46 @@ export const SolicitudPermisos = () => {
     return colaboradoresActivos;
   }, [colaboradoresActivos, hasAdminPermission, userID]);
 
-  const colaboradorOptions = useMemo(() => {
-    return colaboradoresVisibles.map((colaborador) => {
-      const collaboratorId = colaborador.id;
-      const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-      const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${collaboratorId}`;
-      const suffix = collaboratorId === userID ? " (Para mí)" : "";
-      return { label: `${displayName}${suffix}`, value: String(collaboratorId) };
-    });
-  }, [colaboradoresVisibles, userID]);
+  const colaboradorOptions = useMemo(
+    () =>
+      (colaboradoresVisibles ?? []).map((colaborador) => {
+        const collaboratorId = colaborador.id;
+        const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${collaboratorId}`;
+        const suffix = collaboratorId === userID ? " (Para mí)" : "";
+        return { label: `${displayName}${suffix}`, value: String(collaboratorId) };
+      }),
+    [colaboradoresVisibles, userID],
+  );
+
+  const adminOptions = useMemo(
+    () =>
+      (employees ?? [])
+        .filter((colaborador) => {
+          const roleName = colaborador.usuario?.rol;
+          return roleName === "ADMINISTRADOR" || roleName === "SUPER_ADMIN";
+        })
+        .map((colaborador) => {
+          const collaboratorId = colaborador.id;
+          const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${collaboratorId}`;
+          return { label: displayName, value: String(collaboratorId) };
+        }),
+    [employees],
+  );
+
+  const defaultApproverId = useMemo(() => adminOptions[0]?.value ?? "", [adminOptions]);
+  const formKey = useMemo(() => `permisos-form-${defaultApproverId}`, [defaultApproverId]);
 
   const tipoPermisoOptions = useMemo(
-    () => tiposPermiso.map((tipo) => ({ label: toTitleCase(tipo.tipo_solicitud), value: String(tipo.id) })),
-    [tiposPermiso],
+    () => PERMISO_TIPOS.map((tipo) => ({ label: tipo.label, value: tipo.code })),
+    [],
   );
 
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
@@ -144,9 +222,23 @@ export const SolicitudPermisos = () => {
     }
   }, [hasAdminPermission, selectedCollaboratorId, refetchOtherPermisos]);
 
-  const { mutate: createPermiso, isLoading: isSubmitting } = useApiMutation<PermisoPayload, void>({
+  useEffect(() => {
+    if (activeTab === "others" && !selectedCollaboratorId && colaboradorOptions.length > 0) {
+      setSelectedCollaboratorId(colaboradorOptions[0].value);
+    }
+  }, [activeTab, colaboradorOptions, selectedCollaboratorId]);
+
+  const { mutate: createPermiso, isLoading: isSubmitting } = useApiMutation<PermisoPayload, PermisoCreateResponse>({
     url: "/permisos",
     method: "POST",
+  });
+
+  const {
+    mutate: updatePermisoEstado,
+    isLoading: isUpdatingPermiso,
+  } = useApiMutation<{ nuevo_estado: "APROBADO" | "RECHAZADO" }, PermisoUpdateResponse, number>({
+    url: (idSolicitud) => `/permisos/solicitud/${idSolicitud}`,
+    method: "PATCH",
   });
 
   const getDurationLabel = useCallback((inicio: string, fin: string) => {
@@ -161,43 +253,126 @@ export const SolicitudPermisos = () => {
     return `${totalDays} ${totalDays === 1 ? "día" : "días"}`;
   }, []);
 
+  const handleChangeEstadoPermiso = useCallback(
+    async (solicitudId: number, nuevoEstado: "APROBADO" | "RECHAZADO") => {
+      try {
+        await updatePermisoEstado(solicitudId, { nuevo_estado: nuevoEstado });
+        showToast(
+          `Solicitud ${nuevoEstado === "APROBADO" ? "aprobada" : "rechazada"} correctamente`,
+          "success",
+          "Estado de permisos",
+        );
+        await Promise.all([refetchMyPermisos(), refetchOtherPermisos()]);
+      } catch (error) {
+        console.error(error);
+        showToast("No se pudo actualizar el estado de la solicitud", "error", "Estado de permisos");
+      }
+    },
+    [updatePermisoEstado, refetchMyPermisos, refetchOtherPermisos],
+  );
+
   const renderPermisosList = useCallback(
-    (items: PermisoListItem[], isLoading: boolean, emptyMessage: string) => (
+    (
+      items: PermisoListItem[],
+      isLoading: boolean,
+      emptyMessage: string,
+      options?: { mostrarAccionesAprobador?: boolean },
+    ) => (
       <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
         <ScrollArea.Viewport>
           <Stack gap={4}>
             {isLoading && <AppLoader />}
             {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
-            {items.map((item) => (
-              <Box key={item.id_solicitud} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
-                <Text fontWeight="semibold">
-                  {toTitleCase(item.tiposSolicitud?.tipo_solicitud ?? String(item.tipo_solicitud))}
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  {item.fecha_inicio} → {item.fecha_fin}
-                </Text>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Estado: {<Badge {...estadoBadgeProps(item.estadoSolicitudPermisos?.estado)}>{toTitleCase(item.estadoSolicitudPermisos?.estado ?? "Desconocido")}</Badge>}
-                </Text>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
-                </Text>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Con goce salarial: {item.con_goce_salarial ? "Sí" : "No"}
-                </Text>
-                {item.observaciones && (
-                  <Text fontSize="xs" color="gray.500" mt={1}>
-                    Observaciones: {item.observaciones}
+            {items.map((item) => {
+              const estadoActual = (item.estadoSolicitudPermisos?.estado ?? item.estado_solicitud ?? "").toUpperCase();
+              const canShowAcciones =
+                options?.mostrarAccionesAprobador &&
+                item.id_aprobador === userID &&
+                estadoActual === "PENDIENTE";
+              const tipoFromCatalog = PERMISO_TIPOS.find(
+                (tipo) => tipo.code === String(item.tipo_permiso ?? "").toUpperCase(),
+              )?.label;
+              const tipoLabel = toTitleCase(item.tiposSolicitud?.tipo_solicitud ?? tipoFromCatalog ?? (item.tipo_permiso ?? "Tipo de permiso"));
+              const skippedDates = item.dias_skipped_detalle ?? [];
+
+              return (
+                <Box key={item.id_solicitud} p={4} borderRadius="lg" bg="gray.50" _hover={{ bg: "gray.100" }}>
+                  <Text fontWeight="semibold">{tipoLabel}</Text>
+                  <Text fontSize="sm" color="gray.600">
+                    {item.fecha_inicio} → {item.fecha_fin}
                   </Text>
-                )}
-              </Box>
-            ))}
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Estado:{" "}
+                    <Badge {...estadoBadgeProps(item.estadoSolicitudPermisos?.estado ?? item.estado_solicitud ?? undefined)}>
+                      {toTitleCase(item.estadoSolicitudPermisos?.estado ?? item.estado_solicitud ?? "Desconocido")}
+                    </Badge>
+                  </Text>
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
+                  </Text>
+                  {item.dias_solicitados && (
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Días solicitados: {item.dias_solicitados}
+                    </Text>
+                  )}
+                  {item.dias_aprobados && (
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Días aprobados: {item.dias_aprobados}
+                    </Text>
+                  )}
+                  {item.cantidad_horas && (
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Horas estimadas: {item.cantidad_horas}
+                    </Text>
+                  )}
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Con goce salarial: {item.con_goce_salarial ? "Sí" : "No"}
+                  </Text>
+                  {!!skippedDates.length && (
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Días omitidos: {skippedDates.map((skip) => skip.date).join(", ")}
+                    </Text>
+                  )}
+                  {item.observaciones && (
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Observaciones: {item.observaciones}
+                    </Text>
+                  )}
+                  {canShowAcciones && (
+                    <Stack direction={{ base: "column", sm: "row" }} mt={3} gap={2}>
+                      <Button
+                        type="button"
+                        appearance="primary"
+                        size="sm"
+                        loading={isUpdatingPermiso}
+                        loadingText="Actualizando"
+                        disabled={isUpdatingPermiso}
+                        onClick={() => handleChangeEstadoPermiso(item.id_solicitud, "APROBADO")}
+                      >
+                        Aprobar
+                      </Button>
+                      <Button
+                        type="button"
+                        appearance="danger"
+                        size="sm"
+                        loading={isUpdatingPermiso}
+                        loadingText="Actualizando"
+                        disabled={isUpdatingPermiso}
+                        onClick={() => handleChangeEstadoPermiso(item.id_solicitud, "RECHAZADO")}
+                      >
+                        Rechazar
+                      </Button>
+                    </Stack>
+                  )}
+                </Box>
+              );
+            })}
           </Stack>
         </ScrollArea.Viewport>
         <ScrollArea.Scrollbar orientation="vertical" />
       </ScrollArea.Root>
     ),
-    [getDurationLabel],
+    [getDurationLabel, handleChangeEstadoPermiso, isUpdatingPermiso, userID],
   );
 
   const handleCreatePermiso = async (formValues: CreatePermisoFormValues) => {
@@ -206,30 +381,54 @@ export const SolicitudPermisos = () => {
       return false;
     }
 
-    const selectedTipo = tiposPermiso.find((tipo) => tipo.id === formValues.tipo_solicitud);
-    const normalizedNombre = (selectedTipo?.tipo_solicitud ?? "")
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toUpperCase();
+    const approverId = Number(formValues.id_aprobador);
 
-    const conGoceSalarial = normalizedNombre.includes("SIN GOCE")
-      ? false
-      : normalizedNombre.includes("CON GOCE") || normalizedNombre.includes("LICENCIA");
+    if (!Number.isFinite(approverId) || approverId <= 0) {
+      showToast("Seleccione un aprobador válido.", "error", "Solicitud de permisos");
+      return false;
+    }
+
+    const selectedTipo = PERMISO_TIPOS.find((tipo) => tipo.code === formValues.tipo_permiso);
+
+    if (!selectedTipo) {
+      showToast("Seleccione un tipo de permiso válido.", "error", "Solicitud de permisos");
+      return false;
+    }
 
     const payload: PermisoPayload = {
-      ...formValues,
       id_colaborador: Number(userID),
-      id_aprobador: 1,
-      con_goce_salarial: conGoceSalarial,
-      observaciones: "N/A"
+      id_aprobador: approverId,
+      fecha_inicio: formValues.fecha_inicio,
+      fecha_fin: formValues.fecha_fin,
+      tipo_permiso: selectedTipo.code,
+      ...(formValues.observaciones ? { observaciones: formValues.observaciones } : {}),
     };
 
     try {
-      await createPermiso(payload);
+      const result = await createPermiso(payload);
+
+      showToast("Solicitud de permiso registrada", "success", "Solicitud de permisos");
+
+      if (typeof result?.cantidad_dias === "number") {
+        showToast(
+          `Esta solicitud cubre ${result.cantidad_dias} ${result.cantidad_dias === 1 ? "día" : "días"} laborables.`,
+          "info",
+          "Cálculo de permisos",
+        );
+      }
+
+      if (Array.isArray(result?.warnings)) {
+        result.warnings.forEach((warning, index) => {
+          if (!warning) return;
+          showToast(warning, "warning", index === 0 ? "Avisos del periodo" : undefined);
+        });
+      }
+
       await refetchMyPermisos();
       if (hasAdminPermission && payload.id_colaborador === Number(selectedCollaboratorId)) {
         await refetchOtherPermisos();
       }
+
       return true;
     } catch (error) {
       console.error(error);
@@ -254,7 +453,15 @@ export const SolicitudPermisos = () => {
               Permisos registrados
             </Heading>
 
-            <Tabs.Root variant="line" defaultValue="mine">
+            <Tabs.Root
+              variant="line"
+              value={activeTab}
+              onValueChange={(details) => {
+                if (details.value === "mine" || details.value === "others") {
+                  setActiveTab(details.value);
+                }
+              }}
+            >
               <Tabs.List>
                 <Tabs.Trigger value="mine">
                   <LuUser />
@@ -290,7 +497,9 @@ export const SolicitudPermisos = () => {
                           isLoadingEmployees ? "Cargando colaboradores..." : "Seleccione un colaborador"
                         }
                         options={colaboradorOptions}
-                        selectRootProps={{ disabled: isLoadingEmployees || colaboradorOptions.length === 0 }}
+                        selectRootProps={{
+                          disabled: isLoadingEmployees || colaboradorOptions.length === 0,
+                        }}
                         rules={{ required: "El campo es obligatorio" }}
                       />
                     </Wrap>
@@ -308,6 +517,7 @@ export const SolicitudPermisos = () => {
                         otherPermisos,
                         isLoadingOtherPermisos,
                         "No hay permisos registrados",
+                        { mostrarAccionesAprobador: true },
                       )
                     ) : (
                       <EmptyStateIndicator title="Seleccione un colaborador para consultar" />
@@ -321,20 +531,35 @@ export const SolicitudPermisos = () => {
 
         <GridItem>
           <Box bg="white" borderRadius="xl" boxShadow="md" p={6}>
-            <Form onSubmit={handleCreatePermiso} resetOnSuccess>
+            <Form
+              key={formKey}
+              onSubmit={handleCreatePermiso}
+              resetOnSuccess
+              defaultValues={{ id_aprobador: defaultApproverId }}
+            >
               <Wrap maxW="600px">
                 <InputField
                   fieldType="select"
+                  label="Aprobador"
+                  name="id_aprobador"
+                  required
+                  disableSelectPortal
+                  placeholder={
+                    isLoadingEmployees ? "Cargando aprobadores..." : "Seleccione un aprobador"
+                  }
+                  options={adminOptions}
+                  selectRootProps={{ disabled: isLoadingEmployees || adminOptions.length === 0 }}
+                  rules={{ required: "El campo es obligatorio" }}
+                />
+                <InputField
+                  fieldType="select"
                   label="Tipo de permiso"
-                  name="tipo_solicitud"
+                  name="tipo_permiso"
                   required
                   disableSelectPortal
                   placeholder={tipoPermisoOptions.length ? "Seleccione un tipo" : "Cargando..."}
                   options={tipoPermisoOptions}
-                  rules={{
-                    required: "El campo es obligatorio",
-                    setValueAs: (v) => (v ? Number(v) : undefined),
-                  }}
+                  rules={{ required: "El campo es obligatorio" }}
                   selectRootProps={{ disabled: tipoPermisoOptions.length === 0 }}
                 />
                 <InputField
@@ -371,6 +596,7 @@ export const SolicitudPermisos = () => {
                   type="submit"
                   size="lg"
                   w="100%"
+                  disabled={!adminOptions.length}
                 >
                   Registrar permiso
                 </Button>

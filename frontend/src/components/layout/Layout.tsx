@@ -22,10 +22,10 @@ export const Layout = ({ children, pageTitle }: LayoutProps) => {
       <Box h="100vh" display="flex" flexDirection="column" overflow="hidden">
         <TopNavBar
           leftContent={
-            <>
+            <Flex alignItems="center">
               <Image src={logo} height="50px" alt="Logo" />
-              <Heading as="h1">BioAlquimia</Heading>
-            </>}
+              <Heading as="h1" mt="2">BioAlquimia</Heading>
+            </Flex>}
 
           rightContent={
             <Button

@@ -31,7 +31,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.message) {
       const msg =
-        error.response.data.message || error.response.data.error ||  'Error en la respuesta del servidor.';
+        error.response.data.message || error.response.data.error || 'Error en la respuesta del servidor.';
       showToast(msg, 'error');
     } else if (error.request) {
       showToast('No se recibió respuesta del servidor.', 'warning');

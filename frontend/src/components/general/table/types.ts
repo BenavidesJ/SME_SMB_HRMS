@@ -47,6 +47,15 @@ export type DataTableActionBar = {
   renderActions?: (selectionCount: number) => React.ReactNode;
 };
 
+export type DataTableActionColumn<T> = {
+  /** Header label or node (defaults to "Acciones") */
+  header?: React.ReactNode;
+  /** Cell renderer — receives the row and returns action buttons / icons */
+  cell: (row: T) => React.ReactNode;
+  /** Fixed width for the column (defaults to "140px") */
+  w?: Table.ColumnHeaderProps["w"];
+};
+
 export interface DataTableProps<T> extends Omit<TableRootProps, "children" | "columns"> {
   columns: Array<DataTableColumn<T>>;
   data: T[];
@@ -70,8 +79,14 @@ export interface DataTableProps<T> extends Omit<TableRootProps, "children" | "co
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onRowClick?: (row: any) => void
 
-  /** Action bar (works with selection) */
+  /** Action bar (works with selection) — cannot coexist with actionColumn */
   actionBar?: DataTableActionBar;
+
+  /**
+   * Per-row actions column, sticky to the right edge.
+   * Cannot coexist with actionBar.
+   */
+  actionColumn?: DataTableActionColumn<T>;
 
   /** Empty state */
   emptyState?: React.ReactNode;

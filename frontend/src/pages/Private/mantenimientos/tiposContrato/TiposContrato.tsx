@@ -17,7 +17,7 @@ import {
   type TipoContratoRow,
 } from "../../../../services/api/tiposContrato";
 
-type TipoContratoFormCreate = { tipo: string };
+type TipoContratoFormCreate = { tipo_contrato: string };
 type TipoContratoFormEdit = { tipo_contrato: string };
 
 const TiposContrato = () => {
@@ -38,7 +38,7 @@ const TiposContrato = () => {
 
   const selectedRow = useMemo(() => {
     if (!selectedId) return null;
-    return rows.find((r) => r.id_tipo_contrato === selectedId) ?? null;
+    return rows.find((r) => r.id === selectedId) ?? null;
   }, [rows, selectedId]);
 
   const fill = useCallback(async () => {
@@ -62,7 +62,7 @@ const TiposContrato = () => {
         header: "ID",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => String(r.id_tipo_contrato),
+        cell: (r) => String(r.id),
       },
       {
         id: "tipo_contrato",
@@ -78,7 +78,7 @@ const TiposContrato = () => {
     try {
       setIsSubmitting(true);
 
-      const payload = { tipo: String(values.tipo ?? "").trim() };
+      const payload = { tipo_contrato: String(values.tipo_contrato ?? "").trim() };
       await createContractType(payload);
 
       await fill();
@@ -161,7 +161,7 @@ const TiposContrato = () => {
               enabled: true,
               selectedKeys: selection,
               onChange: setSelection,
-              getRowKey: (r) => String(r.id_tipo_contrato),
+              getRowKey: (r) => String(r.id),
             }}
             actionBar={{
               enabled: true,
@@ -208,13 +208,13 @@ const TiposContrato = () => {
           <Form<TipoContratoFormCreate>
             onSubmit={handleCreate}
             resetOnSuccess
-            defaultValues={{ tipo: "" }}
+            defaultValues={{ tipo_contrato: "" }}
           >
             <SimpleGrid columns={1} gapX="1rem">
               <InputField
                 fieldType="text"
-                label="Tipo"
-                name="tipo"
+                label="Tipo de Contrato"
+                name="tipo_contrato"
                 required
                 rules={{
                   required: "El campo es obligatorio",

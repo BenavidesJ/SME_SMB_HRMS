@@ -11,7 +11,7 @@ export const showToast = (
     title,
     description,
     type: variant,
-    duration: 800,
+    duration: 2000,
     closable: true,
   });
 };

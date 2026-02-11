@@ -1,67 +1,68 @@
-import { sequelize } from "../config/db.js";
+import { models, sequelize } from "../models/index.js";
 
-import { Rol } from "../models/rol.js";
-import { Genero } from "../models/genero.js";
-import { Estado } from "../models/estado.js";
-import { EstadoCivil } from "../models/estado_civil.js";
-import { Departamento } from "../models/departamento.js";
-import { Puesto } from "../models/puesto.js";
-import { TipoContrato } from "../models/tipo_contrato.js";
-import { TipoJornada } from "../models/tipo_jornada.js";
-import { CicloPago } from "../models/ciclo_pago.js";
-import { TipoIncapacidad } from "../models/tipo_incapacidad.js";
-import { TipoSolicitud } from "../models/tipo_solicitud.js";
-import { TipoMarca } from "../models/tipo_marca.js";
+const {
+  Estado,
+  EstadoCivil,
+  Departamento,
+  Puesto,
+  TipoContrato,
+  TipoJornada,
+  CicloPago,
+  TipoIncapacidad,
+  TipoMarca,
+  Feriado,
+  Deduccion,
+} = models;
+
+async function ensureEstado(value, transaction) {
+  const existing = await Estado.findOne({ where: { estado: value }, transaction });
+  if (existing) return existing;
+
+  const nextId = (Number(await Estado.max("id_estado", { transaction })) || 0) + 1;
+  return Estado.create({ id_estado: nextId, estado: value }, { transaction });
+}
+
+async function upsertRows(model, rows, transaction) {
+  for (const row of rows) {
+    await model.upsert(row, { transaction });
+  }
+}
+
+async function upsertFeriados(rows, transaction) {
+  for (const row of rows) {
+    const existing = await Feriado.findOne({ where: { fecha: row.fecha }, transaction });
+    if (existing) {
+      await existing.update(row, { transaction });
+    } else {
+      await Feriado.create(row, { transaction });
+    }
+  }
+}
+
+async function upsertDeducciones(rows, transaction) {
+  for (const row of rows) {
+    const existing = await Deduccion.findOne({ where: { nombre: row.nombre }, transaction });
+    if (existing) {
+      await existing.update(row, { transaction });
+    } else {
+      await Deduccion.create(row, { transaction });
+    }
+  }
+}
 
 export async function seedCatalogosBase() {
   const t = await sequelize.transaction();
   try {
-    await Rol.bulkCreate(
-      [
-        { nombre: "SUPER_ADMIN" },
-        { nombre: "ADMINISTRADOR" },
-        { nombre: "EMPLEADO" },
-      ],
-      { transaction: t, updateOnDuplicate: ["nombre"] },
-    );
-
-    for (const row of [{ genero: "MASCULINO" }, { genero: "FEMENINO" }]) {
-      await Genero.findOrCreate({
-        where: { genero: row.genero },
-        defaults: row,
-        transaction: t,
-      });
+    const estadosBase = ["ACTIVO", "INACTIVO", "PENDIENTE", "APROBADO", "CANCELADO", "RECHAZADO"];
+    const estadosCreados = [];
+    for (const value of estadosBase) {
+      const estado = await ensureEstado(value, t);
+      estadosCreados.push(estado);
     }
 
-    for (const row of [{ nombre: "ENFERMEDAD" }, { nombre: "MATERNIDAD" }, { nombre: "ACCIDENTE_TRANSITO" }]) {
-      await TipoIncapacidad.findOrCreate({
-        where: { nombre: row.nombre },
-        defaults: row,
-        transaction: t,
-      });
-    }
+    const estadoActivo = estadosCreados.find((estado) => estado.estado === "ACTIVO");
 
-    await TipoSolicitud.bulkCreate(
-      [
-        { tipo_solicitud: "CON GOCE", es_licencia: false, es_permiso: true },
-        { tipo_solicitud: "SIN GOCE", es_licencia: false, es_permiso: true },
-        { tipo_solicitud: "LICENCIA", es_licencia: true, es_permiso: false },
-      ],
-      { transaction: t, updateOnDuplicate: ["es_licencia", "es_permiso"] },
-    );
-
-    await TipoMarca.bulkCreate(
-      [{ nombre: "ENTRADA" }, { nombre: "SALIDA" }],
-      { transaction: t, updateOnDuplicate: ["nombre"] },
-    );
-
-    for (const row of [{ estado: "ACTIVO" }, { estado: "INACTIVO" },{ estado: "PENDIENTE" }, { estado: "APROBADO" },{ estado: "CANCELADO" },{ estado: "RECHAZADO" }    ]) {
-      await Estado.findOrCreate({
-        where: { estado: row.estado },
-        defaults: row,
-        transaction: t,
-      });
-    }
+    if (!estadoActivo) throw new Error("No se pudo crear/obtener el estado ACTIVO");
 
     for (const row of [{ estado_civil: "SOLTERO" }, { estado_civil: "CASADO" }]) {
       await EstadoCivil.findOrCreate({
@@ -71,16 +72,8 @@ export async function seedCatalogosBase() {
       });
     }
 
-    const estadoActivo = await Estado.findOne({
-      where: { estado: "ACTIVO" },
-      transaction: t,
-    });
-
-    if (!estadoActivo) {
-      throw new Error("No se encontró el estado ACTIVO");
-    }
-
-    await Departamento.bulkCreate(
+    await upsertRows(
+      Departamento,
       [
         { id_departamento: 7, nombre: "CONTABILIDAD" },
         { id_departamento: 6, nombre: "SERVICIO AL CLIENTE" },
@@ -89,78 +82,69 @@ export async function seedCatalogosBase() {
         { id_departamento: 2, nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
         { id_departamento: 1, nombre: "ADMINISTRACIÓN" },
       ],
-      { transaction: t, updateOnDuplicate: ["nombre"] },
+      t,
     );
 
-    await Puesto.bulkCreate(
+    await upsertRows(
+      Puesto,
       [
         {
           id_puesto: 1,
           id_departamento: 1,
-          nombre: "CO-ADMINISTRADOR",
-          sal_base_referencia_min: "420000.00",
-          sal_base_referencia_max: "800000.00",
+          nombre: "ADMINISTRADOR GENERAL",
+          es_jefe: true,
           estado: estadoActivo.id_estado,
         },
         {
           id_puesto: 2,
           id_departamento: 2,
           nombre: "INGENIERO DE SOFTWARE",
-          sal_base_referencia_min: "1200000.00",
-          sal_base_referencia_max: "1800000.00",
+          es_jefe: false,
           estado: estadoActivo.id_estado,
         },
         {
           id_puesto: 3,
           id_departamento: 7,
           nombre: "CONTADOR",
-          sal_base_referencia_min: "300000.00",
-          sal_base_referencia_max: "400000.00",
+          es_jefe: false,
           estado: estadoActivo.id_estado,
         },
         {
           id_puesto: 4,
           id_departamento: 3,
           nombre: "OPERARIO DE PRODUCCIÓN",
-          sal_base_referencia_min: "350000.00",
-          sal_base_referencia_max: "550000.00",
+          es_jefe: false,
           estado: estadoActivo.id_estado,
         },
         {
           id_puesto: 5,
           id_departamento: 5,
           nombre: "VENDEDOR",
-          sal_base_referencia_min: "300000.00",
-          sal_base_referencia_max: "650000.00",
+          es_jefe: false,
           estado: estadoActivo.id_estado,
         },
         {
           id_puesto: 6,
           id_departamento: 6,
           nombre: "OPERADOR DE SERVICIO AL CLIENTE",
-          sal_base_referencia_min: "320000.00",
-          sal_base_referencia_max: "600000.00",
+          es_jefe: false,
           estado: estadoActivo.id_estado,
         },
       ],
-      {
-        transaction: t,
-        updateOnDuplicate: [
-          "id_departamento",
-          "nombre",
-          "sal_base_referencia_min",
-          "sal_base_referencia_max",
-          "estado",
-        ],
-      },
+      t,
     );
 
-    await TipoContrato.bulkCreate(
-      [{ id_tipo_contrato: 1, tipo_contrato: "INDEFINIDO" }],
-      { transaction: t, updateOnDuplicate: ["tipo_contrato"] },
+    await upsertRows(
+      TipoContrato,
+      [
+        { id_tipo_contrato: 1, tipo_contrato: "INDEFINIDO" },
+        { id_tipo_contrato: 2, tipo_contrato: "PLAZO FIJO" },
+      ],
+      t,
     );
 
-    await TipoJornada.bulkCreate(
+    await upsertRows(
+      TipoJornada,
       [
         {
           id_tipo_jornada: 1,
@@ -181,19 +165,80 @@ export async function seedCatalogosBase() {
           max_horas_semanales: "42.00",
         },
       ],
-      {
-        transaction: t,
-        updateOnDuplicate: ["tipo", "max_horas_diarias", "max_horas_semanales"],
-      },
+      t,
     );
 
-    await CicloPago.bulkCreate(
+    await upsertRows(
+      CicloPago,
       [
-        { id_ciclo_pago: 1, nombre: "QUINCENAL" },
-        { id_ciclo_pago: 2, nombre: "MENSUAL" },
-        { id_ciclo_pago: 3, nombre: "BI-SEMANAL" },
+        { id_ciclo_pago: 1, ciclo_pago: "QUINCENAL" },
+        { id_ciclo_pago: 2, ciclo_pago: "MENSUAL" },
+        { id_ciclo_pago: 3, ciclo_pago: "BI-SEMANAL" },
       ],
-      { transaction: t, updateOnDuplicate: ["nombre"] },
+      t,
+    );
+
+    await upsertRows(
+      TipoIncapacidad,
+      [
+        { nombre: "ENFERMEDAD" },
+        { nombre: "MATERNIDAD" },
+        { nombre: "ACCIDENTE" },
+      ],
+      t,
+    );
+
+    await upsertRows(
+      TipoMarca,
+      [{ nombre: "ENTRADA" }, { nombre: "SALIDA" }],
+      t,
+    );
+
+    await upsertFeriados(
+      [
+        { fecha: "2025-01-01", nombre: "Año Nuevo", es_obligatorio: true },
+        { fecha: "2025-04-11", nombre: "Día de Juan Santamaría", es_obligatorio: true },
+        { fecha: "2025-04-17", nombre: "Jueves Santo", es_obligatorio: true },
+        { fecha: "2025-04-18", nombre: "Viernes Santo", es_obligatorio: true },
+        { fecha: "2025-05-01", nombre: "Día Internacional del Trabajo", es_obligatorio: true },
+        { fecha: "2025-07-25", nombre: "Anexión del Partido de Nicoya", es_obligatorio: true },
+        { fecha: "2025-08-02", nombre: "Virgen de los Ángeles", es_obligatorio: true },
+        { fecha: "2025-08-15", nombre: "Día de la Madre", es_obligatorio: true },
+        { fecha: "2025-09-15", nombre: "Día de la Independencia", es_obligatorio: true },
+        { fecha: "2025-12-25", nombre: "Navidad", es_obligatorio: true },
+        { fecha: "2026-01-01", nombre: "Año Nuevo", es_obligatorio: true },
+        { fecha: "2026-04-11", nombre: "Día de Juan Santamaría", es_obligatorio: true },
+        { fecha: "2026-04-02", nombre: "Jueves Santo", es_obligatorio: true },
+        { fecha: "2026-04-03", nombre: "Viernes Santo", es_obligatorio: true },
+        { fecha: "2026-05-01", nombre: "Día Internacional del Trabajo", es_obligatorio: true },
+        { fecha: "2026-07-25", nombre: "Anexión del Partido de Nicoya", es_obligatorio: true },
+        { fecha: "2026-08-02", nombre: "Virgen de los Ángeles", es_obligatorio: true },
+        { fecha: "2026-08-15", nombre: "Día de la Madre", es_obligatorio: true },
+        { fecha: "2026-09-15", nombre: "Día de la Independencia", es_obligatorio: true },
+        { fecha: "2026-12-25", nombre: "Navidad", es_obligatorio: true },
+      ],
+      t,
+    );
+
+    await upsertDeducciones(
+      [
+        {
+          nombre: "CCSS SEM (Enfermedad y Maternidad)",
+          valor: 5.5,
+          es_voluntaria: false,
+        },
+        {
+          nombre: "CCSS IVM (Invalidez Vejez Muerte)",
+          valor: 4.33,
+          es_voluntaria: false,
+        },
+        {
+          nombre: "Banco Popular - Aporte trabajador",
+          valor: 1.0,
+          es_voluntaria: false,
+        },
+      ],
+      t,
     );
 
     await t.commit();

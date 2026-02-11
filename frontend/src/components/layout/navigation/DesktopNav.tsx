@@ -20,21 +20,26 @@ export const DesktopNav = () => {
   const debounceRef = useRef<number | null>(null);
   const { user } = useAuth();
 
-  const userRoles = user?.usuario?.roles || [];
+  const userRoles = user?.usuario?.rol;
+
+  const rolesArray = useMemo(
+    () => (Array.isArray(userRoles) ? userRoles : [userRoles]),
+    [userRoles]
+  );
 
   const filteredMainNav = useMemo(() => {
     return NAV_MAIN.filter(item => {
       if (!item.roles || item.roles.length === 0) return true;
-      return item.roles.some(role => userRoles.includes(role));
+      return item.roles.some(role => rolesArray.includes(role));
     });
-  }, [userRoles]);
+  }, [rolesArray]);
 
   const filteredSettingsNav = useMemo(() => {
     return NAV_SETTINGS.filter(item => {
       if (!item.roles || item.roles.length === 0) return true;
-      return item.roles.some(role => userRoles.includes(role));
+      return item.roles.some(role => rolesArray.includes(role));
     });
-  }, [userRoles]);
+  }, [rolesArray]);
 
   const [modules, setModules] = useState(filteredMainNav);
 

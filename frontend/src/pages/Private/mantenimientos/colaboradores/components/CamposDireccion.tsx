@@ -13,7 +13,7 @@ type DireccionFieldsProps = {
   mode?: "create" | "edit";
 };
 
-export function DireccionFields({ provincias, mode = "create" }: DireccionFieldsProps) {
+export function DireccionFields({ provincias = [], mode = "create" }: DireccionFieldsProps) {
   const { setValue, getValues } = useFormContext();
 
   const provinciaNombre = useWatch({ name: "provincia" }) as string;
@@ -45,12 +45,20 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
   );
 
   const findProvinciaIdByNombre = useCallback(
-    (nombre: string) => provincias.find((p) => p.nombre === nombre)?.id_provincia,
+    (nombre: string) => {
+      const provincia = provincias.find((p) => p.nombre === nombre);
+      if (!provincia) return undefined;
+      return (provincia as Provincia).id_provincia ?? (provincia as Provincia & { id?: number }).id;
+    },
     [provincias],
   );
 
   const findCantonIdByNombre = useCallback(
-    (nombre: string) => cantones.find((c) => c.nombre === nombre)?.id_canton,
+    (nombre: string) => {
+      const canton = cantones.find((c) => c.nombre === nombre);
+      if (!canton) return undefined;
+      return (canton as Canton).id_canton ?? (canton as Canton & { id?: number }).id;
+    },
     [cantones],
   );
 
@@ -91,7 +99,7 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
       setLoadingCantones(true);
       try {
         const resp = await getCantonesPorProvincia(provinciaId);
-        const nextCantones = resp.data.data.cantones as Canton[];
+        const nextCantones = (resp.data.data as unknown as Canton[]) ?? [];
         setCantones(nextCantones);
       } finally {
         setLoadingCantones(false);
@@ -103,11 +111,6 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
     run();
   }, [provinciaNombre, findProvinciaIdByNombre, setValue, mode]);
 
-  /**
-   * Carga distritos por cantón.
-   * - create: resetea distrito al cambiar cantón
-   * - edit: NO resetea si es hidratación inicial; solo asegura lista
-   */
   useEffect(() => {
     const run = async () => {
       if (!cantonNombre) {
@@ -138,7 +141,7 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
       setLoadingDistritos(true);
       try {
         const resp = await getDistritosPorCanton(cantonId);
-        const nextDistritos = resp.data.data.distritos as Distrito[];
+        const nextDistritos = (resp.data.data as unknown as Distrito[]) ?? [];
         setDistritos(nextDistritos);
       } finally {
         setLoadingDistritos(false);
@@ -150,16 +153,9 @@ export function DireccionFields({ provincias, mode = "create" }: DireccionFields
     run();
   }, [cantonNombre, findCantonIdByNombre, setValue, mode]);
 
-  /**
-   * ✅ “Hidratación” para edit:
-   * Cuando el form ya trae defaults (provincia/canton/distrito),
-   * marcamos hydratedRef = true para que después sí haga cascada
-   * si el usuario cambia provincia/canton manualmente.
-   */
   useEffect(() => {
     if (mode !== "edit") return;
 
-    // si ya hay valores iniciales, marcamos como hidratado
     const prov = getValues("provincia") as string;
     const cant = getValues("canton") as string;
 
