@@ -28,7 +28,7 @@ export function AppBreadcrumb() {
   const roles = useMemo(() => {
     if (!user) return [];
     const { usuario } = user;
-    return usuario?.roles ?? []
+    return usuario?.rol ? [usuario.rol] : []
   }, [user])
 
   const index = useMemo(() => {

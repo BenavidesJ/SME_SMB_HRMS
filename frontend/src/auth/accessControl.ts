@@ -23,35 +23,36 @@ const matchesRule = (rule: AccessRule, path: string) => {
 
 export const ACCESS_RULES: AccessRule[] = [
   // Mantenimientos y consultas
-  { path: "/mantenimientos-consultas", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/mantenimientos-consultas", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Planillas
-  { path: "/planillas", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
-  { path: "/planillas/periodo_planilla", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/planillas", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
+  { path: "/planillas/periodo_planilla", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Asistencia
-  { path: "/asistencia", roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"], match: "prefix" },
-  { path: "/asistencia/gestion", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/asistencia", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
+  { path: "/asistencia/gestion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Horas extra
-  { path: "/horas-extra", roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"], match: "prefix" },
-  { path: "/horas-extra/gestion", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/horas-extra", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
+  { path: "/horas-extra/gestion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Vacaciones
-  { path: "/vacaciones", roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"], match: "prefix" },
-  { path: "/vacaciones/gestion", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/vacaciones", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
+  { path: "/vacaciones/gestion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Permisos
-  { path: "/permisos", roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"], match: "prefix" },
-  { path: "/permisos/gestion", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/permisos", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
+  { path: "/permisos/gestion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Incapacidades
-  { path: "/incapacidades", roles: ["SUPER_ADMIN", "ADMIN", "EMPLEADO"], match: "prefix" },
+  { path: "/incapacidades", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
 
   // Otras secciones
-  { path: "/aguinaldos", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
-  { path: "/liquidaciones", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
-  { path: "/evaluacion", roles: ["SUPER_ADMIN", "ADMIN"], match: "prefix" },
+  { path: "/aguinaldos", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
+  { path: "/liquidaciones", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
+  { path: "/reportes", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
+  { path: "/evaluacion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 ];
 
 export const getAllowedRolesForPath = (path: string): string[] | undefined => {

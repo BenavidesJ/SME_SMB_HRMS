@@ -7,7 +7,6 @@ import "dayjs/locale/es";
 import {
   Avatar,
   Badge,
-  Box,
   Button,
   Card,
   CloseButton,
@@ -33,6 +32,7 @@ interface SolicitudCardProps {
   onApprove?: (id: number) => void;
   onDecline?: (id: number) => void;
   isSubmitting?: boolean;
+  canManageActions?: boolean;
 }
 
 const estadoBadgeProps = (estado: string) => {
@@ -82,6 +82,7 @@ export const SolicitudCard = ({
   onApprove,
   onDecline,
   isSubmitting = false,
+  canManageActions = false,
 }: SolicitudCardProps) => {
   const estado = item.estado.estado;
 
@@ -135,16 +136,9 @@ export const SolicitudCard = ({
             </Stack>
           </GridItem>
         </Grid>
-
-        <Box mt={3} fontSize="sm">
-          <Text color="fg.muted" mb={1}>
-            Justificación
-          </Text>
-          <Text>{item.justificacion}</Text>
-        </Box>
       </Card.Body>
 
-      {estado === "PENDIENTE" && (
+      {estado === "PENDIENTE" && canManageActions && (
         <Card.Footer pt={3} px={0}>
           <HStack w="full" justify="end">
             {/* RECHAZAR - con confirmación */}

@@ -1,2 +1,3 @@
-export * from "./apiError";
+export * from "./ApiError";
 export * from "./request";
+export * from "./reportes";

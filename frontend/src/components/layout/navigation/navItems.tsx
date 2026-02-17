@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { FiUsers, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome, FiUser } from "react-icons/fi";
+import { FiUsers, FiTable, FiAward, FiBatteryCharging, FiScissors, FiHome, FiUser, FiBarChart2 } from "react-icons/fi";
 import { PiBank, PiCalendarCheck, PiCalendarPlus, PiHospital, PiMoney } from "react-icons/pi";
 import { rolesForPath } from "../../../auth/accessControl";
 
@@ -115,6 +115,12 @@ export const NAV_MAIN: NavItem[] = [
     icon: <FiScissors />,
     path: "/liquidaciones",
     roles: rolesForPath("/liquidaciones"),
+  },
+  {
+    label: "Reportes",
+    icon: <FiBarChart2 />,
+    path: "/reportes",
+    roles: rolesForPath("/reportes"),
   },
   {
     label: "Evaluación de Desempeño",

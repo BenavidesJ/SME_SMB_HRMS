@@ -50,7 +50,7 @@ export const autenticarUsuario = async ({ username, password }) => {
 	const rol = await models.Rol.findByPk(user.id_rol);
 
 	const payload = {
-		id: user.id_usuario,
+		id: user.colaborador.id_colaborador,
 		rol: rol.nombre
 	};
 

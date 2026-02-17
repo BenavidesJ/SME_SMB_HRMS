@@ -25,8 +25,6 @@ import { Layout } from "../../../components/layout";
 import { Button } from "../../../components/general/button/Button";
 import { extenderIncapacidad } from "../../../services/api/incapacidades";
 
-/* ── helpers ── */
-
 const InfoBlock = ({
   label,
   value,
@@ -57,8 +55,6 @@ const formatDateLong = (iso?: string | null) => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
-/* ── types ── */
-
 interface DiaIncapacidad {
   id_jornada: number;
   fecha: string;
@@ -74,8 +70,6 @@ interface IncapacidadGrupo {
   fecha_fin: string | null;
   dias: DiaIncapacidad[];
 }
-
-/* ── component ── */
 
 export default function DetalleIncapacidad() {
   const { grupo } = useParams<{ grupo: string }>();
@@ -106,7 +100,6 @@ export default function DetalleIncapacidad() {
   const totalDias = incapacidad?.dias.length ?? 0;
   const diasLaborales = incapacidad?.dias.filter((d) => d.porcentaje_patrono > 0 || d.porcentaje_ccss > 0).length ?? 0;
 
-  /* ── extend modal ── */
   const [openExtendModal, setOpenExtendModal] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
 
@@ -126,11 +119,9 @@ export default function DetalleIncapacidad() {
     }
   };
 
-  /* ── render ── */
   return (
     <Layout pageTitle="Detalle de Incapacidad">
-      <Stack gap="8">
-        {/* ═══ Header card ═══ */}
+      <Stack gap="8" marginBottom="5rem">
         <Card.Root>
           <Card.Body>
             {isLoading ? (
@@ -186,10 +177,8 @@ export default function DetalleIncapacidad() {
           </Card.Body>
         </Card.Root>
 
-        {/* ═══ Info cards ═══ */}
         {!isLoading && incapacidad && (
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap="6">
-            {/* ── General info ── */}
             <GridItem colSpan={1}>
               <Card.Root h="full">
                 <Card.Header>
@@ -223,7 +212,6 @@ export default function DetalleIncapacidad() {
               </Card.Root>
             </GridItem>
 
-            {/* ── Days summary ── */}
             <GridItem colSpan={1}>
               <Card.Root h="full">
                 <Card.Header>
@@ -243,7 +231,6 @@ export default function DetalleIncapacidad() {
           </Grid>
         )}
 
-        {/* ═══ Detailed table ═══ */}
         {!isLoading && incapacidad && (
           <Card.Root>
             <Card.Header>
@@ -298,7 +285,6 @@ export default function DetalleIncapacidad() {
         )}
       </Stack>
 
-      {/* ═══ Extend modal ═══ */}
       <Modal
         title="Extender incapacidad"
         isOpen={openExtendModal}

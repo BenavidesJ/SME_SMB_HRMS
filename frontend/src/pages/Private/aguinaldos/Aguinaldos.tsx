@@ -38,14 +38,11 @@ import type {
   AguinaldoRegistro,
 } from "../../../services/api/aguinaldos";
 
-// ── Helpers ──
 
-/** Devuelve el período default para el aguinaldo del año actual */
 function getDefaultPeriodo() {
   const now = new Date();
   const currentYear = now.getFullYear();
-  // Si estamos entre Dic-Dic, el aguinaldo es para el año actual
-  // Período: 1 Dic año-1 → 30 Nov año actual
+
   return {
     periodo_desde: `${currentYear - 1}-12-01`,
     periodo_hasta: `${currentYear}-11-30`,
@@ -60,8 +57,6 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(parsed);
 }
 
-// ── Types ──
-
 type CalcularFormValues = {
   colaboradores: (string | number)[];
   periodo_desde: string;
@@ -69,14 +64,11 @@ type CalcularFormValues = {
   fecha_pago: string;
 };
 
-// ── Component ──
-
 export const Aguinaldos = () => {
   const { user } = useAuth();
   const defaults = useMemo(() => getDefaultPeriodo(), []);
   const existentesRef = useRef<HTMLDivElement>(null);
 
-  // ── Employees data ──
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
@@ -107,7 +99,6 @@ export const Aguinaldos = () => {
 
   const hasEmployees = defaultSelectedCollaborators.length > 0;
 
-  // ── Simulation ──
   const {
     mutate: simularCalculo,
     isLoading: isSimulating,
@@ -122,7 +113,6 @@ export const Aguinaldos = () => {
     periodo_hasta: string;
   } | null>(null);
 
-  // ── Create batch ──
   const {
     mutate: crearLote,
     isLoading: isCreating,
@@ -138,7 +128,6 @@ export const Aguinaldos = () => {
     CrearLoteResponse
   >({ url: "aguinaldos/crear-lote", method: "POST" });
 
-  // ── Recalculate ──
   const {
     mutate: recalcular,
     isLoading: isRecalculating,
@@ -147,7 +136,6 @@ export const Aguinaldos = () => {
     method: "PATCH",
   });
 
-  // ── Existing records ──
   const {
     data: existingRecords = [],
     isLoading: loadingRecords,
@@ -157,8 +145,6 @@ export const Aguinaldos = () => {
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<number>>(
     new Set(),
   );
-
-  // ── Handlers ──
 
   const handleSimular = async (values: CalcularFormValues) => {
     const collaboratorIds = (values.colaboradores ?? [])
@@ -205,7 +191,6 @@ export const Aguinaldos = () => {
       return;
     }
 
-    // Derive year from periodo_hasta (Nov of year = that year's aguinaldo)
     const anio = new Date(`${values.periodo_hasta}T00:00:00`).getFullYear();
 
     try {
@@ -222,13 +207,11 @@ export const Aguinaldos = () => {
       setSimulacionMeta(null);
       refetchRecords();
     } catch (err: any) {
-      // Handle 409 conflict — redirect to existing records
       if (err?.status === 409 || err?.response?.status === 409) {
         showToast(
           "Algunos colaboradores ya tienen aguinaldo para este período. Utilice la opción de recalcular en la tabla de registros existentes.",
           "warning",
         );
-        // Scroll to existing records section
         setTimeout(() => {
           existentesRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 300);
@@ -272,19 +255,15 @@ export const Aguinaldos = () => {
     }
   };
 
-  // ── Computed ──
 
   const totalSimulado = useMemo(
     () => simulacion.reduce((acc, r) => acc + (r.monto_aguinaldo ?? 0), 0),
     [simulacion],
   );
 
-  // ── Render ──
-
   return (
     <Layout pageTitle="Aguinaldos">
-      <Stack gap="8">
-        {/* ──────── SECCIÓN: CÁLCULO ──────── */}
+      <Stack gap="8" marginBottom="5rem">
         <Form<CalcularFormValues>
           onSubmit={handleSimular}
           defaultValues={{
@@ -299,7 +278,6 @@ export const Aguinaldos = () => {
             align="flex-start"
             gap="6"
           >
-            {/* ── Panel izquierdo: Formulario ── */}
             <Card.Root
               as="section"
               w={{ base: "full", xl: "560px" }}
@@ -383,7 +361,6 @@ export const Aguinaldos = () => {
               </Card.Footer>
             </Card.Root>
 
-            {/* ── Panel derecho: Resultados de simulación ── */}
             <Stack flex="1" gap="4" w="full">
               {isSimulating ? (
                 <Stack align="center" py="10" gap="3">
@@ -392,7 +369,6 @@ export const Aguinaldos = () => {
                 </Stack>
               ) : simulacion.length > 0 ? (
                 <Stack gap="4">
-                  {/* Resumen */}
                   <Card.Root>
                     <Card.Body>
                       <SimpleGrid columns={{ base: 2, md: 3 }} gap="4">
@@ -423,7 +399,6 @@ export const Aguinaldos = () => {
                     </Card.Body>
                   </Card.Root>
 
-                  {/* Tabla de simulación */}
                   <Card.Root>
                     <Card.Header>
                       <Card.Title>Vista previa del cálculo</Card.Title>
@@ -509,8 +484,6 @@ export const Aguinaldos = () => {
         </Form>
 
         <Separator />
-
-        {/* ──────── SECCIÓN: REGISTROS EXISTENTES ──────── */}
         <div ref={existentesRef}>
           <Card.Root>
             <Card.Header>
@@ -634,8 +607,6 @@ export const Aguinaldos = () => {
     </Layout>
   );
 };
-
-// ── Sub-components ──
 
 const SelectedCollaboratorsBadges = ({
   collaboratorNameMap,

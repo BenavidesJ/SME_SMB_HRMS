@@ -95,7 +95,7 @@ const Perfil = () => {
 
   return (
     <Layout pageTitle="Perfil de Usuario">
-      <Stack gap="8">
+      <Stack gap="8" paddingBottom="5rem">
         {/* ── Header ── */}
         <Card.Root>
           <Card.Body>

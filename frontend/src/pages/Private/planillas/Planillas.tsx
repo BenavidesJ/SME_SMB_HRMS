@@ -70,7 +70,6 @@ export const Planillas = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<PeriodoPlanilla | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const dateFormatter = useMemo(
@@ -178,7 +177,6 @@ export const Planillas = () => {
     if (!confirmed) return;
 
     try {
-      setPendingDeleteId(period.id);
       await deletePeriodoPlanilla(period.id);
       await refetch();
       showToast("Periodo eliminado.", "success");
@@ -186,7 +184,6 @@ export const Planillas = () => {
       console.log(error);
       showToast("No se pudo eliminar el periodo.", "error");
     } finally {
-      setPendingDeleteId(null);
     }
   };
 

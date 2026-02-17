@@ -51,7 +51,7 @@ export const SolicitudHorasExtra = () => {
 
   const hasAdminPermission = useMemo(
     () => {
-      const userRoles = user?.usuario?.roles ?? [];
+      const userRoles = user?.usuario?.rol ? [user.usuario.rol] : [];
       return userRoles.some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN");
     },
     [user]

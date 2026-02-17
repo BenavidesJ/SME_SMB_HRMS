@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import api from "./api";
-import { ApiError } from "./apiError";
+import { ApiError } from "./ApiError";
 import type { HttpMethod } from "../../types";
 
 export async function apiRequest<TResponse, TBody = unknown>(opts: {

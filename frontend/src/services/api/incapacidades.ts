@@ -19,5 +19,5 @@ export const extenderIncapacidad = (
   grupo: string,
   data: { fecha_fin: string },
 ) => {
-  return api.patch<ApiResponse>(`incapacidades/${grupo}`, data);
+  return api.patch<ApiResponse<unknown>>(`incapacidades/${grupo}`, data);
 };

@@ -77,10 +77,7 @@ type CausaLiquidacion = {
   causa_liquidacion: string;
 };
 
-// ── Component ──
-
 export const Liquidaciones = () => {
-  // ── Employees data ──
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
@@ -95,7 +92,6 @@ export const Liquidaciones = () => {
     [employees],
   );
 
-  // ── Causas de liquidación ──
   const { data: causasData = [], isLoading: causasLoading } =
     useApiQuery<CausaLiquidacion[]>({ url: "/mantenimientos/causas-liquidacion" });
 
@@ -108,7 +104,6 @@ export const Liquidaciones = () => {
     [causasData],
   );
 
-  // ── Simulation ──
   const {
     mutate: simularCalculo,
     isLoading: isSimulating,
@@ -119,7 +114,6 @@ export const Liquidaciones = () => {
 
   const [simulacion, setSimulacion] = useState<SimulacionData | null>(null);
 
-  // ── Create ──
   const {
     mutate: crearLiquidacion,
     isLoading: isCreating,
@@ -128,14 +122,11 @@ export const Liquidaciones = () => {
     method: "POST",
   });
 
-  // ── Existing records ──
   const {
     data: existingRecords = [],
     isLoading: loadingRecords,
     refetch: refetchRecords,
   } = useApiQuery<LiquidacionRegistro[]>({ url: "liquidaciones" });
-
-  // ── Handlers ──
 
   const handleSimular = async (values: SimularFormValues) => {
     const idColaborador = Number(values.idColaborador);
@@ -175,12 +166,9 @@ export const Liquidaciones = () => {
     }
   };
 
-  // ── Render ──
-
   return (
     <Layout pageTitle="Liquidaciones">
-      <Stack gap="8">
-        {/* ──────── SECCIÓN: CÁLCULO ──────── */}
+      <Stack gap="8" marginBottom="5rem">
         <Form<SimularFormValues>
           onSubmit={handleSimular}
           defaultValues={{
@@ -301,7 +289,6 @@ export const Liquidaciones = () => {
               </Card.Footer>
             </Card.Root>
 
-            {/* ── Panel derecho: Resultados de simulación ── */}
             <Stack flex="1" gap="4" w="full">
               {isSimulating ? (
                 <Stack align="center" py="10" gap="3">
@@ -310,7 +297,6 @@ export const Liquidaciones = () => {
                 </Stack>
               ) : simulacion ? (
                 <Stack gap="4">
-                  {/* Info colaborador */}
                   <Card.Root>
                     <Card.Body>
                       <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
@@ -488,7 +474,6 @@ export const Liquidaciones = () => {
 
         <Separator />
 
-        {/* ──────── SECCIÓN: REGISTROS EXISTENTES ──────── */}
         <Card.Root>
           <Card.Header>
             <Box>
