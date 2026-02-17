@@ -28,8 +28,6 @@ export const GestionEmpleadosTabla = ({
   const nav = useNavigate();
   const pageSize = 10;
 
-  console.log(selection)
-
   const pagedEmployees = useMemo(() => {
     const start = (page - 1) * pageSize;
     return employees.slice(start, start + pageSize);
@@ -59,40 +57,32 @@ export const GestionEmpleadosTabla = ({
         cell: (r) => r.correo_electronico,
       },
       {
-        id: "genero",
-        header: "Género",
-        minW: "80px",
-        textAlign: "center",
-        cell: (r) => toTitleCase(r.genero),
-      },
-      {
         id: "estado_civil",
         header: "Estado civil",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => toTitleCase(r.estado_civil),
+        cell: (r) => toTitleCase(r.estado_civil?.nombre ?? ""),
       },
       {
         id: "telefono",
         header: "Teléfono",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => toTitleCase(String(r.telefono)),
+        cell: (r) => toTitleCase(r.telefono ? String(r.telefono) : ""),
       },
       {
         id: "rol",
         header: "Rol",
         minW: "80px",
         textAlign: "center",
-        cell: (r) => (
-          <HStack gap="2" wrap="wrap">
-            {(r.usuario?.roles ?? []).map((role) => (
-              <Badge key={role} variant="surface">
-                {role}
-              </Badge>
-            ))}
-          </HStack>
-        ),
+        cell: (r) => {
+          const roleName = r.usuario?.rol;
+          return roleName ? (
+            <HStack gap="2" wrap="wrap">
+              <Badge variant="surface">{roleName}</Badge>
+            </HStack>
+          ) : null;
+        },
       },
       {
         id: "estado",
@@ -100,17 +90,18 @@ export const GestionEmpleadosTabla = ({
         minW: "80px",
         textAlign: "center",
         cell: (r) => {
-          if (r.estado === "ACTIVO") {
+          const estado = r.estado?.nombre ?? "";
+          if (estado === "ACTIVO") {
             return (
               <Badge backgroundColor="blue.600" color="white">
-                {toTitleCase(r.estado)}
+                {toTitleCase(estado)}
               </Badge>
             );
           }
-          if (r.estado === "INACTIVO") {
+          if (estado === "INACTIVO") {
             return (
               <Badge backgroundColor="red.600" color="white">
-                {toTitleCase(r.estado)}
+                {toTitleCase(estado)}
               </Badge>
             );
           }

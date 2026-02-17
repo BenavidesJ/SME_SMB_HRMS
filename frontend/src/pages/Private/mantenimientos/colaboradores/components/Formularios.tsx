@@ -1,5 +1,4 @@
-// EmployeeFormFields.tsx
-import { Box, Heading, SimpleGrid } from "@chakra-ui/react";
+import { Box, SimpleGrid } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
 import { InputField } from "../../../../../components/forms";
 import { Button } from "../../../../../components/general/button/Button";
@@ -11,11 +10,9 @@ type Mode = "create" | "edit";
 
 type Props = {
   mode: Mode;
-  genderOptions: SelectOption[];
   marStatsOptions: SelectOption[];
   rolesOptions: SelectOption[];
   provincias: Provincia[];
-  gendersLoaded: boolean;
   maritalStatusesLoaded: boolean;
   rolesLoaded: boolean;
   isSubmitting?: boolean;
@@ -26,12 +23,10 @@ type Props = {
 export function Formularios({
   mode,
 
-  genderOptions,
   marStatsOptions,
   rolesOptions,
 
   provincias,
-  gendersLoaded,
   maritalStatusesLoaded,
   rolesLoaded,
 
@@ -98,21 +93,6 @@ export function Formularios({
         />
 
         <InputField
-          fieldType="select"
-          label="Género"
-          name="genero"
-          required
-          disableSelectPortal
-          placeholder={gendersLoaded ? "Seleccione una opción" : "Cargando..."}
-          options={genderOptions}
-          rules={{
-            required: "El campo es obligatorio",
-            setValueAs: (v) => String(v ?? "").trim(),
-          }}
-          selectRootProps={{ disabled: !gendersLoaded }}
-        />
-
-        <InputField
           fieldType="text"
           label="Cédula o DIMEX"
           name="identificacion"
@@ -152,15 +132,6 @@ export function Formularios({
             maxLength: { value: 15, message: "No puede exceder 15 dígitos" },
             setValueAs: (v) => String(v ?? "").trim(),
           }}
-        />
-
-        <InputField
-          fieldType="date"
-          label="Fecha de Ingreso"
-          name="fecha_ingreso"
-          helperText={dateHelper}
-          required
-          rules={{ required: "El campo es obligatorio" }}
         />
 
         <InputField
@@ -212,10 +183,6 @@ export function Formularios({
           rules={{ required: "El campo es obligatorio" }}
         />
       </SimpleGrid>
-
-      <Heading as="h3" size="md">
-        Dirección
-      </Heading>
 
       <DireccionFields provincias={provincias} mode={isCreate ? undefined : "edit"} />
 

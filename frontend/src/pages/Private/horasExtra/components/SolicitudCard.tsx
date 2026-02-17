@@ -7,11 +7,12 @@ import "dayjs/locale/es";
 import {
   Avatar,
   Badge,
-  Box,
   Button,
   Card,
   CloseButton,
   Dialog,
+  Grid,
+  GridItem,
   HStack,
   Portal,
   Stack,
@@ -31,6 +32,7 @@ interface SolicitudCardProps {
   onApprove?: (id: number) => void;
   onDecline?: (id: number) => void;
   isSubmitting?: boolean;
+  canManageActions?: boolean;
 }
 
 const estadoBadgeProps = (estado: string) => {
@@ -80,80 +82,64 @@ export const SolicitudCard = ({
   onApprove,
   onDecline,
   isSubmitting = false,
+  canManageActions = false,
 }: SolicitudCardProps) => {
   const estado = item.estado.estado;
 
   return (
-    <Card.Root borderLeftWidth={10} style={{ borderLeftColor: estadoBorderColor(estado) }}>
-      <Card.Body>
-        <HStack justify="space-between" align="start" gap="4">
-          <HStack gap="3" align="start">
-            <Avatar.Root size="2xl">
+    <Card.Root borderLeftWidth={6} py={3} px={4} style={{ borderLeftColor: estadoBorderColor(estado) }}>
+      <Card.Body pb={2} pt={0} px={0}>
+        <Grid
+          templateColumns={{ base: "1fr", md: "auto 1fr auto" }}
+          gap={{ base: 4, md: 3 }}
+          alignItems="start"
+        >
+          <GridItem>
+            <Avatar.Root size="lg">
               <Avatar.Fallback name={getNameInitials(item.colaborador.nombre_completo)} />
             </Avatar.Root>
+          </GridItem>
 
-            <Stack gap="2">
-              <HStack gap="2" wrap="wrap">
-                <Text textStyle="sm" color="fg.muted">
-                  Solicitante:
-                </Text>
-                <Text fontWeight="semibold" textStyle="md">
-                  {item.colaborador.nombre_completo}
-                </Text>
+          <GridItem>
+            <Stack gap={2} fontSize="sm">
+              <HStack gap={2} wrap="wrap">
+                <Text color="fg.muted">Solicitante:</Text>
+                <Text fontWeight="semibold">{item.colaborador.nombre_completo}</Text>
                 <Badge {...estadoBadgeProps(estado)}>{estado}</Badge>
               </HStack>
 
-              <HStack gap="2" wrap="wrap">
-                <Text textStyle="sm" color="fg.muted">
-                  Correo electrónico:
-                </Text>
-                <Text textStyle="md">{item.colaborador.correo}</Text>
+              <HStack gap={2} wrap="wrap">
+                <Text color="fg.muted">Correo:</Text>
+                <Text>{item.colaborador.correo}</Text>
               </HStack>
 
-              <Stack gap="1" mt="1">
-                <HStack gap="2" wrap="wrap">
-                  <Text textStyle="sm" color="fg.muted">
-                    Fecha de trabajo:
-                  </Text>
-                  <Text fontWeight="semibold" textStyle="md">
-                    {formatFecha(item.fecha_trabajo)}
-                  </Text>
-                </HStack>
-              </Stack>
+              <HStack gap={2} wrap="wrap">
+                <Text color="fg.muted">Fecha de trabajo:</Text>
+                <Text fontWeight="semibold">{formatFecha(item.fecha_trabajo)}</Text>
+              </HStack>
 
-              <HStack gap="2" wrap="wrap" mt="1">
-                <Text textStyle="sm" color="fg.muted">
-                  Cantidad de horas solicitadas:
-                </Text>
-                <Text fontWeight="bold" textStyle="lg">
-                  {item.horas_solicitadas}
-                </Text>
+              <HStack gap={2} wrap="wrap">
+                <Text color="fg.muted">Horas solicitadas:</Text>
+                <Text fontWeight="semibold">{item.horas_solicitadas}</Text>
               </HStack>
             </Stack>
-          </HStack>
+          </GridItem>
 
-          <Stack gap="1" align="end" minW="fit-content">
-            <Text color="fg.muted" fontWeight="semibold" textStyle="xs">
-              Solicitud #{item.id_solicitud_hx}
-            </Text>
-            <Text textStyle="sm" fontWeight="semibold" color="fg.muted">
-              Fecha de solicitud: {formatFecha(item.fecha_solicitud)}
-            </Text>
-          </Stack>
-        </HStack>
-
-        <Box mt="4">
-          <Text textStyle="sm" color="fg.muted" mb="1">
-            Justificación:
-          </Text>
-          <Text textStyle="md" color="fg">
-            {item.justificacion}
-          </Text>
-        </Box>
+          <GridItem textAlign={{ base: "left", md: "right" }}>
+            <Stack gap={1} align={{ base: "flex-start", md: "flex-end" }}>
+              <Text color="fg.muted" fontWeight="semibold" textStyle="xs">
+                Solicitud #{item.id_solicitud_hx}
+              </Text>
+              <Text textStyle="xs" color="fg.muted">
+                {formatFecha(item.fecha_solicitud)}
+              </Text>
+            </Stack>
+          </GridItem>
+        </Grid>
       </Card.Body>
 
-      {estado === "PENDIENTE" && (
-        <Card.Footer>
+      {estado === "PENDIENTE" && canManageActions && (
+        <Card.Footer pt={3} px={0}>
           <HStack w="full" justify="end">
             {/* RECHAZAR - con confirmación */}
             <Dialog.Root size="sm">

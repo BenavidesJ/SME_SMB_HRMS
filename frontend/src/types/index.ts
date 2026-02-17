@@ -3,3 +3,4 @@ export * from "./ApiResponse";
 export * from "./Employee";
 export * from "./Status";
 export * from "./Genders";
+export * from "./Evaluacion";

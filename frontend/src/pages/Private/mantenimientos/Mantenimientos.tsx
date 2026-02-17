@@ -1,4 +1,4 @@
-import { Grid, GridItem, VStack, IconButton, Text, InputGroup, Input, Center } from '@chakra-ui/react';
+import { Grid, GridItem, IconButton, Flex, Text, InputGroup, Input, Center } from '@chakra-ui/react';
 import { Layout } from "../../../components/layout";
 import { useNavigate } from 'react-router';
 import { modules } from './modulesList';
@@ -44,7 +44,7 @@ const Mantenimientos = () => {
 
   return (
     <Layout pageTitle="Página de Mantenimientos">
-      <Center mt="1.15rem">
+      <Center my="1.15rem">
         <InputGroup startElement={<FiSearch />}>
           <Input
             name="find"
@@ -57,14 +57,14 @@ const Mantenimientos = () => {
         </InputGroup>
       </Center>
       <Grid
-        templateColumns="repeat(6, 1fr)"
-        gap="4"
+        templateColumns="repeat(3, 1fr)"
+        gap="6"
         p="0.50rem 2rem"
       >
         {
           showModules && showModules.map((m) => (
             <GridItem key={m.name}>
-              <VStack>
+              <Flex alignItems="center" gap="4">
                 <IconButton
                   variant="solid"
                   onClick={() => handleNavigation(m.path)}
@@ -75,7 +75,7 @@ const Mantenimientos = () => {
                   {m.icon}
                 </IconButton>
                 <Text textStyle="md" textAlign="center" >{m.name}</Text>
-              </VStack>
+              </Flex>
             </GridItem>
           ))
         }

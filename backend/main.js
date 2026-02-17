@@ -6,13 +6,17 @@ import { TOO_MANY_REQUESTS } from "./src/common/strings.js";
 import { errorHandler } from "./src/middlewares/handleErrors.js";
 import securityRoutes from "./src/routes/security.route.js"
 import employeeRoutes from "./src/routes/employee.route.js"
-import planillasRoutes from "./src/routes/planillas.route.js"
+import mantenimientosConsultasRoutes from "./src/routes/mantenimientos_consultas.route.js"
 import asistenciaRoutes from "./src/routes/asistencia.route.js"
-import estadosRoutes from "./src/routes/estado.route.js"
 import horasExtraRoutes from "./src/routes/horasExtra.route.js"
 import incapacidadesRoutes from "./src/routes/incapacidades.route.js"
 import permisosRoutes from "./src/routes/permisos.route.js"
 import vacacionesRoutes from "./src/routes/vacaciones.route.js"
+import planillasRoutes from "./src/routes/planillas.route.js"
+import evaluacionDesempenoRoutes from "./src/routes/evaluacion_desempeno.route.js"
+import aguinaldoRoutes from "./src/routes/aguinaldo.route.js"
+import liquidacionesRoutes from "./src/routes/liquidaciones.route.js"
+import reportesRoutes from "./src/routes/reportes.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -24,6 +28,8 @@ app.use(
   cors({
     credentials: true,
     origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -39,17 +45,22 @@ const rateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
 app.use(rateLimiter);
 // API V1 Routes
 app.use(`/${API_VERSION}/auth`, securityRoutes);
-app.use(`/${API_VERSION}`, employeeRoutes);
-app.use(`/${API_VERSION}/planillas`, planillasRoutes);
+app.use(`/${API_VERSION}/`, employeeRoutes);
+app.use(`/${API_VERSION}/mantenimientos`, mantenimientosConsultasRoutes);
 app.use(`/${API_VERSION}/asistencia`, asistenciaRoutes);
-app.use(`/${API_VERSION}/estados`, estadosRoutes);
 app.use(`/${API_VERSION}/horas-extra`, horasExtraRoutes);
 app.use(`/${API_VERSION}/incapacidades`, incapacidadesRoutes);
 app.use(`/${API_VERSION}/permisos`, permisosRoutes);
 app.use(`/${API_VERSION}/vacaciones`, vacacionesRoutes);
+app.use(`/${API_VERSION}/planillas`, planillasRoutes);
+app.use(`/${API_VERSION}/evaluacion-desempeno`, evaluacionDesempenoRoutes);
+app.use(`/${API_VERSION}/aguinaldos`, aguinaldoRoutes);
+app.use(`/${API_VERSION}/liquidaciones`, liquidacionesRoutes);
+app.use(`/${API_VERSION}/reportes`, reportesRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

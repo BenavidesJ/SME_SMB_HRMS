@@ -15,11 +15,11 @@ import { Layout } from "../../../../components/layout";
 export const EstadosCiviles = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const { data: maritalStatuses = [], isLoading: isTableLoading, refetch: refetchMaritalStatuses } = useApiQuery<MaritalStatus[]>({ url: "estado_civil" });
-  const { mutate: createMaritalStatus, isLoading: isSubmitting } = useApiMutation<{ estado_civil: string }, void>({ url: "/estado_civil", method: "POST" });
+  const { data: maritalStatuses = [], isLoading: isTableLoading, refetch: refetchMaritalStatuses } = useApiQuery<MaritalStatus[]>({ url: "mantenimientos/estados-civiles" });
+  const { mutate: createMaritalStatus, isLoading: isSubmitting } = useApiMutation<{ estado_civil: string }, void>({ url: "mantenimientos/estados-civiles", method: "POST" });
   const { mutate: patchMaritalStatus } =
     useApiMutation<{ estado_civil: string }, void, number>({
-      url: (id) => `/estado_civil/${id}`,
+      url: (id) => `mantenimientos/estados-civiles/${id}`,
       method: "PATCH",
     })
   const [selection, setSelection] = useState<string[]>([]);

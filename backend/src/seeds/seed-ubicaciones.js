@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sequelize } from "../config/db.js";
-import { Provincia } from "../models/provincia.js";
-import { Canton } from "../models/canton.js";
-import { Distrito } from "../models/distrito.js";
+import { models, sequelize } from "../models/index.js";
+const { Provincia, Canton, Distrito } = models;
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
