@@ -1,4 +1,3 @@
-import { Op } from "sequelize";
 import { Aguinaldo, Colaborador } from "../../../models/index.js";
 
 /**
