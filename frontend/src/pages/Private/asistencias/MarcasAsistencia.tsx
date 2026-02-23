@@ -15,6 +15,9 @@ import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
 import { useAuth } from "../../../context/AuthContext";
 import { useWatch } from "react-hook-form";
+import { onlyDigitsMax } from "../../../utils";
+
+const IDENTIFICATION_MAX_DIGITS = 12;
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -105,12 +108,13 @@ const formatTimeCR = (timestamp: string) =>
 
 const getTipo = (registro: MarcaRegistroApi) => String((registro.tipo_marca ?? registro.TipoMarca?.nombre) ?? "").toUpperCase();
 
-const onlyDigitsMax = (v: unknown, max = 17) => String(v ?? "").replace(/\D/g, "").slice(0, max);
-
 export const MarcasAsistencia = () => {
   const { user } = useAuth();
 
-  const loggedId = useMemo(() => onlyDigitsMax(user?.identificacion, 17), [user?.identificacion]);
+  const loggedId = useMemo(
+    () => onlyDigitsMax(user?.identificacion, IDENTIFICATION_MAX_DIGITS),
+    [user?.identificacion],
+  );
 
   const [clockText, setClockText] = useState(() => formatClockText(dayjs()));
   const [tipoEnProceso, setTipoEnProceso] = useState<"ENTRADA" | "SALIDA" | null>(null);
@@ -217,7 +221,10 @@ export const MarcasAsistencia = () => {
 
   const handleRegistrarMarca = useCallback(
     async (tipo: "ENTRADA" | "SALIDA", identificacionIngresada: string) => {
-      const identificacionDestino = onlyDigitsMax(identificacionIngresada || loggedId, 17);
+      const identificacionDestino = onlyDigitsMax(
+        identificacionIngresada || loggedId,
+        IDENTIFICATION_MAX_DIGITS,
+      );
       if (!identificacionDestino) return;
 
       setTipoEnProceso(tipo);
@@ -355,10 +362,12 @@ const FormContent = ({
             label="Identificación"
             size="sm"
             required
+            numericOnly
+            maxDigits={IDENTIFICATION_MAX_DIGITS}
             rules={{
               required: "El campo es obligatorio",
               pattern: { value: /^\d+$/, message: "Solo se permiten números." },
-              maxLength: { value: 17, message: "Máximo 17 dígitos" },
+              maxLength: { value: IDENTIFICATION_MAX_DIGITS, message: "Máximo 12 dígitos" },
               validate: (value: string) =>
                 String(value ?? "").trim() === loggedId ||
                 "Debe coincidir con tu identificación.",

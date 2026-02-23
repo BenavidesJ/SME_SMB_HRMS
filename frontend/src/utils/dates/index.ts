@@ -20,3 +20,7 @@ export function getWeekRangeSundayToSaturday(date: Dayjs): WeekRange {
 export function formatRangeLabel(range: WeekRange) {
   return `${range.start.format("DD MMM YYYY")} - ${range.end.format("DD MMM YYYY")}`;
 }
+
+export function getMaxBirthDateForLegalAge(minAge = 18): string {
+  return dayjs().subtract(minAge, "year").format(DATE_FMT);
+}

@@ -129,15 +129,6 @@ export const GestionEmpleadosTabla = ({
           <>
             <ChakraButton
               variant="solid"
-              colorPalette="red"
-              size="sm"
-              onClick={() => console.log("Eliminar", selection)}
-            >
-              Desactivar
-            </ChakraButton>
-
-            <ChakraButton
-              variant="solid"
               colorPalette="yellow"
               size="sm"
               disabled={selection.length !== 1}

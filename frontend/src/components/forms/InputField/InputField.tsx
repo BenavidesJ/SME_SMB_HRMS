@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
+import { onlyDigitsMax } from "../../../utils";
 
 type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
 
@@ -30,6 +31,8 @@ interface FieldProps extends InputProps {
   rules?: RegisterOptions;
   startElement?: string;
   endElement?: string;
+  numericOnly?: boolean;
+  maxDigits?: number;
 
   // number
   numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
@@ -71,6 +74,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     noIndicator = false,
     startElement,
     endElement,
+    numericOnly = false,
+    maxDigits,
 
     numberProps,
 
@@ -83,6 +88,16 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
   } = props;
 
   const { register, control, getFieldState, formState } = useFormContext();
+  const registeredTextField = register(name, { required, ...rules });
+
+  const onTextFieldChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+    if (numericOnly) {
+      const normalized = onlyDigitsMax(event.target.value, maxDigits);
+      event.target.value = normalized;
+    }
+
+    registeredTextField.onChange(event);
+  };
 
   const { error } = getFieldState(name, formState);
   const errorMessage = (error?.message as string | undefined) ?? undefined;
@@ -147,7 +162,9 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
             placeholder={placeholder}
             required={required}
             {...restInputProps}
-            {...register(name, { required, ...rules })}
+            {...registeredTextField}
+            onChange={onTextFieldChange}
+            inputMode={numericOnly ? "numeric" : restInputProps.inputMode}
             _focusVisible={focusStyles}
             aria-invalid={isInvalid || undefined}
           />

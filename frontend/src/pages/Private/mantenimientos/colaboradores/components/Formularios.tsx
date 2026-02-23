@@ -5,6 +5,10 @@ import { Button } from "../../../../../components/general/button/Button";
 import { DireccionFields } from "../components/CamposDireccion";
 import type { SelectOption } from "../../../../../components/forms/InputField";
 import type { Provincia } from "../../../../../types/Address";
+import { getMaxBirthDateForLegalAge } from "../../../../../utils";
+
+const IDENTIFICATION_MAX_DIGITS = 12;
+const PHONE_MAX_DIGITS = 15;
 
 type Mode = "create" | "edit";
 
@@ -40,6 +44,7 @@ export function Formularios({
     submitLabel ?? (isCreate ? "Agregar Colaborador" : "Actualizar");
 
   const dateHelper = "Formato día/mes/año";
+  const maxBirthDate = getMaxBirthDateForLegalAge();
 
   return (
     <>
@@ -97,10 +102,12 @@ export function Formularios({
           label="Cédula o DIMEX"
           name="identificacion"
           required
+          numericOnly
+          maxDigits={IDENTIFICATION_MAX_DIGITS}
           rules={{
             required: "El campo es obligatorio",
             pattern: { value: /^\d+$/, message: "Solo se permiten números." },
-            maxLength: { value: 15, message: "El máximo son 15 dígitos" },
+            maxLength: { value: IDENTIFICATION_MAX_DIGITS, message: "El máximo son 12 dígitos" },
             setValueAs: (v) => String(v ?? "").trim(),
           }}
         />
@@ -125,11 +132,13 @@ export function Formularios({
           label="Teléfono"
           name="telefono"
           required
+          numericOnly
+          maxDigits={PHONE_MAX_DIGITS}
           rules={{
             required: "El campo es obligatorio",
             pattern: { value: /^\d+$/, message: "Solo se permiten números" },
             minLength: { value: 8, message: "Debe tener al menos 8 dígitos" },
-            maxLength: { value: 15, message: "No puede exceder 15 dígitos" },
+            maxLength: { value: PHONE_MAX_DIGITS, message: "No puede exceder 15 dígitos" },
             setValueAs: (v) => String(v ?? "").trim(),
           }}
         />
@@ -140,7 +149,14 @@ export function Formularios({
           name="fecha_nacimiento"
           helperText={dateHelper}
           required
-          rules={{ required: "El campo es obligatorio" }}
+          max={maxBirthDate}
+          rules={{
+            required: "El campo es obligatorio",
+            validate: (value) => {
+              if (!value) return true;
+              return value <= maxBirthDate || "La persona debe ser mayor o igual a 18 años";
+            },
+          }}
         />
 
         <InputField

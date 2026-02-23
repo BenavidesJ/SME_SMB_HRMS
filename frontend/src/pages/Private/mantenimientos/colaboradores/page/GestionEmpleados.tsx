@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useCallback, useMemo, useState } from "react";
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Stack, Button as ChakraButton, Text } from "@chakra-ui/react";
 import { Form } from "../../../../../components/forms";
 import { FiPlus } from "react-icons/fi";
 import { Button } from "../../../../../components/general/button/Button";
@@ -15,10 +15,14 @@ import type { MaritalStatus } from "../../../../../types/MaritalStatus";
 import type { Provincia } from "../../../../../types/Address";
 import { Layout } from "../../../../../components/layout";
 import { Formularios } from "../components/Formularios";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../../../../context/AuthContext";
+import { showToast } from "../../../../../services/toast/toastService";
 
 dayjs.extend(customParseFormat);
 
 type PatchEmployeePayload = Partial<Employee> & {
+  estado?: string;
   direccion?: {
     provincia?: string;
     canton?: string;
@@ -36,6 +40,8 @@ const toDateInput = (v?: string | null) => {
 };
 
 const GestionEmpleados = () => {
+  const nav = useNavigate();
+  const { user } = useAuth();
   const { data: maritalStatuses = [] } = useApiQuery<MaritalStatus[]>({ url: "mantenimientos/estados-civiles" });
   const { data: roles = [] } = useApiQuery<Roles[]>({ url: "/auth/roles" });
   const { data: employees = [], isLoading: isTableLoading, refetch: refetchEmployees } =
@@ -44,7 +50,7 @@ const GestionEmpleados = () => {
   const { data: provincias = [], refetch: refetchProvincias } = useApiQuery<Provincia[]>({ url: "mantenimientos/provincias" });
 
   const { mutate: createEmployee, isLoading: isSubmitting } =
-    useApiMutation<Employee, void>({ url: "/empleados", method: "POST" });
+    useApiMutation<Employee, EmployeeRow>({ url: "/empleados", method: "POST" });
 
   const { mutate: patchEmployee, isLoading: isPatching } =
     useApiMutation<PatchEmployeePayload, void, number>({
@@ -54,6 +60,7 @@ const GestionEmpleados = () => {
 
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [openConfirmEmployeeToggle, setOpenConfirmEmployeeToggle] = useState(false);
 
   const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -83,10 +90,48 @@ const GestionEmpleados = () => {
     setOpenEditModal(true);
   };
 
-  const { data: employeeFull, isLoading: isLoadingFull } = useApiQuery<EmployeeFullApi | null>({
+  const { data: employeeFull, isLoading: isLoadingFull, refetch: refetchEmployeeFull } = useApiQuery<EmployeeFullApi | null>({
     url: editId ? `/empleados/${editId}` : "/__disabled__",
     enabled: Boolean(openEditModal && editId),
   });
+
+  const isCurrentSessionEmployee = Boolean(editId && user?.id && Number(editId) === Number(user.id));
+  const currentEmployeeEstado = String(employeeFull?.estado?.nombre ?? "").toUpperCase();
+  const nextEmployeeEstado = currentEmployeeEstado === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+
+  const openEmployeeToggleConfirmation = () => {
+    if (!editId || !employeeFull?.estado?.nombre) return;
+
+    if (isCurrentSessionEmployee) {
+      showToast("No puedes cambiar el estado de tu propio usuario en sesión.", "error");
+      return;
+    }
+
+    setOpenConfirmEmployeeToggle(true);
+  };
+
+  const handleToggleEmployeeStatus = async () => {
+    if (!editId || !employeeFull?.estado?.nombre) return;
+
+    if (isCurrentSessionEmployee) {
+      showToast("No puedes cambiar el estado de tu propio usuario en sesión.", "error");
+      return;
+    }
+
+    try {
+      await patchEmployee(editId, { estado: nextEmployeeEstado });
+      showToast(
+        `Empleado ${nextEmployeeEstado === "ACTIVO" ? "activado" : "desactivado"} correctamente.`,
+        "success",
+      );
+
+      await Promise.all([refetchEmployees(), refetchEmployeeFull()]);
+      setOpenConfirmEmployeeToggle(false);
+    } catch (error) {
+      console.log(error);
+      showToast("No fue posible cambiar el estado del empleado.", "error");
+    }
+  };
 
   const handleCreateEmployee = async (employee: Employee) => {
     try {
@@ -98,12 +143,21 @@ const GestionEmpleados = () => {
         direccion: { provincia, canton, distrito, otros_datos },
       };
 
-      await createEmployee(payload);
+      const createdEmployee = await createEmployee(payload);
+      const createdEmployeeId = Number(createdEmployee?.id);
 
+      if (!Number.isFinite(createdEmployeeId) || createdEmployeeId <= 0) {
+        throw new Error("No fue posible obtener el id del colaborador creado");
+      }
+
+      setOpenModal(false);
       setSelection([]);
       setPage(1);
-      await refetchEmployees();
       await refetchProvincias();
+
+      nav(`/mantenimientos-consultas/colaboradores/${createdEmployeeId}`, {
+        state: { openCreateContract: true },
+      });
 
       return true;
     } catch (error) {
@@ -253,6 +307,56 @@ const GestionEmpleados = () => {
               />
             </Form>
           )
+        }
+        footerContent={
+          isLoadingFull || !employeeFull ? null : (
+            <>
+              {isCurrentSessionEmployee && (
+                <Text fontSize="sm" color="red.600" mr="3">
+                  No puedes activar/desactivar tu propio usuario en sesión.
+                </Text>
+              )}
+              <ChakraButton
+                variant="solid"
+                colorPalette={employeeFull.estado?.nombre === "ACTIVO" ? "red" : "blue"}
+                onClick={openEmployeeToggleConfirmation}
+                disabled={isCurrentSessionEmployee || isPatching}
+                loading={isPatching}
+              >
+                {employeeFull.estado?.nombre === "ACTIVO" ? "Desactivar empleado" : "Activar empleado"}
+              </ChakraButton>
+            </>
+          )
+        }
+      />
+
+      <Modal
+        title="Confirmar cambio de estado"
+        isOpen={openConfirmEmployeeToggle}
+        size="sm"
+        onOpenChange={(e) => setOpenConfirmEmployeeToggle(e.open)}
+        content={
+          <Text>
+            ¿Seguro que deseas {nextEmployeeEstado === "ACTIVO" ? "activar" : "desactivar"} este empleado?
+          </Text>
+        }
+        footerContent={
+          <>
+            <ChakraButton
+              variant="outline"
+              onClick={() => setOpenConfirmEmployeeToggle(false)}
+              disabled={isPatching}
+            >
+              Cancelar
+            </ChakraButton>
+            <ChakraButton
+              colorPalette={nextEmployeeEstado === "ACTIVO" ? "blue" : "red"}
+              onClick={handleToggleEmployeeStatus}
+              loading={isPatching}
+            >
+              Confirmar
+            </ChakraButton>
+          </>
         }
       />
     </Layout>

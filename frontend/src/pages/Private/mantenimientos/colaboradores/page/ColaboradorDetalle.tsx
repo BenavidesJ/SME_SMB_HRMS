@@ -1,5 +1,5 @@
-import { useParams } from "react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   Contrato,
   CreateContractForm,
@@ -29,14 +29,14 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { FiEdit2, FiFilePlus, FiFileText } from "react-icons/fi";
+import { FiEdit2, FiFilePlus, FiFileText, FiPower } from "react-icons/fi";
 import { Form, InputField } from "../../../../../components/forms";
 import { toTitleCase } from "../../../../../utils";
 import { showToast } from "../../../../../services/toast/toastService";
 import { Modal } from "../../../../../components/general";
 import { mapFormToPayload } from "../components/mapContractFormToPayload";
 import { DataTable } from "../../../../../components/general/table/DataTable";
-import type { DataTableColumn } from "../../../../../components/general/table/types";
+import type { DataTableActionColumn, DataTableColumn } from "../../../../../components/general/table/types";
 import { type TipoContratoRow } from "../../../../../services/api/tiposContrato";
 import { useApiQuery } from "../../../../../hooks/useApiQuery";
 import { Layout } from "../../../../../components/layout";
@@ -106,6 +106,8 @@ const getLastHorario = (r: Contrato) => {
 
 export default function ColaboradorDetalle() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
   const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `empleados/${id}/contratos`, enabled: Boolean(id) });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "mantenimientos/tipos-jornada" });
@@ -113,9 +115,21 @@ export default function ColaboradorDetalle() {
   const { data: tipoContratos = [] } = useApiQuery<TipoContratoRow[]>({ url: "mantenimientos/tipos-contrato" });
 
   const [openModal, setOpenModal] = useState(false);
+  const [contractCreationRequired, setContractCreationRequired] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contractToggleLoadingId, setContractToggleLoadingId] = useState<number | null>(null);
+  const [contractToToggle, setContractToToggle] = useState<Contrato | null>(null);
 
-  const [selection, setSelection] = useState<string[]>([]);
+  useEffect(() => {
+    const shouldOpenCreateContract = Boolean((location.state as { openCreateContract?: boolean } | null)?.openCreateContract);
+    if (!shouldOpenCreateContract) return;
+
+    setOpenModal(true);
+    setContractCreationRequired(true);
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -180,6 +194,7 @@ export default function ColaboradorDetalle() {
       await createAndAssignContract(payload);
 
       showToast("Contrato creado correctamente.", "success");
+      setContractCreationRequired(false);
       setOpenModal(false);
 
       await refetchContracts();
@@ -271,6 +286,34 @@ export default function ColaboradorDetalle() {
     }
   };
 
+  const handleToggleContractStatus = useCallback(async (contract: Contrato) => {
+    if (!id) return;
+
+    const currentEstado = String(contract.estado ?? "INACTIVO").toUpperCase();
+    const nextEstado = currentEstado === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+
+    try {
+      setContractToggleLoadingId(contract.id_contrato);
+      await patchContract(Number(id), contract.id_contrato, { estado: nextEstado });
+      showToast(
+        `Contrato ${nextEstado === "ACTIVO" ? "activado" : "desactivado"} correctamente.`,
+        "success",
+      );
+      await refetchContracts();
+    } catch (error) {
+      console.log(error);
+      showToast("No fue posible cambiar el estado del contrato.", "error");
+    } finally {
+      setContractToggleLoadingId(null);
+    }
+  }, [id, refetchContracts]);
+
+  const confirmContractToggle = useCallback(async () => {
+    if (!contractToToggle) return;
+    await handleToggleContractStatus(contractToToggle);
+    setContractToToggle(null);
+  }, [contractToToggle, handleToggleContractStatus]);
+
   /* ── table columns ── */
   const columns = useMemo<DataTableColumn<Contrato>[]>(() => {
     return [
@@ -358,6 +401,31 @@ export default function ColaboradorDetalle() {
   }, []);
 
   const isTableLoading = isEmployeeLoading || isContractsLoading;
+  const contractActionColumn = useMemo<DataTableActionColumn<Contrato>>(() => ({
+    header: "Acciones",
+    w: "180px",
+    cell: (contract) => {
+      const isActive = String(contract.estado ?? "").toUpperCase() === "ACTIVO";
+
+      return (
+        <Button
+          size="xs"
+          variant="outline"
+          colorPalette={isActive ? "red" : "blue"}
+          onClick={() => setContractToToggle(contract)}
+          loading={contractToggleLoadingId === contract.id_contrato}
+        >
+          <FiPower />
+          {isActive ? "Desactivar" : "Activar"}
+        </Button>
+      );
+    },
+  }), [contractToggleLoadingId]);
+
+  const handleOpenCreateContractModal = useCallback((e: { open: boolean }) => {
+    if (!e.open && contractCreationRequired) return;
+    setOpenModal(e.open);
+  }, [contractCreationRequired]);
 
   /* ── render ── */
   return (
@@ -529,26 +597,7 @@ export default function ColaboradorDetalle() {
                 columns={columns}
                 isDataLoading={isTableLoading}
                 size="md"
-                selection={{
-                  enabled: true,
-                  selectedKeys: selection,
-                  onChange: setSelection,
-                  getRowKey: (r) => String(r.id_contrato),
-                }}
-                actionBar={{
-                  enabled: contracts.length > 0,
-                  renderActions: (count) => (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={count === 0}
-                      >
-                        Desactivar ({count})
-                      </Button>
-                    </>
-                  ),
-                }}
+                actionColumn={contractActionColumn}
                 pagination={{
                   enabled: true,
                   page,
@@ -602,7 +651,7 @@ export default function ColaboradorDetalle() {
         title="Crear contrato"
         isOpen={openModal}
         size="lg"
-        onOpenChange={(e) => setOpenModal(e.open)}
+        onOpenChange={handleOpenCreateContractModal}
         content={
           <Form onSubmit={handleCreateContract}>
             <SimpleGrid columns={2} gapX="1rem">
@@ -806,6 +855,34 @@ export default function ColaboradorDetalle() {
               </Button>
             </Form>
           )
+        }
+      />
+
+      <Modal
+        title="Confirmar cambio de estado"
+        isOpen={Boolean(contractToToggle)}
+        size="sm"
+        onOpenChange={(e) => {
+          if (!e.open) setContractToToggle(null);
+        }}
+        content={
+          <Text>
+            ¿Seguro que deseas {String(contractToToggle?.estado ?? "").toUpperCase() === "ACTIVO" ? "desactivar" : "activar"} el contrato #{contractToToggle?.id_contrato}?
+          </Text>
+        }
+        footerContent={
+          <>
+            <Button variant="outline" onClick={() => setContractToToggle(null)} disabled={Boolean(contractToggleLoadingId)}>
+              Cancelar
+            </Button>
+            <Button
+              colorPalette={String(contractToToggle?.estado ?? "").toUpperCase() === "ACTIVO" ? "red" : "blue"}
+              onClick={confirmContractToggle}
+              loading={contractToToggle ? contractToggleLoadingId === contractToToggle.id_contrato : false}
+            >
+              Confirmar
+            </Button>
+          </>
         }
       />
     </Layout>

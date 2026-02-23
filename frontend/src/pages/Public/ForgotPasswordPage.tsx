@@ -9,6 +9,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import { Link } from '../../components/general';
 import css from "../../styles/global.module.css";
 import { Button } from '../../components/general/button/Button';
+import { usernamePattern, usernamePatternMessage } from '../../utils';
 
 const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,11 @@ const ForgotPasswordPage = () => {
                   required
                   rules={{
                     required: "El usuario es obligatorio",
-                    minLength: { value: 3, message: "Debe tener al menos 3 caracteres" }
+                    setValueAs: (value) => String(value ?? "").trim(),
+                    pattern: {
+                      value: usernamePattern,
+                      message: usernamePatternMessage,
+                    },
                   }}
                 />
                 <Button

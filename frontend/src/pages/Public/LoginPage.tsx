@@ -9,6 +9,7 @@ import { FiLogIn } from "react-icons/fi";
 import { Link, Logo } from '../../components/general';
 import css from "../../styles/global.module.css"
 import { Button } from '../../components/general/button/Button';
+import { usernamePattern, usernamePatternMessage } from '../../utils';
 
 const LoginPage = () => {
   const nav = useNavigate();
@@ -61,7 +62,11 @@ const LoginPage = () => {
                   required
                   rules={{
                     required: "El usuario es obligatorio",
-                    minLength: { value: 3, message: "Debe tener al menos 3 caracteres" }
+                    setValueAs: (value) => String(value ?? "").trim(),
+                    pattern: {
+                      value: usernamePattern,
+                      message: usernamePatternMessage,
+                    },
                   }}
                 />
                 <InputField

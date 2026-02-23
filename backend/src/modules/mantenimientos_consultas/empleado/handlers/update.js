@@ -21,7 +21,7 @@ import {
   resolveRol,
 } from "./shared.js";
 
-const { Colaborador, Direccion } = empleadoModels;
+const { Colaborador, Direccion, Usuario } = empleadoModels;
 
 export const updateEmpleado = ({ id, patch }) =>
   runInTransaction(async (transaction) => {
@@ -47,6 +47,7 @@ export const updateEmpleado = ({ id, patch }) =>
     if (!colaborador) throw new Error(`No existe colaborador con id ${empleadoId}`);
 
     const updates = {};
+    let estadoIdToSync;
 
     if (payload.nombre !== undefined) updates.nombre = sanitizeNombre(payload.nombre, "nombre");
     if (payload.primer_apellido !== undefined)
@@ -84,10 +85,24 @@ export const updateEmpleado = ({ id, patch }) =>
     if (payload.estado !== undefined) {
       const estado = await resolveEstado(payload.estado, transaction);
       updates.estado = estado.id_estado;
+      estadoIdToSync = estado.id_estado;
     }
 
     if (Object.keys(updates).length > 0) {
       await colaborador.update(updates, { transaction });
+    }
+
+    if (estadoIdToSync !== undefined) {
+      const usuarios = await Usuario.findAll({
+        where: { id_colaborador: empleadoId },
+        transaction,
+      });
+
+      if (usuarios.length > 0) {
+        await Promise.all(
+          usuarios.map((usuario) => usuario.update({ estado: estadoIdToSync }, { transaction })),
+        );
+      }
     }
 
     if (payload.direccion !== undefined) {
