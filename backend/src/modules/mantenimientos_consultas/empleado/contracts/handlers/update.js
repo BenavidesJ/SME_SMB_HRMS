@@ -7,8 +7,10 @@ import {
   ensureSingleActiveContract,
   fetchContractById,
   normalizeFechaInicio,
+  normalizeHorarioPayload,
   normalizeHorasSemanales,
   normalizeSalario,
+  resolveJefeDirecto,
   resolvePuesto,
   resolveTipoContrato,
   resolveTipoJornada,
@@ -23,6 +25,8 @@ const ALLOWED_FIELDS = new Set([
   "tipo_jornada",
   "salario_base",
   "horas_semanales",
+  "horario",
+  "id_jefe_directo",
   "estado",
 ]);
 
@@ -70,6 +74,7 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       fecha_inicio: contratoActual.fecha_inicio,
       horas_semanales: contratoActual.horas_semanales,
       salario_base: contratoActual.salario_base,
+      id_jefe_directo: contratoActual.id_jefe_directo,
       estado: contratoActual.estado,
     };
 
@@ -102,6 +107,16 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       next.horas_semanales = normalizeHorasSemanales(next.horas_semanales, tipoJornada.max_horas_semanales);
     }
 
+    if (patch.id_jefe_directo !== undefined) {
+      const jefeDirecto = await resolveJefeDirecto(patch.id_jefe_directo, colaborador.id_colaborador, transaction);
+      next.id_jefe_directo = jefeDirecto.id_colaborador;
+    }
+
+    let horario = null;
+    if (patch.horario !== undefined) {
+      horario = normalizeHorarioPayload(patch.horario);
+    }
+
     validateHorasContraJornada(next.horas_semanales, tipoJornada.max_horas_semanales);
 
     if (patch.estado !== undefined) {
@@ -125,6 +140,7 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       fecha_inicio: next.fecha_inicio,
       horas_semanales: next.horas_semanales,
       salario_base: next.salario_base,
+      id_jefe_directo: next.id_jefe_directo,
       estado: next.estado,
     };
 
@@ -132,6 +148,22 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
       where: { id_contrato: contractId },
       transaction,
     });
+
+    if (horario) {
+      await models.HorarioLaboral.create(
+        {
+          id_contrato: contractId,
+          hora_inicio: horario.horaInicio,
+          hora_fin: horario.horaFin,
+          dias_laborales: horario.diasLaborales,
+          dias_libres: horario.diasLibres,
+          estado: next.estado,
+          fecha_actualizacion: horario.fechaActualizacion,
+          id_tipo_jornada: next.id_tipo_jornada,
+        },
+        { transaction }
+      );
+    }
 
     const warnings = buildWarnings(puesto, next.salario_base);
     const contratoActualizado = await fetchContractById(contractId, transaction);

@@ -35,6 +35,8 @@ import { toTitleCase } from "../../../../../utils";
 import { showToast } from "../../../../../services/toast/toastService";
 import { Modal } from "../../../../../components/general";
 import { mapFormToPayload } from "../components/mapContractFormToPayload";
+import { normalizeDaysString } from "../../../../../utils/time/normalizeDaysString";
+import { normalizeTimeToHHMMSS } from "../../../../../utils/time/normalizeTime";
 import { DataTable } from "../../../../../components/general/table/DataTable";
 import type { DataTableActionColumn, DataTableColumn } from "../../../../../components/general/table/types";
 import { type TipoContratoRow } from "../../../../../services/api/tiposContrato";
@@ -91,6 +93,28 @@ const DAY_LABELS: Record<string, string> = {
   D: "Domingo",
 };
 
+const formatTimeCR = (time?: string | null) => {
+  if (!time) return "—";
+  const [rawHour = "0", rawMinute = "0"] = String(time).split(":");
+  const hour24 = Number(rawHour);
+  const minute = Number(rawMinute);
+
+  if (!Number.isInteger(hour24) || hour24 < 0 || hour24 > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59) {
+    return String(time);
+  }
+
+  const period = hour24 >= 12 ? "pm" : "am";
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}:${String(minute).padStart(2, "0")} ${period}`;
+};
+
+const formatHorarioCR = (inicio?: string | null, fin?: string | null) => {
+  const inicioFmt = formatTimeCR(inicio);
+  const finFmt = formatTimeCR(fin);
+  if (inicioFmt === "—" || finFmt === "—") return "—";
+  return `${inicioFmt} - ${finFmt}`;
+};
+
 const getLastHorario = (r: Contrato) => {
   const hs = r.horarios ?? [];
   if (!hs.length) return null;
@@ -109,6 +133,7 @@ export default function ColaboradorDetalle() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
+  const { data: colaboradores = [] } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `empleados/${id}/contratos`, enabled: Boolean(id) });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "mantenimientos/tipos-jornada" });
   const { data: positions = [] } = useApiQuery<Puesto[]>({ url: "mantenimientos/puestos" });
@@ -151,6 +176,17 @@ export default function ColaboradorDetalle() {
     () => mapContractTypesToOptions(tipoContratos),
     [tipoContratos, mapContractTypesToOptions],
   );
+
+  const jefeDirectoOptions = useMemo(() => {
+    const colaboradorId = Number(id);
+
+    return colaboradores
+      .filter((item) => Number(item.id) !== colaboradorId)
+      .map((item) => ({
+        label: `${item.nombre} ${item.primer_apellido} ${item.segundo_apellido}`.trim(),
+        value: String(item.id),
+      }));
+  }, [colaboradores, id]);
 
   const tipoJornadaOptions = useMemo(
     () => mapToOptions(tiposJornada.map((t) => t.tipo)),
@@ -216,6 +252,21 @@ export default function ColaboradorDetalle() {
   }, [contracts]);
 
   const activeHorario = activeContract ? getLastHorario(activeContract) : null;
+  const jefeInmediato = useMemo(() => {
+    if (!activeContract?.id_jefe_directo) return "—";
+
+    const fromList = colaboradores.find((item) => Number(item.id) === Number(activeContract.id_jefe_directo));
+    if (fromList) {
+      return `${fromList.nombre} ${fromList.primer_apellido} ${fromList.segundo_apellido}`.trim();
+    }
+
+    const boss = activeContract.jefe_directo;
+    if (boss) {
+      return `${boss.nombre} ${boss.primer_apellido} ${boss.segundo_apellido}`.trim();
+    }
+
+    return `Colaborador #${activeContract.id_jefe_directo}`;
+  }, [activeContract, colaboradores]);
 
   /* ── edit contract ── */
   const [openEditContractModal, setOpenEditContractModal] = useState(false);
@@ -270,6 +321,12 @@ export default function ColaboradorDetalle() {
         tipo_jornada: String(form.tipo_jornada).trim(),
         salario_base: Number(form.salario_base),
         fecha_inicio: String(form.fecha_inicio).trim(),
+        horario: {
+          hora_inicio: normalizeTimeToHHMMSS(form.hora_inicio),
+          hora_fin: normalizeTimeToHHMMSS(form.hora_fin),
+          dias_laborales: normalizeDaysString(form.dias_laborales),
+          dias_libres: normalizeDaysString(form.dias_libres),
+        },
         estado: String(form.estado).trim(),
       };
 
@@ -374,7 +431,7 @@ export default function ColaboradorDetalle() {
         cell: (r) => {
           const h = getLastHorario(r);
           if (!h) return <Badge variant="subtle">Sin horario</Badge>;
-          return `${h.hora_inicio} - ${h.hora_fin}`;
+          return formatHorarioCR(h.hora_inicio, h.hora_fin);
         },
       },
       {
@@ -529,8 +586,9 @@ export default function ColaboradorDetalle() {
                       <InfoBlock label="Horas semanales" value={activeContract.horas_semanales} />
                       <InfoBlock
                         label="Horario"
-                        value={activeHorario ? `${activeHorario.hora_inicio} – ${activeHorario.hora_fin}` : null}
+                        value={activeHorario ? formatHorarioCR(activeHorario.hora_inicio, activeHorario.hora_fin) : null}
                       />
+                      <InfoBlock label="Jefe inmediato" value={jefeInmediato} />
                       <Stack gap="0.5">
                         <Text textStyle="xs" color="fg.muted" textTransform="uppercase">
                           Días laborales
@@ -655,6 +713,18 @@ export default function ColaboradorDetalle() {
         content={
           <Form onSubmit={handleCreateContract}>
             <SimpleGrid columns={2} gapX="1rem">
+              <InputField
+                fieldType="select"
+                label="Jefe Directo"
+                name="id_jefe_directo"
+                required
+                placeholder={jefeDirectoOptions.length ? "Seleccione una opción" : "Cargando..."}
+                disableSelectPortal
+                options={jefeDirectoOptions}
+                rules={{ required: "El campo es obligatorio" }}
+                selectRootProps={{ disabled: jefeDirectoOptions.length === 0 }}
+              />
+
               <InputField
                 fieldType="select"
                 label="Puesto"
@@ -839,6 +909,48 @@ export default function ColaboradorDetalle() {
                   required
                   disableSelectPortal
                   options={estadoOptions}
+                  rules={{ required: "El campo es obligatorio" }}
+                />
+              </SimpleGrid>
+
+              <Heading mt="3">Horario Laboral</Heading>
+
+              <SimpleGrid columns={2} gapX="1rem">
+                <InputField
+                  fieldType="time"
+                  label="Hora de Entrada"
+                  name="hora_inicio"
+                  required
+                  rules={{ required: "El campo es obligatorio" }}
+                />
+
+                <InputField
+                  fieldType="time"
+                  label="Hora de Salida"
+                  name="hora_fin"
+                  required
+                  rules={{ required: "El campo es obligatorio" }}
+                />
+
+                <InputField
+                  fieldType="select"
+                  label="Días Laborales"
+                  name="dias_laborales"
+                  options={diasOptions}
+                  disableSelectPortal
+                  selectRootProps={{ multiple: true }}
+                  required
+                  rules={{ required: "El campo es obligatorio" }}
+                />
+
+                <InputField
+                  fieldType="select"
+                  label="Días Libres"
+                  name="dias_libres"
+                  options={diasOptions}
+                  disableSelectPortal
+                  selectRootProps={{ multiple: true }}
+                  required
                   rules={{ required: "El campo es obligatorio" }}
                 />
               </SimpleGrid>

@@ -151,6 +151,9 @@ models.Puesto.belongsTo(models.Departamento, { foreignKey: "id_departamento", as
 models.Colaborador.hasMany(models.Contrato, { foreignKey: "id_colaborador", as: "contratos" });
 models.Contrato.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
 
+models.Contrato.belongsTo(models.Colaborador, { foreignKey: "id_jefe_directo", as: "jefeDirecto" });
+models.Colaborador.hasMany(models.Contrato, { foreignKey: "id_jefe_directo", as: "contratosComoJefeDirecto" });
+
 models.Contrato.belongsTo(models.Puesto, { foreignKey: "id_puesto", as: "puesto" });
 models.Puesto.hasMany(models.Contrato, { foreignKey: "id_puesto", as: "contratos" });
 

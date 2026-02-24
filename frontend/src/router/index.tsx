@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import { Route as GuardRoute } from "./Route";
 
 import LoginPage from "../pages/Public/LoginPage";
@@ -215,105 +215,117 @@ export const router = createBrowserRouter([
 
       {
         path: "/mantenimientos-consultas",
-        element: <Mantenimientos />,
+        element: <Outlet />,
         handle: { crumb: "Mantenimientos y consultas" },
-      },
-      {
-        path: "/mantenimientos-consultas/colaboradores",
-        element: <GestionEmpleados />,
-        handle: { crumb: "Colaboradores" },
-      },
-      {
-        path: "/mantenimientos-consultas/colaboradores/:id",
-        element: <ColaboradorDetalle />,
-        handle: {
-          crumb: ({ params }: { params: Record<string, string> }) => `Colaborador (${shortId(params.id)})`,
-        },
-      },
-      {
-        path: "/mantenimientos-consultas/estados",
-        element: <Estados />,
-        handle: { crumb: "Estados" },
-      },
-      {
-        path: "/mantenimientos-consultas/puestos",
-        element: <Puestos />,
-        handle: { crumb: "Puestos" },
-      },
-      {
-        path: "/mantenimientos-consultas/estados_civiles",
-        element: <EstadosCiviles />,
-        handle: { crumb: "Estados civiles" },
-      },
-      {
-        path: "/mantenimientos-consultas/departamentos",
-        element: <Departamentos />,
-        handle: { crumb: "Departamentos" },
-      },
-      {
-        path: "/mantenimientos-consultas/roles",
-        element: <RolesPage />,
-        handle: { crumb: "Roles" },
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_contrato",
-        element: <TiposContrato />,
-        handle: { crumb: "Tipos de contrato" },
-      },
-      {
-        path: "/mantenimientos-consultas/ciclos_pago",
-        element: <CiclosPago />,
-        handle: { crumb: "Ciclos de pago" },
-      },
-      {
-        path: "/mantenimientos-consultas/deducciones_planilla",
-        element: <Deducciones />,
-        handle: { crumb: "Deducciones de planilla" },
-      },
-      {
-        path: "/mantenimientos-consultas/provincias",
-        element: <Provincias />,
-        handle: { crumb: "Provincias" },
-      },
-      {
-        path: "/mantenimientos-consultas/cantones",
-        element: <Cantones />,
-        handle: { crumb: "Cantones" },
-      },
-      {
-        path: "/mantenimientos-consultas/distritos",
-        element: <Distritos />,
-        handle: { crumb: "Distritos" },
-      },
-      {
-        path: "/mantenimientos-consultas/feriados",
-        element: <Feriados />,
-        handle: { crumb: "Feriados" },
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_jornada",
-        element: <TiposJornada />,
-        handle: { crumb: "Tipos de Jornada" },
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_hora_extra",
-        element: <TiposHoraExtra />,
-        handle: { crumb: "Tipos de hora extra" },
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_incapacidad",
-        element: <TiposIncapacidad />,
-        handle: { crumb: "Tipos de incapacidad" },
-      },
-      {
-        path: "/mantenimientos-consultas/tipos_marca",
-        element: <TiposMarca />,
-        handle: { crumb: "Tipos de marca" },
-      },
-      {
-        path: "/mantenimientos-consultas/causas_liquidacion",
-        element: <CausasLiquidacion />,
-        handle: { crumb: "Causas de liquidación" },
+        children: [
+          {
+            index: true,
+            element: <Mantenimientos />,
+          },
+          {
+            path: "colaboradores",
+            handle: { crumb: "Colaboradores" },
+            element: <Outlet />,
+            children: [
+              {
+                index: true,
+                element: <GestionEmpleados />,
+              },
+              {
+                path: ":id",
+                element: <ColaboradorDetalle />,
+                handle: {
+                  crumb: ({ params }: { params: Record<string, string> }) => `Colaborador (${shortId(params.id)})`,
+                },
+              },
+            ],
+          },
+          {
+            path: "estados",
+            element: <Estados />,
+            handle: { crumb: "Estados" },
+          },
+          {
+            path: "puestos",
+            element: <Puestos />,
+            handle: { crumb: "Puestos" },
+          },
+          {
+            path: "estados_civiles",
+            element: <EstadosCiviles />,
+            handle: { crumb: "Estados civiles" },
+          },
+          {
+            path: "departamentos",
+            element: <Departamentos />,
+            handle: { crumb: "Departamentos" },
+          },
+          {
+            path: "roles",
+            element: <RolesPage />,
+            handle: { crumb: "Roles" },
+          },
+          {
+            path: "tipos_contrato",
+            element: <TiposContrato />,
+            handle: { crumb: "Tipos de contrato" },
+          },
+          {
+            path: "ciclos_pago",
+            element: <CiclosPago />,
+            handle: { crumb: "Ciclos de pago" },
+          },
+          {
+            path: "deducciones_planilla",
+            element: <Deducciones />,
+            handle: { crumb: "Deducciones de planilla" },
+          },
+          {
+            path: "provincias",
+            element: <Provincias />,
+            handle: { crumb: "Provincias" },
+          },
+          {
+            path: "cantones",
+            element: <Cantones />,
+            handle: { crumb: "Cantones" },
+          },
+          {
+            path: "distritos",
+            element: <Distritos />,
+            handle: { crumb: "Distritos" },
+          },
+          {
+            path: "feriados",
+            element: <Feriados />,
+            handle: { crumb: "Feriados" },
+          },
+          {
+            path: "tipos_jornada",
+            element: <TiposJornada />,
+            handle: { crumb: "Tipos de Jornada" },
+          },
+          {
+            path: "tipos_hora_extra",
+            element: <TiposHoraExtra />,
+            handle: { crumb: "Tipos de hora extra" },
+          },
+          {
+            path: "tipos_incapacidad",
+            element: <TiposIncapacidad />,
+            handle: { crumb: "Tipos de incapacidad" },
+          },
+          {
+            path: "tipos_marca",
+            element: <TiposMarca />,
+            handle: { crumb: "Tipos de marca" },
+          },
+          {
+            path: "causas_liquidacion",
+            element: <CausasLiquidacion />,
+            handle: { crumb: "Causas de liquidación" },
+          },
+        ],
       },
     ],
   },

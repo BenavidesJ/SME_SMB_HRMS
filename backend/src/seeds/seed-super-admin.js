@@ -1,5 +1,3 @@
-import dayjs from "dayjs";
-import { Op } from "sequelize";
 import { models, sequelize } from "../models/index.js";
 
 const {
@@ -8,30 +6,17 @@ const {
   Rol,
   Estado,
   EstadoCivil,
+  Direccion,
+  Provincia,
+  Canton,
+  Distrito,
+  Departamento,
+  Puesto,
+  TipoContrato,
+  TipoJornada,
   Contrato,
   HorarioLaboral,
-  Direccion,
-  JornadaDiaria,
-  SaldoVacaciones,
-  SolicitudVacaciones,
-  SolicitudPermisos,
-  TipoIncapacidad,
-  Incapacidad,
 } = models;
-
-function listDatesInclusive(startStr, endStr) {
-  const start = dayjs(startStr, "YYYY-MM-DD", true);
-  const end = dayjs(endStr, "YYYY-MM-DD", true);
-  const dates = [];
-
-  let cursor = start;
-  while (cursor.isBefore(end) || cursor.isSame(end)) {
-    dates.push(cursor.format("YYYY-MM-DD"));
-    cursor = cursor.add(1, "day");
-  }
-
-  return dates;
-}
 
 export async function seedSuperAdmin() {
   const t = await sequelize.transaction();
@@ -55,6 +40,70 @@ export async function seedSuperAdmin() {
       transaction: t,
     });
 
+    const [rolSuperAdmin] = await Rol.findOrCreate({
+      where: { nombre: "SUPER_ADMIN" },
+      defaults: { nombre: "SUPER_ADMIN" },
+      transaction: t,
+    });
+
+    const [departamentoTI] = await Departamento.findOrCreate({
+      where: { nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
+      defaults: { nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
+      transaction: t,
+    });
+
+    const [puesto] = await Puesto.findOrCreate({
+      where: { nombre: "INGENIERO DE SOFTWARE" },
+      defaults: {
+        id_departamento: departamentoTI.id_departamento,
+        nombre: "INGENIERO DE SOFTWARE",
+        estado: estadoActivo.id_estado,
+      },
+      transaction: t,
+    });
+
+    if (
+      Number(puesto.id_departamento) !== Number(departamentoTI.id_departamento) ||
+      Number(puesto.estado) !== Number(estadoActivo.id_estado)
+    ) {
+      await puesto.update(
+        {
+          id_departamento: departamentoTI.id_departamento,
+          estado: estadoActivo.id_estado,
+        },
+        { transaction: t }
+      );
+    }
+
+    const [tipoContrato] = await TipoContrato.findOrCreate({
+      where: { tipo_contrato: "INDEFINIDO" },
+      defaults: { tipo_contrato: "INDEFINIDO" },
+      transaction: t,
+    });
+
+    const [tipoJornada] = await TipoJornada.findOrCreate({
+      where: { tipo: "DIURNA" },
+      defaults: {
+        tipo: "DIURNA",
+        max_horas_diarias: "8.00",
+        max_horas_semanales: "48.00",
+      },
+      transaction: t,
+    });
+
+    if (
+      Number(tipoJornada.max_horas_diarias) !== 8 ||
+      Number(tipoJornada.max_horas_semanales) !== 48
+    ) {
+      await tipoJornada.update(
+        {
+          max_horas_diarias: "8.00",
+          max_horas_semanales: "48.00",
+        },
+        { transaction: t }
+      );
+    }
+
     const [colab] = await Colaborador.findOrCreate({
       where: { identificacion: 115050783 },
       defaults: {
@@ -64,8 +113,7 @@ export async function seedSuperAdmin() {
         fecha_nacimiento: "1992-07-01",
         correo_electronico: "jdanielbenavides@hotmail.com",
         telefono: "70192643",
-        fecha_ingreso: new Date(),
-        cantidad_hijos: false,
+        cantidad_hijos: 0,
         estado_civil: estadoCivil.id_estado_civil,
         estado: estadoActivo.id_estado,
       },
@@ -79,7 +127,7 @@ export async function seedSuperAdmin() {
         estado_civil: estadoCivil.id_estado_civil,
         estado: estadoActivo.id_estado,
       },
-      { transaction: t },
+      { transaction: t }
     );
 
     const username = "jbenavides0783";
@@ -93,6 +141,7 @@ export async function seedSuperAdmin() {
         contrasena_hash: passwordHash,
         requiere_cambio_contrasena: false,
         id_colaborador: colab.id_colaborador,
+        id_rol: rolSuperAdmin.id_rol,
         estado: estadoActivo.id_estado,
       },
       transaction: t,
@@ -101,315 +150,94 @@ export async function seedSuperAdmin() {
     await user.update(
       {
         id_colaborador: colab.id_colaborador,
+        id_rol: rolSuperAdmin.id_rol,
         estado: estadoActivo.id_estado,
       },
-      { transaction: t },
+      { transaction: t }
     );
 
-    await Rol.findOrCreate({
-      where: { id_usuario: user.id_usuario, nombre: "SUPER_ADMIN" },
-      defaults: { id_usuario: user.id_usuario, nombre: "SUPER_ADMIN" },
-      transaction: t,
-    });
+    const provincia = (await Provincia.findByPk(1, { transaction: t }))
+      ?? (await Provincia.findOne({ order: [["id_provincia", "ASC"]], transaction: t }));
+    const canton = (await Canton.findByPk(115, { transaction: t }))
+      ?? (await Canton.findOne({ order: [["id_canton", "ASC"]], transaction: t }));
+    const distrito = (await Distrito.findByPk(10203, { transaction: t }))
+      ?? (await Distrito.findOne({ order: [["id_distrito", "ASC"]], transaction: t }));
 
-    await Direccion.upsert(
-      {
-        id_direccion: 2,
-        id_colaborador: colab.id_colaborador,
-        id_provincia: 1,
-        id_canton: 115,
-        id_distrito: 10203,
-        otros_datos: "Cerro Vista Ap 4A",
-        es_principal: 1,
-      },
-      { transaction: t },
-    );
-
-    const [contrato] = await Contrato.findOrCreate({
-      where: { id_contrato: 5 },
-      defaults: {
-        id_contrato: 5,
-        id_colaborador: colab.id_colaborador,
-        id_puesto: 2,
-        fecha_inicio: "2026-01-04",
-        id_tipo_contrato: 1,
-        id_tipo_jornada: 1,
-        horas_semanales: "40.00",
-        salario_base: "3000000.00",
-        id_ciclo_pago: 1,
-        estado: estadoActivo.id_estado,
-      },
-      transaction: t,
-    });
-
-    await contrato.update(
-      {
-        id_colaborador: colab.id_colaborador,
-        id_puesto: 2,
-        fecha_inicio: "2026-01-04",
-        id_tipo_contrato: 1,
-        id_tipo_jornada: 1,
-        horas_semanales: "40.00",
-        salario_base: "3000000.00",
-        id_ciclo_pago: 1,
-        estado: estadoActivo.id_estado,
-      },
-      { transaction: t },
-    );
-
-    await HorarioLaboral.upsert(
-      {
-        id_horario: 2,
-        id_contrato: contrato.id_contrato,
-        hora_inicio: "08:00:00",
-        hora_fin: "17:00:00",
-        minutos_descanso: 60,
-        dias_laborales: "LKMJVS",
-        dias_libres: "D",
-        estado: estadoActivo.id_estado,
-        fecha_actualizacion: "2026-01-04",
-        id_tipo_jornada: 1,
-      },
-      { transaction: t },
-    );
-
-    const estadoAprobado = await Estado.findOne({
-      where: { estado: "APROBADO" },
-      transaction: t,
-    });
-
-    if (!estadoAprobado) {
-      throw new Error("No se pudo obtener el estado APROBADO");
-    }
-
-    const estadoAprobadoId = Number(estadoAprobado.id_estado);
-
-    const [tipoIncapCcss] = await TipoIncapacidad.findOrCreate({
-      where: { nombre: "CCSS" },
-      defaults: { nombre: "CCSS" },
-      transaction: t,
-    });
-
-    const [saldoVacaciones] = await SaldoVacaciones.findOrCreate({
-      where: { id_colaborador: colab.id_colaborador },
-      defaults: { dias_ganados: 15, dias_tomados: 0 },
-      transaction: t,
-    });
-
-    const requiredSaldoUpdates = {};
-    const saldoGanadoActual = Number(saldoVacaciones.dias_ganados ?? 0);
-    const saldoTomadoActual = Number(saldoVacaciones.dias_tomados ?? 0);
-
-    if (saldoGanadoActual < 15) {
-      requiredSaldoUpdates.dias_ganados = 15;
-    }
-
-    if (saldoTomadoActual < 5) {
-      requiredSaldoUpdates.dias_tomados = 5;
-    }
-
-    if (Object.keys(requiredSaldoUpdates).length > 0) {
-      await saldoVacaciones.update(requiredSaldoUpdates, { transaction: t });
-    }
-
-    const vacacionesInicio = "2026-04-06";
-    const vacacionesFin = "2026-04-10";
-    const [solicitudVacaciones] = await SolicitudVacaciones.findOrCreate({
-      where: {
-        id_colaborador: colab.id_colaborador,
-        fecha_inicio: vacacionesInicio,
-        fecha_fin: vacacionesFin,
-      },
-      defaults: {
-        id_colaborador: colab.id_colaborador,
-        id_aprobador: colab.id_colaborador,
-        estado_solicitud: estadoAprobadoId,
-        fecha_inicio: vacacionesInicio,
-        fecha_fin: vacacionesFin,
-        id_saldo_vacaciones: Number(saldoVacaciones.id_saldo_vac),
-      },
-      transaction: t,
-    });
-
-    const updateVacacionesPayload = {};
-    if (Number(solicitudVacaciones.estado_solicitud) !== estadoAprobadoId) {
-      updateVacacionesPayload.estado_solicitud = estadoAprobadoId;
-    }
-    if (Number(solicitudVacaciones.id_aprobador) !== colab.id_colaborador) {
-      updateVacacionesPayload.id_aprobador = colab.id_colaborador;
-    }
-    if (Number(solicitudVacaciones.id_saldo_vacaciones) !== Number(saldoVacaciones.id_saldo_vac)) {
-      updateVacacionesPayload.id_saldo_vacaciones = Number(saldoVacaciones.id_saldo_vac);
-    }
-    if (Object.keys(updateVacacionesPayload).length > 0) {
-      await solicitudVacaciones.update(updateVacacionesPayload, { transaction: t });
-    }
-
-    const permisosPlan = [
-      {
-        inicio: "2026-04-13",
-        fin: "2026-04-15",
-        conGoce: false,
-      },
-      {
-        inicio: "2026-04-16",
-        fin: "2026-04-17",
-        conGoce: true,
-      },
-    ];
-
-    const permisoPorFecha = new Map();
-
-    for (const plan of permisosPlan) {
-      const fechas = listDatesInclusive(plan.inicio, plan.fin);
-      const dias = fechas.length;
-      const horas = dias * 8;
-
-      const [solicitudPermiso] = await SolicitudPermisos.findOrCreate({
+    if (provincia && canton && distrito) {
+      const [direccionPrincipal] = await Direccion.findOrCreate({
         where: {
           id_colaborador: colab.id_colaborador,
-          fecha_inicio: plan.inicio,
-          fecha_fin: plan.fin,
+          es_principal: 1,
         },
         defaults: {
           id_colaborador: colab.id_colaborador,
-          id_aprobador: colab.id_colaborador,
-          estado_solicitud: estadoAprobadoId,
-          fecha_inicio: plan.inicio,
-          fecha_fin: plan.fin,
-          con_goce_salarial: plan.conGoce,
-          cantidad_horas: horas,
-          cantidad_dias: dias,
+          id_provincia: provincia.id_provincia,
+          id_canton: canton.id_canton,
+          id_distrito: distrito.id_distrito,
+          otros_datos: "Cerro Vista Ap 4A",
+          es_principal: 1,
         },
         transaction: t,
       });
 
-      const updatePermisoPayload = {};
-      if (Number(solicitudPermiso.estado_solicitud) !== estadoAprobadoId) {
-        updatePermisoPayload.estado_solicitud = estadoAprobadoId;
-      }
-      if (Number(solicitudPermiso.id_aprobador) !== colab.id_colaborador) {
-        updatePermisoPayload.id_aprobador = colab.id_colaborador;
-      }
-      if (solicitudPermiso.con_goce_salarial !== plan.conGoce) {
-        updatePermisoPayload.con_goce_salarial = plan.conGoce;
-      }
-      if (Number(solicitudPermiso.cantidad_horas) !== horas) {
-        updatePermisoPayload.cantidad_horas = horas;
-      }
-      if (Number(solicitudPermiso.cantidad_dias) !== dias) {
-        updatePermisoPayload.cantidad_dias = dias;
-      }
-      if (Object.keys(updatePermisoPayload).length > 0) {
-        await solicitudPermiso.update(updatePermisoPayload, { transaction: t });
-      }
-
-      for (const fecha of fechas) {
-        permisoPorFecha.set(fecha, Number(solicitudPermiso.id_solicitud));
-      }
+      await direccionPrincipal.update(
+        {
+          id_provincia: provincia.id_provincia,
+          id_canton: canton.id_canton,
+          id_distrito: distrito.id_distrito,
+          otros_datos: "Cerro Vista Ap 4A",
+          es_principal: 1,
+        },
+        { transaction: t }
+      );
     }
 
-    const incapacidadFechas = listDatesInclusive("2026-03-09", "2026-03-13");
-    const incapacidadIdsPorFecha = new Map();
-
-    const jornadasExistentes = await JornadaDiaria.findAll({
-      where: {
-        id_colaborador: colab.id_colaborador,
-        fecha: {
-          [Op.between]: ["2026-01-05", "2026-05-31"],
-        },
-      },
+    let contrato = await Contrato.findOne({
+      where: { id_colaborador: colab.id_colaborador },
+      order: [["fecha_inicio", "DESC"], ["id_contrato", "DESC"]],
       transaction: t,
-      lock: t.LOCK.UPDATE,
     });
 
-    const jornadasPorFecha = new Map();
-    for (const jornada of jornadasExistentes) {
-      jornadasPorFecha.set(String(jornada.fecha), jornada);
+    const contratoPayload = {
+      id_colaborador: colab.id_colaborador,
+      id_puesto: puesto.id_puesto,
+      fecha_inicio: "2026-01-04",
+      id_tipo_contrato: tipoContrato.id_tipo_contrato,
+      id_tipo_jornada: tipoJornada.id_tipo_jornada,
+      horas_semanales: "48.00",
+      salario_base: "3000000.00",
+      id_jefe_directo: colab.id_colaborador,
+      estado: estadoActivo.id_estado,
+    };
+
+    if (!contrato) {
+      contrato = await Contrato.create(contratoPayload, { transaction: t });
+    } else {
+      await contrato.update(contratoPayload, { transaction: t });
     }
 
-    let incapacidadDiaContador = 0;
-    for (const fecha of incapacidadFechas) {
-      const jornadaExistente = jornadasPorFecha.get(fecha);
-      if (jornadaExistente?.incapacidad) {
-        incapacidadIdsPorFecha.set(fecha, Number(jornadaExistente.incapacidad));
-        continue;
-      }
+    const fechaActualizacion = new Date().toISOString().slice(0, 10);
+    const horarioPayload = {
+      id_contrato: contrato.id_contrato,
+      hora_inicio: "08:00:00",
+      hora_fin: "17:00:00",
+      dias_laborales: "LKMJV",
+      dias_libres: "SD",
+      estado: estadoActivo.id_estado,
+      fecha_actualizacion: fechaActualizacion,
+      id_tipo_jornada: tipoJornada.id_tipo_jornada,
+    };
 
-      incapacidadDiaContador += 1;
-      const porcentaje_patrono = incapacidadDiaContador <= 3 ? 50 : 0;
-      const porcentaje_ccss = incapacidadDiaContador <= 3 ? 50 : 60;
+    const horarioExistente = await HorarioLaboral.findOne({
+      where: { id_contrato: contrato.id_contrato },
+      order: [["fecha_actualizacion", "DESC"], ["id_horario", "DESC"]],
+      transaction: t,
+    });
 
-      const incapacidadCreada = await Incapacidad.create(
-        {
-          id_tipo_incap: Number(tipoIncapCcss.id_tipo_incap),
-          porcentaje_patrono,
-          porcentaje_ccss,
-        },
-        { transaction: t },
-      );
-
-      incapacidadIdsPorFecha.set(fecha, Number(incapacidadCreada.id_incapacidad));
-    }
-
-    for (const fecha of incapacidadFechas) {
-      if (!incapacidadIdsPorFecha.has(fecha)) {
-        const jornadaExistente = jornadasPorFecha.get(fecha);
-        if (jornadaExistente?.incapacidad) {
-          incapacidadIdsPorFecha.set(fecha, Number(jornadaExistente.incapacidad));
-        }
-      }
-    }
-
-    const vacacionesFechas = new Set(listDatesInclusive(vacacionesInicio, vacacionesFin));
-    const incapacidadFechasSet = new Set(incapacidadFechas);
-
-    const contractStart = dayjs(String(contrato.fecha_inicio)).startOf("day");
-    let cursor = dayjs("2026-01-05");
-    const cursorFin = dayjs("2026-05-31");
-
-    while (cursor.isBefore(cursorFin) || cursor.isSame(cursorFin)) {
-      if (cursor.isBefore(contractStart)) {
-        cursor = cursor.add(1, "day");
-        continue;
-      }
-
-      if (cursor.day() === 0) {
-        cursor = cursor.add(1, "day");
-        continue;
-      }
-
-      const fecha = cursor.format("YYYY-MM-DD");
-      const jornadaExistente = jornadasPorFecha.get(fecha);
-      const payload = {
-        id_colaborador: colab.id_colaborador,
-        fecha,
-        horas_ordinarias: 0,
-        horas_extra: 0,
-        horas_nocturnas: 0,
-        incapacidad: null,
-        vacaciones: null,
-        permiso: null,
-      };
-
-      if (incapacidadFechasSet.has(fecha)) {
-        payload.incapacidad = incapacidadIdsPorFecha.get(fecha) ?? null;
-      } else if (vacacionesFechas.has(fecha)) {
-        payload.vacaciones = Number(solicitudVacaciones.id_solicitud_vacaciones);
-      } else if (permisoPorFecha.has(fecha)) {
-        payload.permiso = permisoPorFecha.get(fecha);
-      } else {
-        payload.horas_ordinarias = 8;
-        payload.horas_extra = cursor.month() === 0 && cursor.day() === 1 ? 2 : 0;
-      }
-
-      if (jornadaExistente) {
-        await jornadaExistente.update(payload, { transaction: t });
-      } else {
-        await JornadaDiaria.create(payload, { transaction: t });
-      }
-
-      cursor = cursor.add(1, "day");
+    if (!horarioExistente) {
+      await HorarioLaboral.create(horarioPayload, { transaction: t });
+    } else {
+      await horarioExistente.update(horarioPayload, { transaction: t });
     }
 
     await t.commit();

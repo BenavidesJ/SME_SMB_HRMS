@@ -9,6 +9,7 @@ import {
   normalizeFechaInicio,
   normalizeHorarioPayload,
   normalizeSalario,
+  resolveJefeDirecto,
   resolvePuesto,
   resolveTipoContrato,
   resolveTipoJornada,
@@ -37,6 +38,8 @@ export const createContractForColaborador = ({ id, payload }) =>
 
     const horario = normalizeHorarioPayload(payload.horario);
 
+    const jefeDirecto = await resolveJefeDirecto(payload.id_jefe_directo, colaborador.id_colaborador, transaction);
+    
     const contrato = await models.Contrato.create(
       {
         id_colaborador: colaborador.id_colaborador,
@@ -46,6 +49,7 @@ export const createContractForColaborador = ({ id, payload }) =>
         id_tipo_jornada: tipoJornada.id_tipo_jornada,
         horas_semanales: tipoJornada.max_horas_semanales,
         salario_base: salarioBase,
+        id_jefe_directo: jefeDirecto.id_colaborador,
         estado: estadoActivo.id_estado,
       },
       { transaction }

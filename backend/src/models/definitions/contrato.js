@@ -42,6 +42,11 @@ export function Contrato(sequelize) {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
       },
+      id_jefe_directo: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: "colaborador", key: "id_colaborador" },
+      },
       estado: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -77,6 +82,11 @@ export function Contrato(sequelize) {
           name: "idx_contrato_tipo_jornada",
           using: "BTREE",
           fields: [{ name: "id_tipo_jornada" }],
+        },
+        {
+          name: "idx_contrato_jefe_directo",
+          using: "BTREE",
+          fields: [{ name: "id_jefe_directo" }],
         },
         {
           name: "idx_contrato_estado",

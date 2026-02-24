@@ -6,9 +6,11 @@ export const mapFormToPayload = (form: CreateContractForm, idColaborador: number
   const salario = Number(form.salario_base);
   const horas = Number(form.horas_semanales);
   const descanso = Number(form.minutos_descanso);
+  const jefeDirecto = Number(form.id_jefe_directo);
 
   return {
     id_colaborador: idColaborador,
+    id_jefe_directo: Number.isInteger(jefeDirecto) && jefeDirecto > 0 ? jefeDirecto : 0,
     puesto: String(form.puesto).trim(),
     fecha_inicio: String(form.fecha_ingreso).trim(),
     tipo_contrato: String(form.tipo_contrato).trim(),

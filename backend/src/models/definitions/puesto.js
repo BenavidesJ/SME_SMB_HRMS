@@ -20,7 +20,6 @@ export function Puesto(sequelize) {
         allowNull: false,
         unique: "uq_puesto_nombre",
       },
-      es_jefe: { type: DataTypes.BOOLEAN, allowNull: false },
       estado: {
         type: DataTypes.INTEGER,
         allowNull: false,

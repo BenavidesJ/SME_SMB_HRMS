@@ -85,6 +85,7 @@ export interface Puesto {
 
 export interface ContractPayload {
   id_colaborador: number;
+  id_jefe_directo: number;
   puesto: string;
   fecha_inicio: string;
   tipo_contrato: string;
@@ -102,6 +103,7 @@ export interface ContractPayload {
 };
 
 export interface CreateContractForm {
+  id_jefe_directo: string;
   puesto: string;
   tipo_contrato: string;
   tipo_jornada: string;
@@ -119,6 +121,7 @@ export interface CreateContractForm {
 export interface Contrato {
   id_contrato: number
   id_colaborador: number
+  id_jefe_directo?: number
   puesto: string
   fecha_inicio: string
   tipo_contrato: string
@@ -126,6 +129,12 @@ export interface Contrato {
   horas_semanales: string
   salario_base: string
   estado: string | null
+  jefe_directo?: {
+    id_colaborador: number
+    nombre: string
+    primer_apellido: string
+    segundo_apellido: string
+  } | null
   horarios: Horario[]
 }
 

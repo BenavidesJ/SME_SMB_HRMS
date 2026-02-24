@@ -1,67 +1,99 @@
 import { Button, HStack, Text } from "@chakra-ui/react";
-import { useLocation, useNavigate, Link as RouterLink } from "react-router";
+import { useLocation, useNavigate, useMatches, Link as RouterLink } from "react-router";
 import { FiArrowLeft } from "react-icons/fi";
 import {
   BreadcrumbRoot,
   BreadcrumbLink,
   BreadcrumbCurrentLink,
 } from "../../../components/ui/breadcrumb";
-import { NAV_MAIN, NAV_SETTINGS } from "../navigation/navItems";
-import { useAuth } from "../../../context/AuthContext";
-
-import { buildNavIndex } from "./helpers/buildNavIndex";
-import { resolveBreadcrumb, type Crumb } from "./helpers/breadCrumbResolve";
 import { useMemo } from "react";
 
-const PARENTS_THAT_REDIRECT: Record<string, string> = {
-  "/asistencia": "/asistencia/marca",
-  "/horas-extra": "/horas-extra/solicitud",
-  "/vacaciones": "/vacaciones/solicitud",
-  "/permisos": "/permisos/solicitud",
+type Crumb = { label: string; to?: string; isCurrent?: boolean };
+type CrumbHandle = {
+  crumb?: string | ((ctx: { params: Record<string, string> }) => string);
 };
 
 export function AppBreadcrumb() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const roles = useMemo(() => {
-    if (!user) return [];
-    const { usuario } = user;
-    return usuario?.rol ? [usuario.rol] : []
-  }, [user])
-
-  const index = useMemo(() => {
-
-    return buildNavIndex([...NAV_MAIN, ...NAV_SETTINGS], roles);
-  }, [roles]);
+  const matches = useMatches();
+  const isRootPath = pathname === "/";
 
   const crumbs: Crumb[] = useMemo(() => {
     if (pathname.startsWith("/login") || pathname.startsWith("/forgot-password")) return [];
-    return resolveBreadcrumb(pathname, index);
-  }, [pathname, index]);
 
-  const backTo = useMemo(() => {
-    const current = pathname;
+    const routeCrumbs = matches
+      .map((match) => {
+        const handle = match.handle as CrumbHandle | undefined;
+        const crumb = handle?.crumb;
+        if (!crumb) return null;
 
+        const label =
+          typeof crumb === "function"
+            ? crumb({ params: match.params as Record<string, string> })
+            : crumb;
+
+        if (!label) return null;
+        return { label, to: match.pathname };
+      })
+      .filter((item): item is { label: string; to: string } => !!item);
+
+    const withHome = routeCrumbs.some((c) => c.to === "/")
+      ? routeCrumbs
+      : [{ label: "Inicio", to: "/" }, ...routeCrumbs];
+
+    const normalized = withHome.filter((crumb, index, arr) => {
+      if (index === 0) return true;
+      const prev = arr[index - 1];
+      return !(prev.label === crumb.label && prev.to === crumb.to);
+    });
+
+    return normalized.map((crumb, index) => {
+      const isCurrent = index === normalized.length - 1;
+      return {
+        label: crumb.label,
+        to: isCurrent ? undefined : crumb.to,
+        isCurrent,
+      };
+    });
+  }, [pathname, matches]);
+
+  const isDetailRoute = useMemo(() => {
+    const currentMatch = matches[matches.length - 1];
+    if (!currentMatch) return false;
+    return Object.keys(currentMatch.params ?? {}).length > 0;
+  }, [matches]);
+
+  const logicalParent = useMemo(() => {
     for (let i = crumbs.length - 2; i >= 0; i--) {
       const candidate = crumbs[i].to;
-      if (!candidate) continue;
-
-      const redirectsTo = PARENTS_THAT_REDIRECT[candidate];
-      if (redirectsTo && redirectsTo === current) continue;
-
-      return candidate;
+      if (candidate) return candidate;
     }
     return "/";
-  }, [crumbs, pathname]);
+  }, [crumbs]);
+
+  const handleBack = () => {
+    if (isRootPath) return;
+
+    if (isDetailRoute) {
+      navigate(logicalParent);
+      return;
+    }
+
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/");
+  };
 
   if (crumbs.length === 0) return null;
 
   return (
     <HStack justify="space-between" align="center" w="full" mt="2" mb="4">
       <HStack>
-        <Button aria-label="Volver" size="sm" variant="outline" onClick={() => navigate(backTo)}>
+        <Button aria-label="Volver" size="sm" variant="outline" onClick={handleBack} disabled={isRootPath}>
           <FiArrowLeft />
           <Text as="span" ml="2">
             Volver

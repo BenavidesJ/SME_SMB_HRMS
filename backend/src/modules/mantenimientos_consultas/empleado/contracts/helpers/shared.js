@@ -6,10 +6,15 @@ import { normalizeDateOnly } from "../../../../../common/normalizeDateOnly.js";
 import { requireNonEmptyString, requirePositiveInt } from "../../../shared/validators.js";
 
 export const contractInclude = [
-  { model: models.Puesto, as: "puesto", attributes: ["nombre", "es_jefe", "id_departamento"] },
+  { model: models.Puesto, as: "puesto", attributes: ["nombre", "id_departamento"] },
   { model: models.TipoContrato, as: "tipoContrato", attributes: ["tipo_contrato"] },
   { model: models.TipoJornada, as: "tipoJornada", attributes: ["tipo", "max_horas_diarias", "max_horas_semanales"] },
   { model: models.Estado, as: "estadoRef", attributes: ["id_estado", "estado"] },
+  {
+    model: models.Colaborador,
+    as: "jefeDirecto",
+    attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
+  },
   {
     model: models.HorarioLaboral,
     as: "horarios",
@@ -36,6 +41,7 @@ export function serializeContract(instance) {
   return {
     id_contrato: plain.id_contrato,
     id_colaborador: plain.id_colaborador,
+    id_jefe_directo: plain.id_jefe_directo,
     puesto: plain.puesto?.nombre ?? null,
     fecha_inicio: plain.fecha_inicio,
     tipo_contrato: plain.tipoContrato?.tipo_contrato ?? null,
@@ -43,6 +49,14 @@ export function serializeContract(instance) {
     horas_semanales: plain.horas_semanales,
     salario_base: plain.salario_base,
     estado: plain.estadoRef?.estado ?? null,
+    jefe_directo: plain.jefeDirecto
+      ? {
+          id_colaborador: plain.jefeDirecto.id_colaborador,
+          nombre: plain.jefeDirecto.nombre,
+          primer_apellido: plain.jefeDirecto.primer_apellido,
+          segundo_apellido: plain.jefeDirecto.segundo_apellido,
+        }
+      : null,
     horarios: (plain.horarios ?? []).map((horario) => ({
       id_horario: horario.id_horario,
       hora_inicio: horario.hora_inicio,
@@ -62,6 +76,24 @@ export async function ensureColaboradorExists(id, transaction) {
   const colaborador = await models.Colaborador.findByPk(colaboradorId, { attributes: ["id_colaborador"], transaction });
   if (!colaborador) throw new Error(`No existe un colaborador con id ${colaboradorId}`);
   return colaborador;
+}
+
+export async function resolveJefeDirecto(idJefeDirecto, idColaborador, transaction) {
+  const jefeDirectoId = requirePositiveInt(idJefeDirecto, "id_jefe_directo");
+  if (jefeDirectoId === idColaborador) {
+    throw new Error("El jefe directo no puede ser el mismo colaborador del contrato");
+  }
+
+  const jefeDirecto = await models.Colaborador.findByPk(jefeDirectoId, {
+    attributes: ["id_colaborador"],
+    transaction,
+  });
+
+  if (!jefeDirecto) {
+    throw new Error(`No existe un colaborador jefe con id ${jefeDirectoId}`);
+  }
+
+  return jefeDirecto;
 }
 
 export function normalizeTime(value, fieldName) {
