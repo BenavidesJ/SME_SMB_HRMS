@@ -28,7 +28,6 @@ export async function solicitarVacaciones({
   fecha_fin,
 }) {
   const idColaborador = assertId(id_colaborador, "id_colaborador");
-  const idAprobador = assertId(id_aprobador, "id_aprobador");
   const startDate = assertDate(fecha_inicio, "fecha_inicio");
   const endDate = assertDate(fecha_fin, "fecha_fin");
 
@@ -51,14 +50,6 @@ export async function solicitarVacaciones({
       throw new Error(`No existe colaborador con id ${idColaborador}`);
     }
 
-    const aprobador = await Colaborador.findByPk(idAprobador, {
-      transaction: tx,
-      lock: tx.LOCK.UPDATE,
-    });
-    if (!aprobador) {
-      throw new Error(`No existe colaborador aprobador con id ${idAprobador}`);
-    }
-
     const estadoActivoId = await fetchEstadoId({ transaction: tx, nombre: "ACTIVO" });
     const estadoPendienteId = await fetchEstadoId({ transaction: tx, nombre: "PENDIENTE" });
     const estadoAprobadoId = await fetchEstadoId({ transaction: tx, nombre: "APROBADO" });
@@ -75,6 +66,21 @@ export async function solicitarVacaciones({
     });
     if (!contratoActivo) {
       throw new Error("El colaborador no tiene un contrato ACTIVO");
+    }
+
+    const idJefeDirecto = assertId(contratoActivo.id_jefe_directo, "id_jefe_directo");
+    const idAprobador = assertId(id_aprobador, "id_aprobador");
+
+    if (idAprobador !== idJefeDirecto) {
+      throw new Error("El aprobador debe ser el jefe directo del colaborador");
+    }
+
+    const aprobador = await Colaborador.findByPk(idJefeDirecto, {
+      transaction: tx,
+      lock: tx.LOCK.UPDATE,
+    });
+    if (!aprobador) {
+      throw new Error(`No existe colaborador aprobador con id ${idJefeDirecto}`);
     }
 
     const horarioActivo = await HorarioLaboral.findOne({

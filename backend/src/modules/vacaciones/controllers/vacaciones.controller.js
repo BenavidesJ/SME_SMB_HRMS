@@ -38,7 +38,21 @@ async function resolveActorFromToken(tokenId) {
 
 export async function solicitarVacacionesController(req, res, next) {
   try {
-    const data = await solicitarVacaciones(req.body ?? {});
+    const actor = await resolveActorFromToken(req.user?.id);
+    const requestedColaboradorId = Number(req.body?.id_colaborador);
+
+    if (!Number.isInteger(requestedColaboradorId) || requestedColaboradorId <= 0) {
+      throw new Error("id_colaborador debe ser un entero positivo");
+    }
+
+    if (requestedColaboradorId !== actor.id_colaborador) {
+      throw new Error("No puedes crear solicitudes para otro colaborador");
+    }
+
+    const data = await solicitarVacaciones({
+      ...(req.body ?? {}),
+      id_colaborador: actor.id_colaborador,
+    });
 
     return res.status(CREATED).json({
       success: true,

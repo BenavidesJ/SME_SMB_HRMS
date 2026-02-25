@@ -356,14 +356,13 @@ export const Reportes = () => {
     return [{ value: "", label: "Sin orden" }, ...options];
   }, [reporteData?.columns]);
 
-  const selectedColumns = reporteData?.selectedColumns ?? [];
-
   const visibleColumns = useMemo(() => {
+    const selectedColumns = reporteData?.selectedColumns ?? [];
     const columnMap = new Map((reporteData?.columns ?? []).map((column) => [column.key, column]));
     return selectedColumns
       .map((columnKey) => columnMap.get(columnKey))
       .filter((column): column is ReporteColumn => Boolean(column));
-  }, [reporteData?.columns, selectedColumns]);
+  }, [reporteData?.columns, reporteData?.selectedColumns]);
 
   const tableColumns = useMemo<DataTableColumn<Record<string, string | number | null>>[]>(
     () =>

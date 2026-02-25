@@ -183,7 +183,6 @@ export const Planillas = () => {
     } catch (error) {
       console.log(error);
       showToast("No se pudo eliminar el periodo.", "error");
-    } finally {
     }
   };
 

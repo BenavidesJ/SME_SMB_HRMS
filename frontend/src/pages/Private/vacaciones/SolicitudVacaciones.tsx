@@ -10,7 +10,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
-import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
+import type { Contrato, EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { toTitleCase } from "../../../utils";
 
 interface VacacionPayload {
@@ -142,6 +142,10 @@ export const SolicitudVacaciones = () => {
   });
 
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const { data: myContracts = [] } = useApiQuery<Contrato[]>({
+    url: userID ? `empleados/${userID}/contratos` : "",
+    enabled: Boolean(userID),
+  });
 
   const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
     if (!usuario) return false;
@@ -181,26 +185,32 @@ export const SolicitudVacaciones = () => {
     [colaboradoresVisibles, userID],
   );
 
-  const adminOptions = useMemo(
-    () =>
-      (employees ?? [])
-        .filter((colaborador) => {
-          const roleName = colaborador.usuario?.rol;
-          return roleName === "ADMINISTRADOR" || roleName === "SUPER_ADMIN";
-        })
-        .map((colaborador) => {
-          const collaboratorId = colaborador.id;
-          const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-          const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${collaboratorId}`;
-          return { label: displayName, value: String(collaboratorId) };
-        }),
-    [employees],
-  );
+  const jefeDirectoId = useMemo(() => {
+    const activeContracts = myContracts.filter((contract) => String(contract.estado ?? "").toUpperCase() === "ACTIVO");
+    const latestContract = (activeContracts.length ? activeContracts : myContracts)
+      .slice()
+      .sort((a, b) => String(b.fecha_inicio ?? "").localeCompare(String(a.fecha_inicio ?? "")))[0];
 
-  const defaultApproverId = useMemo(() => adminOptions[0]?.value ?? "", [adminOptions]);
+    return latestContract?.id_jefe_directo ? Number(latestContract.id_jefe_directo) : null;
+  }, [myContracts]);
+
+  const approverOptions = useMemo(() => {
+    if (!jefeDirectoId) return [];
+
+    const manager = (employees ?? []).find((colaborador) => Number(colaborador.id) === Number(jefeDirectoId));
+    if (!manager) {
+      return [{ label: `Colaborador ${jefeDirectoId}`, value: String(jefeDirectoId) }];
+    }
+
+    const baseName = [manager.nombre, manager.primer_apellido, manager.segundo_apellido]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${jefeDirectoId}`;
+    return [{ label: displayName, value: String(jefeDirectoId) }];
+  }, [employees, jefeDirectoId]);
+
+  const defaultApproverId = useMemo(() => approverOptions[0]?.value ?? "", [approverOptions]);
   const formKey = useMemo(() => `vacaciones-form-${defaultApproverId}`, [defaultApproverId]);
 
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
@@ -389,15 +399,26 @@ export const SolicitudVacaciones = () => {
 
     const { id_aprobador, ...rest } = formValues;
     const approverId = Number(id_aprobador);
+    const expectedApproverId = Number(jefeDirectoId);
 
     if (!Number.isFinite(approverId) || approverId <= 0) {
       showToast("Seleccione un aprobador válido.", "error", "Solicitud de vacaciones");
       return false;
     }
 
+    if (!Number.isFinite(expectedApproverId) || expectedApproverId <= 0) {
+      showToast("No tienes un jefe directo asignado en tu contrato activo.", "error", "Solicitud de vacaciones");
+      return false;
+    }
+
+    if (approverId !== expectedApproverId) {
+      showToast("El aprobador debe ser tu jefe directo.", "error", "Solicitud de vacaciones");
+      return false;
+    }
+
     const payload: VacacionPayload = {
       id_colaborador: Number(userID),
-      id_aprobador: approverId,
+      id_aprobador: expectedApproverId,
       fecha_inicio: rest.fecha_inicio,
       fecha_fin: rest.fecha_fin,
       observaciones: rest.observaciones,
@@ -539,10 +560,10 @@ export const SolicitudVacaciones = () => {
                   required
                   disableSelectPortal
                   placeholder={
-                    isLoadingEmployees ? "Cargando aprobadores..." : "Seleccione un aprobador"
+                    isLoadingEmployees ? "Cargando jefe directo..." : "Jefe directo no disponible"
                   }
-                  options={adminOptions}
-                  selectRootProps={{ disabled: isLoadingEmployees || adminOptions.length === 0 }}
+                  options={approverOptions}
+                  selectRootProps={{ disabled: true }}
                   rules={{ required: "El campo es obligatorio" }}
                 />
                 <InputField
@@ -579,7 +600,7 @@ export const SolicitudVacaciones = () => {
                   type="submit"
                   size="lg"
                   w="100%"
-                  disabled={!adminOptions.length}
+                  disabled={!approverOptions.length}
                 >
                   Registrar vacaciones
                 </Button>

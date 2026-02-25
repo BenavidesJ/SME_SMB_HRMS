@@ -7,8 +7,6 @@ import {
   JornadaDiaria,
   SolicitudPermisos,
   SolicitudVacaciones,
-  Usuario,
-  Rol,
 } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
 import { plantillaSolicitudPermisos } from "../../../common/plantillasEmail/emailTemplate.js";
@@ -36,54 +34,6 @@ function normalizeTipoPermiso(value) {
     throw new Error(`tipo_permiso inválido. Valores permitidos: ${Object.values(SUPPORTED_TYPES).join(", ")}`);
   }
   return raw;
-}
-
-async function resolveAprobador({ providedId, transaction, estadoActivoId }) {
-  if (providedId !== undefined && providedId !== null) {
-    const id = assertId(providedId, "id_aprobador");
-    const aprobador = await Colaborador.findByPk(id, {
-      transaction,
-      lock: transaction?.LOCK?.UPDATE,
-    });
-    if (!aprobador) {
-      throw new Error(`No existe colaborador aprobador con id ${id}`);
-    }
-    return { id, aprobador };
-  }
-
-  const adminUsuario = await Usuario.findOne({
-    include: [
-      {
-        model: Rol,
-        as: "rol",
-        attributes: [],
-        required: true,
-        where: {
-          nombre: { [Op.in]: ["ADMINISTRADOR", "SUPER_ADMIN"] },
-        },
-      },
-    ],
-    where: { estado: estadoActivoId },
-    order: [["id_usuario", "ASC"]],
-    transaction,
-    lock: transaction?.LOCK?.UPDATE,
-  });
-
-  if (!adminUsuario) {
-    throw new Error("No se encontró un aprobador por defecto para la solicitud de permiso");
-  }
-
-  const adminColaboradorId = assertId(adminUsuario.id_colaborador, "id_aprobador");
-  const aprobador = await Colaborador.findByPk(adminColaboradorId, {
-    transaction,
-    lock: transaction?.LOCK?.UPDATE,
-  });
-
-  if (!aprobador) {
-    throw new Error("El aprobador por defecto no está asociado a un colaborador válido");
-  }
-
-  return { id: adminColaboradorId, aprobador };
 }
 
 function computeHorasPorDia({ contrato, horario }) {
@@ -245,11 +195,21 @@ export async function solicitarPermiso({
       }
     }
 
-    const { id: idAprobador, aprobador } = await resolveAprobador({
-      providedId: id_aprobador,
+    const idJefeDirecto = assertId(contratoActivo.id_jefe_directo, "id_jefe_directo");
+    const idAprobador = assertId(id_aprobador, "id_aprobador");
+
+    if (idAprobador !== idJefeDirecto) {
+      throw new Error("El aprobador debe ser el jefe directo del colaborador");
+    }
+
+    const aprobador = await Colaborador.findByPk(idJefeDirecto, {
       transaction: tx,
-      estadoActivoId,
+      lock: tx.LOCK.UPDATE,
     });
+
+    if (!aprobador) {
+      throw new Error(`No existe colaborador aprobador con id ${idJefeDirecto}`);
+    }
 
     if (idAprobador === idColaborador) {
       console.warn(`SolicitudPermiso: el aprobador coincide con el solicitante (id ${idColaborador})`);

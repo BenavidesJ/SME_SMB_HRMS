@@ -42,6 +42,11 @@ import type { DataTableActionColumn, DataTableColumn } from "../../../../../comp
 import { type TipoContratoRow } from "../../../../../services/api/tiposContrato";
 import { useApiQuery } from "../../../../../hooks/useApiQuery";
 import { Layout } from "../../../../../components/layout";
+import { useFormContext } from "react-hook-form";
+import {
+  getContractTemplatesByPuesto,
+  getContractTemplateById,
+} from "../components/contractTemplates";
 
 /* ── helpers ── */
 
@@ -124,6 +129,69 @@ const getLastHorario = (r: Contrato) => {
     ),
   );
   return sorted[0];
+};
+
+type ContractTemplateFields = {
+  template_id?: string;
+  puesto: string;
+  tipo_jornada: string;
+  salario_base: string | number;
+  hora_inicio: string;
+  hora_fin: string;
+  dias_laborales: string[];
+  dias_libres: string[];
+};
+
+const ContractTemplateSelector = () => {
+  const { setValue, watch } = useFormContext<ContractTemplateFields>();
+  const selectedPuesto = watch("puesto");
+  const selectedTemplateId = watch("template_id");
+
+  const templateOptions = useMemo(() => {
+    return getContractTemplatesByPuesto(selectedPuesto).map((template) => ({
+      label: `${template.nombre} · ${new Intl.NumberFormat("es-CR", {
+        style: "currency",
+        currency: "CRC",
+        maximumFractionDigits: 2,
+      }).format(template.salario_base)}`,
+      value: template.id,
+    }));
+  }, [selectedPuesto]);
+
+  useEffect(() => {
+    if (!selectedTemplateId) return;
+
+    const stillAvailable = templateOptions.some((option) => String(option.value) === String(selectedTemplateId));
+    if (!stillAvailable) {
+      setValue("template_id", "", { shouldDirty: true, shouldValidate: false });
+    }
+  }, [selectedTemplateId, templateOptions, setValue]);
+
+  useEffect(() => {
+    const template = getContractTemplateById(selectedTemplateId);
+    if (!template) return;
+
+    setValue("puesto", template.puesto, { shouldDirty: true, shouldValidate: true });
+    setValue("tipo_jornada", template.tipo_jornada, { shouldDirty: true, shouldValidate: true });
+    setValue("salario_base", template.salario_base, { shouldDirty: true, shouldValidate: true });
+    setValue("hora_inicio", template.hora_inicio, { shouldDirty: true, shouldValidate: true });
+    setValue("hora_fin", template.hora_fin, { shouldDirty: true, shouldValidate: true });
+    setValue("dias_laborales", template.dias_laborales, { shouldDirty: true, shouldValidate: true });
+    setValue("dias_libres", template.dias_libres, { shouldDirty: true, shouldValidate: true });
+  }, [selectedTemplateId, setValue]);
+
+  return (
+    <InputField
+      fieldType="select"
+      label="Plantilla por puesto"
+      name="template_id"
+      placeholder={selectedPuesto ? (templateOptions.length ? "Seleccione una plantilla" : "Sin plantillas para el puesto") : "Seleccione primero el puesto"}
+      disableSelectPortal
+      options={templateOptions}
+      helperText="Al seleccionar una plantilla, se autocompletan salario, jornada, horario y días."
+      selectRootProps={{ disabled: !selectedPuesto || templateOptions.length === 0 }}
+    />
+  );
 };
 
 /* ── component ── */
@@ -217,7 +285,11 @@ export default function ColaboradorDetalle() {
     return contracts.slice(start, start + pageSize);
   }, [contracts, page]);
 
-  const handleCreateContract = async (form: CreateContractForm) => {
+  type CreateContractFormValues = CreateContractForm & {
+    template_id?: string;
+  };
+
+  const handleCreateContract = async (form: CreateContractFormValues) => {
     try {
       setIsSubmitting(true);
 
@@ -284,6 +356,8 @@ export default function ColaboradorDetalle() {
     if (!activeContract) return undefined;
     const h = getLastHorario(activeContract);
     return {
+      template_id: "",
+      id_jefe_directo: activeContract.id_jefe_directo ? String(activeContract.id_jefe_directo) : "",
       puesto: activeContract.puesto,
       tipo_contrato: activeContract.tipo_contrato,
       tipo_jornada: activeContract.tipo_jornada,
@@ -298,6 +372,8 @@ export default function ColaboradorDetalle() {
   }, [activeContract]);
 
   type EditContractFormValues = {
+    template_id?: string;
+    id_jefe_directo: string;
     puesto: string;
     tipo_contrato: string;
     tipo_jornada: string;
@@ -316,6 +392,7 @@ export default function ColaboradorDetalle() {
       setIsEditingContract(true);
 
       const patch: Record<string, unknown> = {
+        id_jefe_directo: Number(form.id_jefe_directo),
         puesto: String(form.puesto).trim(),
         tipo_contrato: String(form.tipo_contrato).trim(),
         tipo_jornada: String(form.tipo_jornada).trim(),
@@ -711,7 +788,7 @@ export default function ColaboradorDetalle() {
         size="lg"
         onOpenChange={handleOpenCreateContractModal}
         content={
-          <Form onSubmit={handleCreateContract}>
+          <Form<CreateContractFormValues> onSubmit={handleCreateContract}>
             <SimpleGrid columns={2} gapX="1rem">
               <InputField
                 fieldType="select"
@@ -736,6 +813,8 @@ export default function ColaboradorDetalle() {
                 rules={{ required: "El campo es obligatorio" }}
                 selectRootProps={{ disabled: positions.length === 0 }}
               />
+
+              <ContractTemplateSelector />
 
               <InputField
                 fieldType="select"
@@ -844,12 +923,24 @@ export default function ColaboradorDetalle() {
           !activeContract ? (
             <Text p="6" color="fg.muted">No hay contrato vigente para editar.</Text>
           ) : (
-            <Form
+            <Form<EditContractFormValues>
               key={activeContract.id_contrato}
               onSubmit={handleEditContract}
               defaultValues={editContractDefaults}
             >
               <SimpleGrid columns={2} gapX="1rem">
+                <InputField
+                  fieldType="select"
+                  label="Jefe Directo"
+                  name="id_jefe_directo"
+                  required
+                  placeholder={jefeDirectoOptions.length ? "Seleccione una opción" : "Cargando..."}
+                  disableSelectPortal
+                  options={jefeDirectoOptions}
+                  rules={{ required: "El campo es obligatorio" }}
+                  selectRootProps={{ disabled: jefeDirectoOptions.length === 0 }}
+                />
+
                 <InputField
                   fieldType="select"
                   label="Puesto"
@@ -861,6 +952,8 @@ export default function ColaboradorDetalle() {
                   rules={{ required: "El campo es obligatorio" }}
                   selectRootProps={{ disabled: positions.length === 0 }}
                 />
+
+                <ContractTemplateSelector />
 
                 <InputField
                   fieldType="select"
