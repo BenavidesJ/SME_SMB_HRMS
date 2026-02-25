@@ -17,6 +17,7 @@ import evaluacionDesempenoRoutes from "./src/routes/evaluacion_desempeno.route.j
 import aguinaldoRoutes from "./src/routes/aguinaldo.route.js"
 import liquidacionesRoutes from "./src/routes/liquidaciones.route.js"
 import reportesRoutes from "./src/routes/reportes.route.js"
+import calendarioRoutes from "./src/routes/calendario.route.js"
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -61,6 +62,7 @@ app.use(`/${API_VERSION}/evaluacion-desempeno`, evaluacionDesempenoRoutes);
 app.use(`/${API_VERSION}/aguinaldos`, aguinaldoRoutes);
 app.use(`/${API_VERSION}/liquidaciones`, liquidacionesRoutes);
 app.use(`/${API_VERSION}/reportes`, reportesRoutes);
+app.use(`/${API_VERSION}/calendario`, calendarioRoutes);
 
 // Error handler middleware
 app.use(errorHandler);
