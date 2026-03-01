@@ -3,11 +3,11 @@ import { models } from "../../../models/index.js";
 import { requireNonEmptyString, requirePositiveInt } from "../../mantenimientos_consultas/shared/validators.js";
 
 export const cambiarPassword = async ({ id, password_anterior, password_nuevo }) => {
-	const uid = requirePositiveInt(id, "id_usuario");
+	const collaboratorId = requirePositiveInt(id, "id_colaborador");
 	const currentPassword = requireNonEmptyString(password_anterior, "password_anterior");
 	const newPassword = requireNonEmptyString(password_nuevo, "password_nuevo");
 
-	const user = await models.Usuario.findByPk(uid);
+	const user = await models.Usuario.findOne({ where: { id_colaborador: collaboratorId } });
 	if (!user) throw new Error("El usuario no existe.");
 
 	const passwordMatch = await bcrypt.compare(currentPassword, user.contrasena_hash);
@@ -24,5 +24,5 @@ export const cambiarPassword = async ({ id, password_anterior, password_nuevo })
 		requiere_cambio_contrasena: false,
 	});
 
-	return { id: uid };
+	return { id: collaboratorId };
 };
