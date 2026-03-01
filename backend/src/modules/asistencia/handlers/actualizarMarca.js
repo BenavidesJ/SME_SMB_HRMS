@@ -53,6 +53,7 @@ export const actualizarMarcaAsistencia = async ({
     if (!marcaOriginalTs.isValid()) {
       throw new Error("El timestamp original no es válido");
     }
+    const fechaOriginal = marcaOriginalTs.format("YYYY-MM-DD");
 
     const hasNuevoTimestamp = Boolean(
       nuevo_timestamp && String(nuevo_timestamp).trim() !== ""
@@ -71,7 +72,6 @@ export const actualizarMarcaAsistencia = async ({
       if (!parsedNuevo.isValid()) {
         throw new Error("El nuevo timestamp no es válido");
       }
-      const fechaOriginal = marcaOriginalTs.format("YYYY-MM-DD");
       const fechaNueva = parsedNuevo.format("YYYY-MM-DD");
       if (fechaOriginal !== fechaNueva) {
         throw new Error("La corrección debe mantenerse dentro del mismo día");

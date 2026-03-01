@@ -17,9 +17,5 @@ export const agruparMarcasPorDia = (marcas) => {
     map.get(dia).asistencia.push(marca);
   }
 
-  return Array.from(map.values()).sort((a, b) => {
-    if (a.dia < b.dia) return -1;
-    if (a.dia > b.dia) return 1;
-    return 0;
-  });
+  return Array.from(map.values()).sort((a, b) => a.dia.localeCompare(b.dia));
 };

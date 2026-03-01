@@ -129,6 +129,16 @@ describe("registrarMarcaAsistencia", () => {
   beforeEach(() => resetMocks());
 
   describe("Validaciones de entrada", () => {
+    test("lanza error si identificación es undefined", async () => {
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: undefined,
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("La identificación es obligatoria");
+    });
+
     test("lanza error si identificación es vacía", async () => {
       await expect(
         registrarMarcaAsistencia({
@@ -203,6 +213,19 @@ describe("registrarMarcaAsistencia", () => {
   });
 
   describe("Validaciones de negocio", () => {
+    test("lanza error si no existe estado ACTIVO en catálogo", async () => {
+      mockModels.Colaborador.findOne.mockResolvedValue(COLAB);
+      mockModels.Estado.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: "123456789",
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow('No existe el estado "ACTIVO" en el catálogo estado');
+    });
+
     test("lanza error si el colaborador no existe", async () => {
       mockModels.Colaborador.findOne.mockResolvedValue(null);
       mockModels.Estado.findOne.mockResolvedValue(ESTADO_ACTIVO);
@@ -281,6 +304,64 @@ describe("registrarMarcaAsistencia", () => {
           timestamp: "2026-02-07T08:00:00",
         })
       ).rejects.toThrow("es día libre");
+    });
+
+    test("lanza error cuando hay vacaciones aprobadas", async () => {
+      setupBaseMocks();
+      mockModels.SolicitudVacaciones.findOne.mockResolvedValue({ id: 1 });
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: "123456789",
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("incapacidad/solicitud de vacaciones aprobada /permiso aprobado");
+    });
+
+    test("lanza error cuando hay permiso aprobado", async () => {
+      setupBaseMocks();
+      mockModels.SolicitudPermisos.findOne.mockResolvedValue({ id: 1 });
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: "123456789",
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("incapacidad/solicitud de vacaciones aprobada /permiso aprobado");
+    });
+
+    test("lanza error cuando el día no está en días laborales", async () => {
+      setupBaseMocks({
+        dayInitial: "D",
+        horario: {
+          ...HORARIO,
+          dias_libres: "",
+          dias_laborales: "LKMJV",
+        },
+      });
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: "123456789",
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("no es día laboral");
+    });
+
+    test("lanza error si catálogo tipo_marca no tiene ENTRADA y SALIDA", async () => {
+      setupBaseMocks();
+      mockModels.TipoMarca.findAll.mockResolvedValue([TIPO_ENTRADA]);
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: "123456789",
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("No existen ENTRADA y/o SALIDA en el catálogo tipo_marca");
     });
   });
 
@@ -524,6 +605,143 @@ describe("registrarMarcaAsistencia", () => {
 
       expect(result.jornada.horas_extra).toBe(2.5);
     });
+
+    test("si no existe estado APROBADO no consulta solicitudes y horas_extra quedan en 0", async () => {
+      setupBaseMocks({
+        marcasPrevias: [
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+        ],
+      });
+
+      mockModels.Estado.findOne
+        .mockReset()
+        .mockResolvedValueOnce(ESTADO_ACTIVO)
+        .mockResolvedValueOnce(null);
+
+      mockModels.MarcaAsistencia.create.mockResolvedValue({
+        id_marca: 9999,
+        id_colaborador: 2,
+        id_tipo_marca: TIPO_SALIDA.id_tipo_marca,
+        timestamp: new Date("2026-02-02T18:00:00"),
+      });
+
+      mockModels.MarcaAsistencia.findAll
+        .mockReset()
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+        ])
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+          { tipoMarca: { nombre: "SALIDA" }, timestamp: new Date("2026-02-02T18:00:00") },
+        ]);
+
+      const result = await registrarMarcaAsistencia({
+        identificacion: "123456789",
+        tipo_marca: "SALIDA",
+        timestamp: "2026-02-02T18:00:00",
+      });
+
+      expect(mockModels.SolicitudHoraExtra.findAll).not.toHaveBeenCalled();
+      expect(result.jornada.horas_extra).toBe(0);
+    });
+
+    test("ignora horas_solicitadas no numéricas", async () => {
+      setupSalidaMocks({
+        horaSalida: "2026-02-02T19:00:00",
+        solicitudesHX: [{ horas_solicitadas: "abc" }, { horas_solicitadas: 2 }],
+      });
+
+      const result = await registrarMarcaAsistencia({
+        identificacion: "123456789",
+        tipo_marca: "SALIDA",
+        timestamp: "2026-02-02T19:00:00",
+      });
+
+      expect(result.jornada.horas_extra).toBe(2);
+    });
+
+    test("trata horas_solicitadas undefined como 0", async () => {
+      setupSalidaMocks({
+        horaSalida: "2026-02-02T19:00:00",
+        solicitudesHX: [{ horas_solicitadas: undefined }, { horas_solicitadas: 1 }],
+      });
+
+      const result = await registrarMarcaAsistencia({
+        identificacion: "123456789",
+        tipo_marca: "SALIDA",
+        timestamp: "2026-02-02T19:00:00",
+      });
+
+      expect(result.jornada.horas_extra).toBe(1);
+    });
+
+    test("si la salida no es posterior a la entrada no suma minutos", async () => {
+      setupBaseMocks({
+        marcasPrevias: [
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T10:00:00") },
+        ],
+      });
+
+      mockModels.MarcaAsistencia.create.mockResolvedValue({
+        id_marca: 9999,
+        id_colaborador: 2,
+        id_tipo_marca: TIPO_SALIDA.id_tipo_marca,
+        timestamp: new Date("2026-02-02T09:00:00"),
+      });
+
+      mockModels.MarcaAsistencia.findAll
+        .mockReset()
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T10:00:00") },
+        ])
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T10:00:00") },
+          { tipoMarca: { nombre: "SALIDA" }, timestamp: new Date("2026-02-02T09:00:00") },
+        ]);
+
+      const result = await registrarMarcaAsistencia({
+        identificacion: "123456789",
+        tipo_marca: "SALIDA",
+        timestamp: "2026-02-02T09:00:00",
+      });
+
+      expect(result.jornada.horas_ordinarias).toBe(0);
+      expect(result.jornada.horas_extra).toBe(0);
+    });
+
+    test("mantiene la primera entrada cuando hay entradas repetidas", async () => {
+      setupBaseMocks({
+        marcasPrevias: [
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+        ],
+      });
+
+      mockModels.MarcaAsistencia.create.mockResolvedValue({
+        id_marca: 9999,
+        id_colaborador: 2,
+        id_tipo_marca: TIPO_SALIDA.id_tipo_marca,
+        timestamp: new Date("2026-02-02T17:00:00"),
+      });
+
+      mockModels.MarcaAsistencia.findAll
+        .mockReset()
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+        ])
+        .mockResolvedValueOnce([
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:00:00") },
+          { tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-02-02T08:10:00") },
+          { tipoMarca: { nombre: "SALIDA" }, timestamp: new Date("2026-02-02T17:00:00") },
+        ]);
+
+      const result = await registrarMarcaAsistencia({
+        identificacion: "123456789",
+        tipo_marca: "SALIDA",
+        timestamp: "2026-02-02T17:00:00",
+      });
+
+      expect(result.jornada.entrada).toEqual(new Date("2026-02-02T08:00:00"));
+    });
   });
 
 
@@ -694,6 +912,20 @@ describe("registrarMarcaAsistencia", () => {
 
       expect(mockTransaction.rollback).toHaveBeenCalled();
       expect(mockTransaction.commit).not.toHaveBeenCalled();
+    });
+
+    test("no hace rollback cuando la transacción ya finalizó", async () => {
+      mockTransaction.finished = true;
+
+      await expect(
+        registrarMarcaAsistencia({
+          identificacion: null,
+          tipo_marca: "ENTRADA",
+          timestamp: "2026-02-02T08:00:00",
+        })
+      ).rejects.toThrow("La identificación es obligatoria");
+
+      expect(mockTransaction.rollback).not.toHaveBeenCalled();
     });
   });
 
