@@ -4,7 +4,7 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
+    "test": "node ./scripts/test-runner.mjs",
     "start": "",
     "dev": "node --watch --env-file=.env main.js",
     "seeds": "node --env-file=.env src/seeds/run-seeds.js"
