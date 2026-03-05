@@ -9,6 +9,7 @@ export const resetPasswordOlvidado = async ({ username }) => {
 	const normalizedUsername = requireNonEmptyString(username, "username");
 
 	const transaction = await sequelize.transaction();
+	let committed = false;
 	try {
 		const userAccount = await models.Usuario.findOne({
 			where: { username: normalizedUsername },
@@ -38,6 +39,7 @@ export const resetPasswordOlvidado = async ({ username }) => {
 		);
 
 		await transaction.commit();
+		committed = true;
 
 		const data = {
 			nombre: userAccount.colaborador?.nombre ?? "",
@@ -55,7 +57,9 @@ export const resetPasswordOlvidado = async ({ username }) => {
 
 		return { username: normalizedUsername };
 	} catch (error) {
-		await transaction.rollback();
+		if (!committed && !transaction.finished) {
+			await transaction.rollback();
+		}
 		throw error;
 	}
 };

@@ -100,7 +100,7 @@ describe("resetPasswordOlvidado", () => {
 		expect(result).toEqual({ username: "user01" });
 	});
 
-	test("si falla envío de correo, propaga error y ejecuta rollback", async () => {
+	test("si falla envío de correo tras commit, propaga error sin rollback", async () => {
 		const update = jest.fn().mockResolvedValue(undefined);
 		models.Usuario.findOne.mockResolvedValue({
 			username: "user01",
@@ -115,6 +115,6 @@ describe("resetPasswordOlvidado", () => {
 		await expect(resetPasswordOlvidado({ username: "user01" })).rejects.toThrow("smtp down");
 
 		expect(transaction.commit).toHaveBeenCalledTimes(1);
-		expect(transaction.rollback).toHaveBeenCalledTimes(1);
+		expect(transaction.rollback).not.toHaveBeenCalled();
 	});
 });

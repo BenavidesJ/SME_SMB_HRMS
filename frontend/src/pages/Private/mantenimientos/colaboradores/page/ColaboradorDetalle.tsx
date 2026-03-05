@@ -52,7 +52,6 @@ import {
   getContractTemplateById,
 } from "../components/contractTemplates";
 
-/* ── helpers ── */
 
 const InfoBlock = ({
   label,

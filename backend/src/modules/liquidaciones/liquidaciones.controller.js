@@ -1,5 +1,5 @@
 import { HTTP_CODES } from "../../common/strings.js";
-import { Liquidacion } from "../../models/index.js";
+import { Colaborador, Liquidacion } from "../../models/index.js";
 import { crearLiquidacion } from "./handlers/crearLiquidacion.js";
 import { listarLiquidaciones } from "./handlers/listarLiquidaciones.js";
 import { recalcularLiquidacion } from "./handlers/recalcularLiquidacion.js";
@@ -56,7 +56,7 @@ export async function simularLiquidacionController(req, res, next) {
 export async function crearLiquidacionController(req, res, next) {
   try {
     const { datosLiquidacion } = req.body;
-    const idAprobador = req.user?.id_colaborador;
+    const idAprobador = req.user?.id;
 
     if (!datosLiquidacion) {
       return res.status(BAD_REQUEST).json({
@@ -137,7 +137,7 @@ export async function obtenerDetalleController(req, res, next) {
     const liquidacion = await Liquidacion.findByPk(idCasoTermina, {
       include: [
         {
-          model: require("../../../models/index.js").Colaborador,
+          model: Colaborador,
           as: "colaborador",
           attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
         },

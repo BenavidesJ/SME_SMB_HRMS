@@ -1,0 +1,134 @@
+[
+  {
+    "id": "ADMINISTRADOR_GENERAL_TECNICO_MEDIO",
+    "nombre": "Gerente general técnico medio",
+    "puesto": "ADMINISTRADOR GENERAL",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 496836.17,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "ADMINISTRADOR_GENERAL_TECNICO_SUPERIOR",
+    "nombre": "Gerente general técnico educación superior",
+    "puesto": "ADMINISTRADOR GENERAL",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 542096.58,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "INGENIERO_SOFTWARE_ESTANDAR",
+    "nombre": "Plantilla estándar",
+    "puesto": "INGENIERO DE SOFTWARE",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 1100000,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "CONTADOR_TECNICO_MEDIO",
+    "nombre": "Contador técnico medio",
+    "puesto": "CONTADOR",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 496838.17,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "CONTADOR_DIPLOMADO",
+    "nombre": "Contador diplomado",
+    "puesto": "CONTADOR",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 585484.58,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "CONTADOR_BACHILLER_UNIVERSITARIO",
+    "nombre": "Contador bachiller universitario",
+    "puesto": "CONTADOR",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 664078.07,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "OPERARIO_NIVEL_UNO_LABORATORISTA_QUIMICO_SIN_TITULO",
+    "nombre": "Operario laboratorista químico sin título",
+    "puesto": "OPERARIO DE PRODUCCIÓN NIVEL UNO",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 419755.8,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "OPERARIO_NIVEL_DOS_LABORATORISTA_QUIMICO_TECNICO",
+    "nombre": "Operario laboratorista químico técnico",
+    "puesto": "OPERARIO DE PRODUCCIÓN NIVEL DOS",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 542096.58,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "LIDER_PRODUCCION_ESTANDAR",
+    "nombre": "Plantilla estándar",
+    "puesto": "LIDER DE PRODUCCIÓN",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 680000,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "VENDEDOR_NIVEL_UNO_ESTANDAR",
+    "nombre": "Plantilla estándar",
+    "puesto": "VENDEDOR NIVEL UNO",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 420000,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "VENDEDOR_NIVEL_DOS_ESTANDAR",
+    "nombre": "Plantilla estándar",
+    "puesto": "VENDEDOR NIVEL DOS",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 500000,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  },
+  {
+    "id": "SERVICIO_CLIENTE_ESTANDAR",
+    "nombre": "Plantilla estándar",
+    "puesto": "OPERADOR DE SERVICIO AL CLIENTE",
+    "tipo_jornada": "DIURNA",
+    "salario_base": 460000,
+    "hora_inicio": "08:00",
+    "hora_fin": "17:00",
+    "dias_laborales": ["L", "K", "M", "J", "V"],
+    "dias_libres": ["S", "D"]
+  }
+]

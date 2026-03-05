@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
+import { Box, Stack, Button as ChakraButton, Field, NativeSelect, Flex } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
@@ -29,6 +29,8 @@ const Cantones = () => {
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [filterProvinceId, setFilterProvinceId] = useState("");
+  const filterFocusStyles = { outline: "1px solid", outlineColor: "brand.blue.100" } as const;
 
   const { data: cantones = [], isLoading: isTableLoading, refetch } = useApiQuery<CantonRow[]>({ url: BASE_URL });
   const { data: provincias = [] } = useApiQuery<ProvinciaRow[]>({ url: PROVINCE_URL });
@@ -58,10 +60,17 @@ const Cantones = () => {
     return cantones.find((row) => row.id === selectedId) ?? null;
   }, [cantones, selectedId]);
 
+  const filteredCantones = useMemo(() => {
+    if (!filterProvinceId) return cantones;
+    const provinceId = Number(filterProvinceId);
+    if (!Number.isFinite(provinceId)) return cantones;
+    return cantones.filter((row) => row.id_provincia === provinceId);
+  }, [cantones, filterProvinceId]);
+
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return cantones.slice(start, start + pageSize);
-  }, [cantones, page]);
+    return filteredCantones.slice(start, start + pageSize);
+  }, [filteredCantones, page]);
 
   const columns = useMemo<DataTableColumn<CantonRow>[]>(() => {
     return [
@@ -160,6 +169,45 @@ const Cantones = () => {
         </section>
 
         <section style={{ marginBottom: "100px" }}>
+          <Flex mb="4" gap="4" flexWrap="wrap">
+            <Field.Root minW="240px" maxW="320px">
+              <Field.Label>Filtrar por provincia</Field.Label>
+              <NativeSelect.Root size="sm">
+                <NativeSelect.Field
+                  _focusVisible={filterFocusStyles}
+                  value={filterProvinceId}
+                  onChange={(event) => {
+                    setFilterProvinceId(event.target.value);
+                    setSelection([]);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Todas</option>
+                  {provincias.map((provincia) => (
+                    <option key={provincia.id} value={String(provincia.id)}>
+                      {provincia.nombre}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+
+            <Box alignContent="end">
+              <ChakraButton
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setFilterProvinceId("");
+                  setSelection([]);
+                  setPage(1);
+                }}
+                disabled={!filterProvinceId}
+              >
+                Limpiar filtros
+              </ChakraButton>
+            </Box>
+          </Flex>
+
           <DataTable<CantonRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
@@ -200,7 +248,7 @@ const Cantones = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: cantones.length,
+              totalCount: filteredCantones.length,
               onPageChange: setPage,
             }}
           />

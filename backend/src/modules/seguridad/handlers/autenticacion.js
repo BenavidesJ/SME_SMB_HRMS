@@ -48,9 +48,18 @@ export const autenticarUsuario = async ({ username, password }) => {
 	await user.update({ ultimo_acceso_en: dayjs().format("YYYY-MM-DD HH:mm:ss") });
 
 	const rol = await models.Rol.findByPk(user.id_rol);
+	const idColaborador = user.colaborador?.id_colaborador;
+
+	if (!idColaborador) {
+		throw new Error("El usuario no tiene un colaborador asociado. Contacte al administrador.");
+	}
+
+	if (!rol?.nombre) {
+		throw new Error("El usuario no tiene un rol válido asignado. Contacte al administrador.");
+	}
 
 	const payload = {
-		id: user.colaborador.id_colaborador,
+		id: idColaborador,
 		rol: rol.nombre
 	};
 

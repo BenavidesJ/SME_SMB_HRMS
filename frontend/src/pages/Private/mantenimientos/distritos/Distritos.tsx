@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
+import { Box, Stack, Button as ChakraButton, Field, NativeSelect, Flex } from "@chakra-ui/react";
 import { FiPlus } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
@@ -12,7 +12,8 @@ import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { apiRequest } from "../../../../services/api";
 
 type DistritoRow = { id: number; id_canton: number; nombre: string };
-type CantonRow = { id: number; nombre: string };
+type CantonRow = { id: number; nombre: string; id_provincia?: number | null };
+type ProvinciaRow = { id: number; nombre: string };
 
 type CreateFormValues = { id_distrito: number; id_canton: string; nombre: string };
 type UpdateFormValues = { id_canton: string; nombre: string };
@@ -22,6 +23,7 @@ type UpdatePayload = { id_canton: number; nombre: string };
 
 const BASE_URL = "mantenimientos/distritos";
 const CANTON_URL = "mantenimientos/cantones";
+const PROVINCE_URL = "mantenimientos/provincias";
 
 const Distritos = () => {
   const [selection, setSelection] = useState<string[]>([]);
@@ -29,9 +31,24 @@ const Distritos = () => {
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [filterProvinceId, setFilterProvinceId] = useState("");
+  const [filterCantonId, setFilterCantonId] = useState("");
+  const filterFocusStyles = { outline: "1px solid", outlineColor: "brand.blue.100" } as const;
 
   const { data: distritos = [], isLoading: isTableLoading, refetch } = useApiQuery<DistritoRow[]>({ url: BASE_URL });
   const { data: cantones = [] } = useApiQuery<CantonRow[]>({ url: CANTON_URL });
+  const { data: provincias = [] } = useApiQuery<ProvinciaRow[]>({ url: PROVINCE_URL });
+
+  const canFilterByProvince = useMemo(() => {
+    return cantones.some((canton) => Number.isFinite(canton.id_provincia));
+  }, [cantones]);
+
+  const filteredCantones = useMemo(() => {
+    if (!canFilterByProvince || !filterProvinceId) return cantones;
+    const provinceId = Number(filterProvinceId);
+    if (!Number.isFinite(provinceId)) return cantones;
+    return cantones.filter((canton) => canton.id_provincia === provinceId);
+  }, [cantones, canFilterByProvince, filterProvinceId]);
 
   const cantonOptions = useMemo(() => {
     return cantones.map((canton) => ({ label: canton.nombre, value: String(canton.id) }));
@@ -58,10 +75,22 @@ const Distritos = () => {
     return distritos.find((row) => row.id === selectedId) ?? null;
   }, [distritos, selectedId]);
 
+  const filteredDistritos = useMemo(() => {
+    return distritos.filter((row) => {
+      const byProvince = !canFilterByProvince || !filterProvinceId
+        ? true
+        : cantones.some(
+          (canton) => canton.id === row.id_canton && canton.id_provincia === Number(filterProvinceId),
+        );
+      const byCanton = filterCantonId ? row.id_canton === Number(filterCantonId) : true;
+      return byProvince && byCanton;
+    });
+  }, [distritos, cantones, canFilterByProvince, filterProvinceId, filterCantonId]);
+
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return distritos.slice(start, start + pageSize);
-  }, [distritos, page]);
+    return filteredDistritos.slice(start, start + pageSize);
+  }, [filteredDistritos, page]);
 
   const columns = useMemo<DataTableColumn<DistritoRow>[]>(() => {
     return [
@@ -158,6 +187,71 @@ const Distritos = () => {
         </section>
 
         <section style={{ marginBottom: "100px" }}>
+          <Flex mb="4" gap="4" flexWrap="wrap">
+            {canFilterByProvince && (
+              <Field.Root minW="240px" maxW="320px">
+                <Field.Label>Filtrar por provincia</Field.Label>
+                <NativeSelect.Root size="sm">
+                  <NativeSelect.Field
+                    _focusVisible={filterFocusStyles}
+                    value={filterProvinceId}
+                    onChange={(event) => {
+                      setFilterProvinceId(event.target.value);
+                      setFilterCantonId("");
+                      setSelection([]);
+                      setPage(1);
+                    }}
+                  >
+                    <option value="">Todas</option>
+                    {provincias.map((provincia) => (
+                      <option key={provincia.id} value={String(provincia.id)}>
+                        {provincia.nombre}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
+              </Field.Root>
+            )}
+
+            <Field.Root minW="240px" maxW="320px">
+              <Field.Label>Filtrar por cantón</Field.Label>
+              <NativeSelect.Root size="sm">
+                <NativeSelect.Field
+                  _focusVisible={filterFocusStyles}
+                  value={filterCantonId}
+                  onChange={(event) => {
+                    setFilterCantonId(event.target.value);
+                    setSelection([]);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {filteredCantones.map((canton) => (
+                    <option key={canton.id} value={String(canton.id)}>
+                      {canton.nombre}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </Field.Root>
+
+            <Box alignContent="end">
+              <ChakraButton
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setFilterProvinceId("");
+                  setFilterCantonId("");
+                  setSelection([]);
+                  setPage(1);
+                }}
+                disabled={!filterProvinceId && !filterCantonId}
+              >
+                Limpiar filtros
+              </ChakraButton>
+            </Box>
+          </Flex>
+
           <DataTable<DistritoRow>
             data={isTableLoading ? [] : pagedRows}
             columns={columns}
@@ -198,7 +292,7 @@ const Distritos = () => {
               enabled: true,
               page,
               pageSize,
-              totalCount: distritos.length,
+              totalCount: filteredDistritos.length,
               onPageChange: setPage,
             }}
           />

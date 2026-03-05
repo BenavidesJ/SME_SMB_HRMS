@@ -11,6 +11,13 @@ interface AuthPayload extends JwtPayload {
   }
 }
 
+function hasValidAuthData(payload: unknown): payload is AuthPayload {
+  if (!payload || typeof payload !== "object") return false;
+  const maybePayload = payload as Partial<AuthPayload>;
+  const id = maybePayload.data?.id;
+  return typeof id === "number" && Number.isFinite(id);
+}
+
 interface IAuthContext {
   user: EmployeeRow | null;
   // eslint-disable-next-line no-unused-vars
@@ -27,8 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const handleGetEmployeeData = async (access_token: string): Promise<EmployeeRow> => {
-    const { data } = jwtDecode<AuthPayload>(access_token);
-    const employee = await getEmployeeByID(data.id)
+    const decoded = jwtDecode<AuthPayload>(access_token);
+
+    if (!hasValidAuthData(decoded)) {
+      throw new Error("Token inválido o con formato inesperado.");
+    }
+
+    const employee = await getEmployeeByID(decoded.data.id)
     return employee.data.data;
   }
 
@@ -54,9 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authenticate = async ({ access_token }: Token) => {
     localStorage.setItem("access_token", access_token);
-    const employee = await handleGetEmployeeData(access_token);
-    setUser(employee);
-    return employee;
+    try {
+      const employee = await handleGetEmployeeData(access_token);
+      setUser(employee);
+      return employee;
+    } catch (error) {
+      localStorage.removeItem("access_token");
+      throw error;
+    }
   }
 
   const logout = () => {
