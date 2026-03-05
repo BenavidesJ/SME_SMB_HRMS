@@ -1,12 +1,17 @@
 import type { ContractPayload, CreateContractForm } from "../../../../../types";
+import { parseCurrencyInputValue } from "../../../../../utils";
 import { normalizeDaysString } from "../../../../../utils/time/normalizeDaysString";
 import { normalizeTimeToHHMMSS } from "../../../../../utils/time/normalizeTime";
 
 export const mapFormToPayload = (form: CreateContractForm, idColaborador: number): ContractPayload => {
-  const salario = Number(form.salario_base);
+  const salario = parseCurrencyInputValue(form.salario_base);
   const horas = Number(form.horas_semanales);
   const descanso = Number(form.minutos_descanso);
   const jefeDirecto = Number(form.id_jefe_directo);
+
+  if (salario === null) {
+    throw new Error("Ingrese un salario válido");
+  }
 
   return {
     id_colaborador: idColaborador,
@@ -15,7 +20,7 @@ export const mapFormToPayload = (form: CreateContractForm, idColaborador: number
     fecha_inicio: String(form.fecha_ingreso).trim(),
     tipo_contrato: String(form.tipo_contrato).trim(),
     tipo_jornada: String(form.tipo_jornada).trim(),
-    salario_base: Number.isFinite(salario) ? salario : 0,
+    salario_base: salario,
     ciclo_pago: String(form.ciclo_pago).trim(),
     horas_semanales: Number.isFinite(horas) ? horas : 0,
     horario: {

@@ -197,6 +197,7 @@ export function Formularios({
           name="cantidad_hijos"
           required
           rules={{ required: "El campo es obligatorio" }}
+          defaultValue={0}
         />
       </SimpleGrid>
 

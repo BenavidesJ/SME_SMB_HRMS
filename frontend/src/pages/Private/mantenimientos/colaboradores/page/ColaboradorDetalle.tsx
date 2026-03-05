@@ -31,7 +31,11 @@ import {
 } from "@chakra-ui/react";
 import { FiEdit2, FiFilePlus, FiFileText, FiPower } from "react-icons/fi";
 import { Form, InputField } from "../../../../../components/forms";
-import { toTitleCase } from "../../../../../utils";
+import {
+  formatCurrencyInputValue,
+  parseCurrencyInputValue,
+  toTitleCase,
+} from "../../../../../utils";
 import { showToast } from "../../../../../services/toast/toastService";
 import { Modal } from "../../../../../components/general";
 import { mapFormToPayload } from "../components/mapContractFormToPayload";
@@ -173,7 +177,10 @@ const ContractTemplateSelector = () => {
 
     setValue("puesto", template.puesto, { shouldDirty: true, shouldValidate: true });
     setValue("tipo_jornada", template.tipo_jornada, { shouldDirty: true, shouldValidate: true });
-    setValue("salario_base", template.salario_base, { shouldDirty: true, shouldValidate: true });
+    setValue("salario_base", formatCurrencyInputValue(template.salario_base), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     setValue("hora_inicio", template.hora_inicio, { shouldDirty: true, shouldValidate: true });
     setValue("hora_fin", template.hora_fin, { shouldDirty: true, shouldValidate: true });
     setValue("dias_laborales", template.dias_laborales, { shouldDirty: true, shouldValidate: true });
@@ -308,7 +315,11 @@ export default function ColaboradorDetalle() {
       await refetchContracts();
     } catch (error) {
       console.log(error);
-      showToast("Error al crear el contrato.", "error");
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : "Error al crear el contrato.";
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -352,6 +363,15 @@ export default function ColaboradorDetalle() {
     [],
   );
 
+  const salaryRules = useMemo(
+    () => ({
+      required: "El campo es obligatorio",
+      validate: (value: unknown) =>
+        parseCurrencyInputValue(value) !== null || "Ingrese un salario válido",
+    }),
+    [],
+  );
+
   const editContractDefaults = useMemo(() => {
     if (!activeContract) return undefined;
     const h = getLastHorario(activeContract);
@@ -361,7 +381,7 @@ export default function ColaboradorDetalle() {
       puesto: activeContract.puesto,
       tipo_contrato: activeContract.tipo_contrato,
       tipo_jornada: activeContract.tipo_jornada,
-      salario_base: Number(activeContract.salario_base),
+      salario_base: formatCurrencyInputValue(activeContract.salario_base),
       fecha_inicio: activeContract.fecha_inicio,
       estado: activeContract.estado ?? undefined,
       hora_inicio: h?.hora_inicio ?? "",
@@ -396,7 +416,14 @@ export default function ColaboradorDetalle() {
         puesto: String(form.puesto).trim(),
         tipo_contrato: String(form.tipo_contrato).trim(),
         tipo_jornada: String(form.tipo_jornada).trim(),
-        salario_base: Number(form.salario_base),
+        salario_base: (() => {
+          const salario = parseCurrencyInputValue(form.salario_base);
+          if (salario === null) {
+            throw new Error("Ingrese un salario válido");
+          }
+
+          return salario;
+        })(),
         fecha_inicio: String(form.fecha_inicio).trim(),
         horario: {
           hora_inicio: normalizeTimeToHHMMSS(form.hora_inicio),
@@ -414,7 +441,11 @@ export default function ColaboradorDetalle() {
       await refetchContracts();
     } catch (error) {
       console.log(error);
-      showToast("Error al actualizar el contrato.", "error");
+      const errorMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : "Error al actualizar el contrato.";
+      showToast(errorMessage, "error");
     } finally {
       setIsEditingContract(false);
     }
@@ -841,11 +872,13 @@ export default function ColaboradorDetalle() {
               />
 
               <InputField
-                fieldType="number"
+                fieldType="text"
                 label="Salario Base"
                 name="salario_base"
+                startElement="₡"
+                currencyMask
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                rules={salaryRules}
               />
 
               <InputField
@@ -913,7 +946,6 @@ export default function ColaboradorDetalle() {
         }
       />
 
-      {/* ═══ Edit contract modal ═══ */}
       <Modal
         title="Editar contrato vigente"
         isOpen={openEditContractModal}
@@ -980,11 +1012,13 @@ export default function ColaboradorDetalle() {
                 />
 
                 <InputField
-                  fieldType="number"
+                  fieldType="text"
                   label="Salario Base"
                   name="salario_base"
+                  startElement="₡"
+                  currencyMask
                   required
-                  rules={{ required: "El campo es obligatorio" }}
+                  rules={salaryRules}
                 />
 
                 <InputField

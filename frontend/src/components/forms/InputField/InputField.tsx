@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
-import { onlyDigitsMax } from "../../../utils";
+import { formatCurrencyInputValue, onlyDigitsMax } from "../../../utils";
 
 type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
 
@@ -29,10 +29,12 @@ interface FieldProps extends InputProps {
   required?: boolean;
   noIndicator?: boolean;
   rules?: RegisterOptions;
-  startElement?: string;
-  endElement?: string;
+  startElement?: React.ReactNode;
+  endElement?: React.ReactNode;
   numericOnly?: boolean;
   maxDigits?: number;
+  currencyMask?: boolean;
+  currencyMaxDecimals?: number;
 
   // number
   numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
@@ -76,6 +78,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     endElement,
     numericOnly = false,
     maxDigits,
+    currencyMask = false,
+    currencyMaxDecimals = 2,
 
     numberProps,
 
@@ -155,7 +159,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
         )}
       </Field.Label>
 
-      {(fieldType === "text" || fieldType === "email") && (
+      {(fieldType === "text" || fieldType === "email") && !currencyMask && (
         <InputGroup startElement={startElement} endElement={endElement}>
           <TextField
             type={fieldType}
@@ -169,6 +173,44 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
             aria-invalid={isInvalid || undefined}
           />
         </InputGroup>
+      )}
+
+      {fieldType === "text" && currencyMask && (
+        <Controller
+          name={name}
+          control={control}
+          rules={{ required, ...rules }}
+          defaultValue=""
+          render={({ field }) => {
+            const value = formatCurrencyInputValue(field.value ?? "", {
+              maxDecimals: currencyMaxDecimals,
+            });
+
+            return (
+              <InputGroup startElement={startElement} endElement={endElement}>
+                <TextField
+                  type="text"
+                  placeholder={placeholder}
+                  required={required}
+                  {...restInputProps}
+                  name={field.name}
+                  value={value}
+                  onChange={(event) => {
+                    const maskedValue = formatCurrencyInputValue(event.target.value, {
+                      maxDecimals: currencyMaxDecimals,
+                    });
+
+                    field.onChange(maskedValue);
+                  }}
+                  onBlur={field.onBlur}
+                  inputMode="decimal"
+                  _focusVisible={focusStyles}
+                  aria-invalid={isInvalid || undefined}
+                />
+              </InputGroup>
+            );
+          }}
+        />
       )}
 
       {fieldType === "password" && (
