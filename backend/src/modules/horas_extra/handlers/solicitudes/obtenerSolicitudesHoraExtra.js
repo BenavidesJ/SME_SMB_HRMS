@@ -9,7 +9,7 @@ import {
 const AGRUPAMIENTOS_PERMITIDOS = ["fecha_solicitud", "estado", "id_colaborador"];
 const PRIORIDAD_ESTADOS = { PENDIENTE: 0, APROBADO: 1, RECHAZADO: 2, CANCELADO: 3 };
 
-export const obtenerSolicitudesHoraExtra = async ({ agrupamiento, estado, id_colaborador } = {}) => {
+export const obtenerSolicitudesHoraExtra = async ({ agrupamiento, estado, id_colaborador, id_aprobador } = {}) => {
   const agr = String(agrupamiento ?? "fecha_solicitud").trim().toLowerCase();
 
   if (!AGRUPAMIENTOS_PERMITIDOS.includes(agr)) {
@@ -28,6 +28,16 @@ export const obtenerSolicitudesHoraExtra = async ({ agrupamiento, estado, id_col
       throw err;
     }
     where.id_colaborador = idColab;
+  }
+
+  if (id_aprobador !== undefined && id_aprobador !== null && String(id_aprobador).trim() !== "") {
+    const idAprobador = Number(String(id_aprobador).trim());
+    if (!Number.isFinite(idAprobador)) {
+      const err = new Error("id_aprobador debe ser numérico");
+      err.statusCode = 400;
+      throw err;
+    }
+    where.id_aprobador = idAprobador;
   }
 
   const filtroEstadoTxt = String(estado ?? "").trim().toUpperCase();
@@ -79,10 +89,10 @@ export const obtenerSolicitudesHoraExtra = async ({ agrupamiento, estado, id_col
 
     return {
       id_solicitud_hx: row.id_solicitud_hx,
+      id_aprobador: row.id_aprobador,
       fecha_solicitud: row.fecha_solicitud,
       fecha_trabajo: row.fecha_trabajo,
       horas_solicitadas: String(row.horas_solicitadas),
-      justificacion: row.justificacion,
       tipo_hx: {
         id: tipo?.id_tipo_hx,
         nombre: tipo?.nombre,

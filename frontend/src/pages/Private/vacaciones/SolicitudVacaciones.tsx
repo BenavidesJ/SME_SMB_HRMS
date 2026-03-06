@@ -11,7 +11,8 @@ import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
 import type { Contrato, EmployeeRow, EmployeeUserInfo } from "../../../types";
-import { toTitleCase } from "../../../utils";
+import { addDaysToDateInput, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
+import { useFormContext } from "react-hook-form";
 
 interface VacacionPayload {
   id_colaborador: number;
@@ -106,6 +107,49 @@ type CreateVacacionFormValues = Pick<VacacionPayload, "fecha_inicio" | "fecha_fi
   id_aprobador: string;
 };
 
+const VacacionesDateFields = ({ todayInCostaRica }: { todayInCostaRica: string }) => {
+  const { watch } = useFormContext<CreateVacacionFormValues>();
+  const startDate = watch("fecha_inicio");
+  const minEndDate = startDate ? addDaysToDateInput(startDate, 1) : todayInCostaRica;
+
+  return (
+    <>
+      <InputField
+        fieldType="date"
+        label="Fecha de inicio"
+        name="fecha_inicio"
+        required
+        min={todayInCostaRica}
+        rules={{
+          required: "El campo es obligatorio",
+          validate: (value) => {
+            const selectedDate = String(value ?? "");
+            if (!selectedDate) return true;
+            return selectedDate >= todayInCostaRica || "La fecha de inicio no puede ser anterior a hoy.";
+          },
+        }}
+      />
+      <InputField
+        fieldType="date"
+        label="Fecha de finalización"
+        name="fecha_fin"
+        required
+        min={minEndDate}
+        rules={{
+          required: "El campo es obligatorio",
+          validate: (value, formValues) => {
+            const endDate = String(value ?? "");
+            const start = String(formValues?.fecha_inicio ?? "");
+
+            if (!endDate || !start) return true;
+            return endDate > start || "La fecha de finalización debe ser posterior a la fecha de inicio.";
+          },
+        }}
+      />
+    </>
+  );
+};
+
 const estadoBadgeProps = (estado?: string) => {
   switch (estado?.toUpperCase()) {
     case "PENDIENTE":
@@ -126,6 +170,7 @@ export const SolicitudVacaciones = () => {
   const userID = user?.id;
   const loggedUserRole = user?.usuario?.rol;
   const [activeTab, setActiveTab] = useState<"mine" | "others">("mine");
+  const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
 
   const hasAdminPermission = useMemo(
     () => (loggedUserRole ? ["ADMINISTRADOR", "SUPER_ADMIN"].includes(loggedUserRole) : false),
@@ -566,20 +611,7 @@ export const SolicitudVacaciones = () => {
                   selectRootProps={{ disabled: true }}
                   rules={{ required: "El campo es obligatorio" }}
                 />
-                <InputField
-                  fieldType="date"
-                  label="Fecha de inicio"
-                  name="fecha_inicio"
-                  required
-                  rules={{ required: "El campo es obligatorio" }}
-                />
-                <InputField
-                  fieldType="date"
-                  label="Fecha de finalización"
-                  name="fecha_fin"
-                  required
-                  rules={{ required: "El campo es obligatorio" }}
-                />
+                <VacacionesDateFields todayInCostaRica={todayInCostaRica} />
                 <InputField
                   fieldType="text"
                   label="Observaciones"

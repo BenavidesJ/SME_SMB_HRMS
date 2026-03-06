@@ -235,6 +235,9 @@ models.SolicitudPermisos.hasMany(models.JornadaDiaria, { foreignKey: "permiso", 
 models.SolicitudHoraExtra.belongsTo(models.Colaborador, { foreignKey: "id_colaborador", as: "colaborador" });
 models.Colaborador.hasMany(models.SolicitudHoraExtra, { foreignKey: "id_colaborador", as: "solicitudesHoraExtra" });
 
+models.SolicitudHoraExtra.belongsTo(models.Colaborador, { foreignKey: "id_aprobador", as: "aprobador" });
+models.Colaborador.hasMany(models.SolicitudHoraExtra, { foreignKey: "id_aprobador", as: "horasExtraAprobadas" });
+
 models.SolicitudHoraExtra.belongsTo(models.TipoHoraExtra, { foreignKey: "id_tipo_hx", as: "tipoHoraExtra" });
 models.TipoHoraExtra.hasMany(models.SolicitudHoraExtra, { foreignKey: "id_tipo_hx", as: "solicitudes" });
 

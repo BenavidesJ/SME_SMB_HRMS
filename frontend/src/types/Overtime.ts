@@ -22,10 +22,10 @@ export interface ColaboradorLite {
 
 export interface SolicitudHoraExtra {
   id_solicitud_hx: number;
+  id_aprobador: number;
   fecha_solicitud: ISODateTime;
   fecha_trabajo: ISODate;
   horas_solicitadas: string;
-  justificacion: string;
   tipo_hx: TipoHx;
   estado: EstadoSolicitud;
   colaborador: ColaboradorLite;

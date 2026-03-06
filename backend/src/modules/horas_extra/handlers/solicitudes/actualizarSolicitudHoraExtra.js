@@ -8,11 +8,11 @@ import {
   TipoJornada,
   Estado,
   Colaborador,
+  Usuario,
 } from "../../../../models/index.js";
 import { sendEmail } from "../../../../services/mail.js";
 import { plantillaNotificacionSolicitud } from "../../../../common/plantillasEmail/emailTemplate.js";
 
-const MAX_JUSTIFICACION_LENGTH = 100;
 const ESTADOS_PERMITIDOS = ["PENDIENTE", "APROBADO", "RECHAZADO", "CANCELADO"];
 
 export const actualizarSolicitudHoraExtra = async ({
@@ -20,8 +20,8 @@ export const actualizarSolicitudHoraExtra = async ({
   fecha_trabajo,
   horas_solicitadas,
   id_tipo_hx,
-  justificacion,
   estado,
+  id_usuario_actor,
 }) => {
   const tx = await sequelize.transaction();
 
@@ -32,6 +32,26 @@ export const actualizarSolicitudHoraExtra = async ({
       err.statusCode = 400;
       throw err;
     }
+
+    const idUsuarioActor = Number(String(id_usuario_actor).trim());
+    if (!Number.isFinite(idUsuarioActor)) {
+      const err = new Error("id_usuario_actor debe ser numérico");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const actorUsuario = await Usuario.findByPk(idUsuarioActor, {
+      attributes: ["id_usuario", "id_colaborador"],
+      transaction: tx,
+    });
+
+    if (!actorUsuario) {
+      const err = new Error(`No existe usuario con id ${idUsuarioActor}`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const actorColaboradorId = Number(actorUsuario.id_colaborador);
 
     const current = await SolicitudHoraExtra.findByPk(id, { transaction: tx });
     if (!current) {
@@ -50,8 +70,7 @@ export const actualizarSolicitudHoraExtra = async ({
     const tieneCambiosCampos =
       fecha_trabajo !== undefined ||
       horas_solicitadas !== undefined ||
-      id_tipo_hx !== undefined ||
-      justificacion !== undefined;
+      id_tipo_hx !== undefined;
 
     if (estadoActualTxt !== "PENDIENTE" && (tieneCambiosCampos || estado !== undefined)) {
       const err = new Error(
@@ -64,6 +83,15 @@ export const actualizarSolicitudHoraExtra = async ({
     if (!tieneCambiosCampos && estado === undefined) {
       const err = new Error("Debe enviar al menos un campo para actualizar");
       err.statusCode = 400;
+      throw err;
+    }
+
+    const esSolicitante = Number(current.id_colaborador) === actorColaboradorId;
+    const esAprobadorAsignado = Number(current.id_aprobador) === actorColaboradorId;
+
+    if (tieneCambiosCampos && !esSolicitante) {
+      const err = new Error("Solo el colaborador solicitante puede modificar la solicitud");
+      err.statusCode = 403;
       throw err;
     }
 
@@ -127,23 +155,6 @@ export const actualizarSolicitudHoraExtra = async ({
       });
     }
 
-    if (justificacion !== undefined) {
-      const justi = String(justificacion ?? "").trim();
-      if (!justi) {
-        const err = new Error("justificacion es obligatoria");
-        err.statusCode = 400;
-        throw err;
-      }
-      if (justi.length > MAX_JUSTIFICACION_LENGTH) {
-        const err = new Error(
-          `justificacion no puede exceder ${MAX_JUSTIFICACION_LENGTH} caracteres`
-        );
-        err.statusCode = 400;
-        throw err;
-      }
-      patch.justificacion = justi;
-    }
-
     let estadoDestino = estadoActual;
 
     if (estado !== undefined) {
@@ -151,6 +162,19 @@ export const actualizarSolicitudHoraExtra = async ({
       if (!ESTADOS_PERMITIDOS.includes(estadoTxt)) {
         const err = new Error(`Estado inválido. Use uno de: ${ESTADOS_PERMITIDOS.join(", ")}`);
         err.statusCode = 400;
+        throw err;
+      }
+
+      const esDecisionAprobador = estadoTxt === "APROBADO" || estadoTxt === "RECHAZADO";
+      if (esDecisionAprobador && !esAprobadorAsignado) {
+        const err = new Error("Solo el jefe directo asignado puede aprobar o rechazar esta solicitud");
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (estadoTxt === "CANCELADO" && !esSolicitante) {
+        const err = new Error("Solo el solicitante puede cancelar esta solicitud");
+        err.statusCode = 403;
         throw err;
       }
 
@@ -299,7 +323,6 @@ export const actualizarSolicitudHoraExtra = async ({
           etiqueta: "Tipo de hora extra",
           valor: String(tipoHx?.nombre ?? ""),
         },
-        { etiqueta: "Justificación", valor: String(current.justificacion ?? "") },
       ];
 
       try {
@@ -330,10 +353,10 @@ export const actualizarSolicitudHoraExtra = async ({
     return {
       id_solicitud_hx: current.id_solicitud_hx,
       id_colaborador: current.id_colaborador,
+      id_aprobador: current.id_aprobador,
       fecha_solicitud: current.fecha_solicitud,
       fecha_trabajo: current.fecha_trabajo,
       horas_solicitadas: String(current.horas_solicitadas),
-      justificacion: current.justificacion,
       tipo_hx: {
         id: tipoHx?.id_tipo_hx,
         nombre: tipoHx?.nombre,

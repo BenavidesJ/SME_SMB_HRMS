@@ -21,15 +21,16 @@ interface ListaSolicitudesProps {
 export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
   const { user } = useAuth();
   const [submittingId, setSubmittingId] = useState<number | null>(null);
-  const currentUserRole = String(user?.usuario?.rol ?? "").toUpperCase();
-  const canManageRequests = ["SUPER_ADMIN", "ADMIN", "ADMINISTRADOR"].includes(currentUserRole);
+  const currentCollaboratorId = Number(user?.id ?? 0);
   const url = useMemo(() => buildQuery(filtros), [filtros]);
   const { data: res, isLoading, refetch } = useApiQuery<DataConsultaSolicitudes>({ url });
   const { mutate: modifyRequest } =
-    useApiMutation<{ id_aprobador?: number; estado: string }, void>({
+    useApiMutation<{ estado: string }, void>({
       url: (id) => `/horas-extra/solicitud/${id}`,
       method: "PATCH",
     })
+
+  const canManageItem = (item: SolicitudHoraExtra) => currentCollaboratorId > 0 && item.id_aprobador === currentCollaboratorId;
 
   const flatItems = res
     ? isAgrupada(res)
@@ -40,8 +41,6 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
   const grupos = res && isAgrupada(res) ? res.grupos : [];
 
   const handleApprove = async (id: number) => {
-    if (!canManageRequests) return;
-
     setSubmittingId(id);
     try {
       await modifyRequest(id,
@@ -56,12 +55,10 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
   };
 
   const handleDecline = async (id: number) => {
-    if (!canManageRequests) return;
-
     setSubmittingId(id);
     try {
       await modifyRequest(id,
-        { id_aprobador: user?.id, estado: "rechazado" },
+        { estado: "rechazado" },
       );
       await refetch();
     } catch (error) {
@@ -103,9 +100,9 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
                           <SolicitudCard
                             key={item.id_solicitud_hx}
                             item={item}
-                            canManageActions={canManageRequests}
-                            onApprove={canManageRequests ? handleApprove : undefined}
-                            onDecline={canManageRequests ? handleDecline : undefined}
+                            canManageActions={canManageItem(item)}
+                            onApprove={canManageItem(item) ? handleApprove : undefined}
+                            onDecline={canManageItem(item) ? handleDecline : undefined}
                             isSubmitting={submittingId === item.id_solicitud_hx}
                           />
                         ))}
@@ -119,9 +116,9 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
                     <SolicitudCard
                       key={item.id_solicitud_hx}
                       item={item}
-                      canManageActions={canManageRequests}
-                      onApprove={canManageRequests ? handleApprove : undefined}
-                      onDecline={canManageRequests ? handleDecline : undefined}
+                      canManageActions={canManageItem(item)}
+                      onApprove={canManageItem(item) ? handleApprove : undefined}
+                      onDecline={canManageItem(item) ? handleDecline : undefined}
                       isSubmitting={submittingId === item.id_solicitud_hx}
                     />
                   ))}

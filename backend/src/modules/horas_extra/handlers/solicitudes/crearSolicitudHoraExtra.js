@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import { Op } from "sequelize";
 import {
   sequelize,
   SolicitudHoraExtra,
@@ -7,21 +6,16 @@ import {
   Contrato,
   TipoJornada,
   Estado,
-  Usuario,
-  Rol,
   Colaborador,
 } from "../../../../models/index.js";
 import { sendEmail } from "../../../../services/mail.js";
 import { plantillaSolicitudHorasExtra } from "../../../../common/plantillasEmail/emailTemplate.js";
-
-const MAX_JUSTIFICACION_LENGTH = 100;
 
 export const crearSolicitudHoraExtra = async ({
   id_colaborador,
   fecha_trabajo,
   horas_solicitadas,
   id_tipo_hx,
-  justificacion,
 }) => {
   const tx = await sequelize.transaction();
 
@@ -50,15 +44,6 @@ export const crearSolicitudHoraExtra = async ({
       throw new Error("id_tipo_hx debe ser numérico");
     }
 
-    const justi = String(justificacion ?? "").trim();
-    if (!justi) {
-      throw new Error("justificacion es obligatoria");
-    }
-
-    if (justi.length > MAX_JUSTIFICACION_LENGTH) {
-      throw new Error("justificacion no puede exceder 100 caracteres");
-    }
-
     const tipoHx = await TipoHoraExtra.findByPk(idTipoHx, {
       attributes: ["id_tipo_hx", "nombre", "multiplicador"],
       transaction: tx,
@@ -82,12 +67,26 @@ export const crearSolicitudHoraExtra = async ({
 
     const contratoActivo = await Contrato.findOne({
       where: { id_colaborador: idColab, estado: ESTADO_ACTIVO_ID },
-      attributes: ["id_contrato", "id_tipo_jornada"],
+      attributes: ["id_contrato", "id_tipo_jornada", "id_jefe_directo"],
       transaction: tx,
     });
 
     if (!contratoActivo) {
       throw new Error("El colaborador no tiene un contrato ACTIVO");
+    }
+
+    const idAprobador = Number(contratoActivo.id_jefe_directo);
+    if (!Number.isInteger(idAprobador) || idAprobador <= 0) {
+      throw new Error("El colaborador no tiene un jefe directo asignado en su contrato ACTIVO");
+    }
+
+    const aprobador = await Colaborador.findByPk(idAprobador, {
+      attributes: ["id_colaborador", "correo_electronico", "nombre", "primer_apellido", "segundo_apellido"],
+      transaction: tx,
+    });
+
+    if (!aprobador) {
+      throw new Error(`No existe colaborador aprobador con id ${idAprobador}`);
     }
 
     const tipoJornada = await TipoJornada.findByPk(contratoActivo.id_tipo_jornada, {
@@ -150,14 +149,12 @@ export const crearSolicitudHoraExtra = async ({
     const created = await SolicitudHoraExtra.create(
       {
         id_colaborador: idColab,
+        id_aprobador: idAprobador,
         fecha_solicitud: new Date(),
         fecha_trabajo: fechaTxt,
         horas_solicitadas: horas,
         id_tipo_hx: idTipoHx,
         estado: ESTADO_PENDIENTE_ID,
-        aprobado_por: null,
-        horas_aprobadas: null,
-        justificacion: justi,
       },
       { transaction: tx }
     );
@@ -169,37 +166,12 @@ export const crearSolicitudHoraExtra = async ({
 
     await tx.commit();
 
-    let emailsSent = 0;
+    let aprobadorNotificado = false;
 
     try {
-      const adminUsers = await Usuario.findAll({
-        include: [
-          {
-            model: Rol,
-            as: "rol",
-            attributes: ["nombre"],
-            where: { nombre: { [Op.in]: ["ADMINISTRADOR", "SUPER_ADMIN"] } },
-            required: true,
-          },
-          {
-            model: Colaborador,
-            as: "colaborador",
-            attributes: ["correo_electronico", "nombre", "primer_apellido", "segundo_apellido"],
-            required: true,
-          },
-        ],
-        attributes: ["id_usuario", "id_colaborador"],
-      });
-
-      console.log(adminUsers);
-
-      const recipients = adminUsers
-        .map((u) => u?.colaborador?.correo_electronico)
-        .filter(Boolean);
-
-      for (const recipient of recipients) {
+      if (aprobador.correo_electronico) {
         await sendEmail({
-          recipient,
+          recipient: aprobador.correo_electronico,
           subject: "Nueva solicitud de horas extra",
           message: plantillaSolicitudHorasExtra({
             solicitanteNombre: `${solicitante.nombre} ${solicitante.primer_apellido} ${solicitante.segundo_apellido}`.trim(),
@@ -207,7 +179,7 @@ export const crearSolicitudHoraExtra = async ({
             horasSolicitadas: String(horas),
           }),
         });
-        emailsSent++;
+        aprobadorNotificado = true;
       }
     } catch (mailErr) {
       console.log("No se pudo enviar correo de notificación:", mailErr);
@@ -216,10 +188,10 @@ export const crearSolicitudHoraExtra = async ({
     return {
       id_solicitud_hx: created.id_solicitud_hx,
       id_colaborador: created.id_colaborador,
+      id_aprobador: created.id_aprobador,
       fecha_solicitud: created.fecha_solicitud,
       fecha_trabajo: created.fecha_trabajo,
       horas_solicitadas: String(created.horas_solicitadas),
-      justificacion: created.justificacion,
       tipo_hx: {
         id: tipoHx.id_tipo_hx,
         nombre: tipoHx.nombre,
@@ -230,7 +202,7 @@ export const crearSolicitudHoraExtra = async ({
         estado: estadoPendiente.estado,
       },
       notificaciones: {
-        admins_notificados: emailsSent,
+        aprobador_notificado: aprobadorNotificado,
       },
     };
   } catch (error) {
