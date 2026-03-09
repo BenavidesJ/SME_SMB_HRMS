@@ -7,6 +7,7 @@ import { EmptyStateIndicator } from "../../../components/general";
 import { Layout } from "../../../components/layout";
 import { AppLoader } from "../../../components/layout/loading";
 import { useAuth } from "../../../context/AuthContext";
+import { usePendientesAprobacion } from "../../../context/PendientesAprobacionContext";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
@@ -158,6 +159,7 @@ const estadoBadgeProps = (estado?: string) => {
 
 export const SolicitudPermisos = () => {
   const { user } = useAuth();
+  const { refreshPendientes } = usePendientesAprobacion();
   const userID = user?.id;
   const loggedUserRole = user?.usuario?.rol;
   const [activeTab, setActiveTab] = useState<"mine" | "others">("mine");
@@ -317,13 +319,13 @@ export const SolicitudPermisos = () => {
           "success",
           "Estado de permisos",
         );
-        await Promise.all([refetchMyPermisos(), refetchOtherPermisos()]);
+        await Promise.all([refetchMyPermisos(), refetchOtherPermisos(), refreshPendientes()]);
       } catch (error) {
         console.error(error);
         showToast("No se pudo actualizar el estado de la solicitud", "error", "Estado de permisos");
       }
     },
-    [updatePermisoEstado, refetchMyPermisos, refetchOtherPermisos],
+    [updatePermisoEstado, refetchMyPermisos, refetchOtherPermisos, refreshPendientes],
   );
 
   const renderPermisosList = useCallback(

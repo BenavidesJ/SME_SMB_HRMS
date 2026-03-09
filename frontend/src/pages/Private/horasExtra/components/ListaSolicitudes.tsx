@@ -12,6 +12,7 @@ import { SolicitudCard } from "./SolicitudCard";
 import { EmptyStateIndicator } from "../../../../components/general";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
 import { useAuth } from "../../../../context/AuthContext";
+import { usePendientesAprobacion } from "../../../../context/PendientesAprobacionContext";
 import { showToast } from "../../../../services/toast/toastService";
 
 interface ListaSolicitudesProps {
@@ -20,6 +21,7 @@ interface ListaSolicitudesProps {
 
 export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
   const { user } = useAuth();
+  const { refreshPendientes } = usePendientesAprobacion();
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const currentCollaboratorId = Number(user?.id ?? 0);
   const url = useMemo(() => buildQuery(filtros), [filtros]);
@@ -46,7 +48,7 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
       await modifyRequest(id,
         { estado: "aprobado" },
       );
-      await refetch();
+      await Promise.all([refetch(), refreshPendientes()]);
     } catch (error) {
       showToast(`Error aprobando la solicitud: ${error}`, "error")
     } finally {
@@ -60,7 +62,7 @@ export function ListaSolicitudes({ filtros }: ListaSolicitudesProps) {
       await modifyRequest(id,
         { estado: "rechazado" },
       );
-      await refetch();
+      await Promise.all([refetch(), refreshPendientes()]);
     } catch (error) {
       showToast(`Error rechazando la solicitud: ${error}`, "error")
     } finally {

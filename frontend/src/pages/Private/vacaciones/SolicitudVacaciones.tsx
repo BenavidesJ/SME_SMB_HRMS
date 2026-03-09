@@ -7,6 +7,7 @@ import { EmptyStateIndicator } from "../../../components/general";
 import { Layout } from "../../../components/layout";
 import { AppLoader } from "../../../components/layout/loading";
 import { useAuth } from "../../../context/AuthContext";
+import { usePendientesAprobacion } from "../../../context/PendientesAprobacionContext";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
@@ -167,6 +168,7 @@ const estadoBadgeProps = (estado?: string) => {
 
 export const SolicitudVacaciones = () => {
   const { user } = useAuth();
+  const { refreshPendientes } = usePendientesAprobacion();
   const userID = user?.id;
   const loggedUserRole = user?.usuario?.rol;
   const [activeTab, setActiveTab] = useState<"mine" | "others">("mine");
@@ -321,7 +323,7 @@ export const SolicitudVacaciones = () => {
           "success",
           "Estado actualizado",
         );
-        await Promise.all([refetchMyVacaciones(), refetchOtherVacaciones()]);
+        await Promise.all([refetchMyVacaciones(), refetchOtherVacaciones(), refreshPendientes()]);
       } catch (error) {
         console.error(error);
         showToast(
@@ -331,7 +333,7 @@ export const SolicitudVacaciones = () => {
         );
       }
     },
-    [updateVacacionEstado, refetchMyVacaciones, refetchOtherVacaciones],
+    [updateVacacionEstado, refetchMyVacaciones, refetchOtherVacaciones, refreshPendientes],
   );
 
   const renderVacacionesList = useCallback(

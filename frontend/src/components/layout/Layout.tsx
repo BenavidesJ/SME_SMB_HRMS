@@ -8,6 +8,7 @@ import { FiLogOut } from "react-icons/fi";
 import { AppBreadcrumb } from "./breadcrumb/AppBreadcrumb";
 import { DesktopNav } from "./navigation";
 import { useAuth } from "../../context/AuthContext";
+import { PendingApprovalsBell } from "./navigation/PendingApprovalsBell";
 
 interface LayoutProps {
   pageTitle: string;
@@ -28,14 +29,17 @@ export const Layout = ({ children, pageTitle }: LayoutProps) => {
             </Flex>}
 
           rightContent={
-            <Button
-              onClick={logout}
-              backgroundColor="semantic.danger"
-              size="xs"
-            >
-              <FiLogOut />
-              Cerrar Sesión
-            </Button>
+            <Flex alignItems="center" gap="2">
+              <PendingApprovalsBell />
+              <Button
+                onClick={logout}
+                backgroundColor="semantic.danger"
+                size="xs"
+              >
+                <FiLogOut />
+                Cerrar Sesión
+              </Button>
+            </Flex>
           }
         />
         <Flex w="full" h="100vh" bg="gray.50">

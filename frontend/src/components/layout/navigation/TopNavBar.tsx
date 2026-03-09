@@ -1,4 +1,4 @@
-import { Box, Flex, Text } from '@chakra-ui/react'
+import { Box, Flex } from '@chakra-ui/react'
 import type { ReactNode } from 'react';
 
 interface TopNavBarProps {
@@ -22,12 +22,12 @@ export const TopNavBar = ({ leftContent, middleContent, rightContent }: TopNavBa
       <Flex alignItems="center">
         {leftContent}
       </Flex>
-      <Text alignItems="center">
+      <Flex alignItems="center" justifyContent="center" flex="1" px="4">
         {middleContent}
-      </Text>
-      <Text alignItems="center">
+      </Flex>
+      <Flex alignItems="center" gap="2">
         {rightContent}
-      </Text>
+      </Flex>
     </Box>
   )
 }

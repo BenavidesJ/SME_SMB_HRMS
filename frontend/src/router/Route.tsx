@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { PendientesAprobacionProvider } from "../context/PendientesAprobacionContext";
 import { AppLoader } from "../components/layout/loading";
 import { getAllowedRolesForPath } from "../auth/accessControl";
 
@@ -47,8 +48,14 @@ export function Route({
     return <Navigate to={unauthenticatedRedirectTo} replace />;
   }
 
+  const renderPrivateOutlet = () => (
+    <PendientesAprobacionProvider>
+      <Outlet />
+    </PendientesAprobacionProvider>
+  );
+
   const autoRoles = getAllowedRolesForPath(location.pathname) ?? [];
-  if (autoRoles.length === 0) return <Outlet />;
+  if (autoRoles.length === 0) return renderPrivateOutlet();
 
   const roleName =
     user?.usuario?.rol ??
@@ -57,5 +64,5 @@ export function Route({
   const userRoles: string[] = roleName ? [roleName] : [];
   const hasAccess = autoRoles.some((r) => userRoles.includes(r));
 
-  return hasAccess ? <Outlet /> : <Navigate to={unauthorizedRedirectTo} replace />;
+  return hasAccess ? renderPrivateOutlet() : <Navigate to={unauthorizedRedirectTo} replace />;
 }
