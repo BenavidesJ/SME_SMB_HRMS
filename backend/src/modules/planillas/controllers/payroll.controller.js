@@ -5,6 +5,8 @@ import { recalcularPlanilla } from "../handlers/payroll/recalcularPlanilla.js";
 import { obtenerDetallePlanilla } from "../handlers/payroll/getPayrollDetails.js";
 import { eliminarPlanilla } from "../handlers/payroll/deletePlanilla.js";
 import { editarPlanilla } from "../handlers/payroll/editPlanilla.js";
+import { listarMisPlanillas } from "../handlers/payroll/listMyPayrolls.js";
+import { obtenerMiComprobantePlanilla } from "../handlers/payroll/getMyPayrollReceipt.js";
 
 const { SUCCESS } = HTTP_CODES;
 
@@ -89,6 +91,42 @@ export async function editarPlanillaController(req, res, next) {
       success: true,
       status_code: SUCCESS.OK,
       message: "Planilla actualizada",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarMisPlanillasController(req, res, next) {
+  try {
+    const data = await listarMisPlanillas({
+      tokenId: req.user?.id,
+      query: req.query ?? {},
+    });
+
+    return res.status(SUCCESS.OK).json({
+      success: true,
+      status_code: SUCCESS.OK,
+      message: "Planillas del colaborador recuperadas",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function obtenerMiComprobantePlanillaController(req, res, next) {
+  try {
+    const data = await obtenerMiComprobantePlanilla({
+      tokenId: req.user?.id,
+      id_detalle: req.params?.id,
+    });
+
+    return res.status(SUCCESS.OK).json({
+      success: true,
+      status_code: SUCCESS.OK,
+      message: "Comprobante de planilla recuperado",
       data,
     });
   } catch (error) {

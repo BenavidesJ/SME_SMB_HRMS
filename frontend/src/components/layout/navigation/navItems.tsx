@@ -54,7 +54,17 @@ export const NAV_MAIN: NavItem[] = [
     label: "Planillas",
     icon: <PiMoney />,
     path: "/planillas",
-    roles: rolesForPath("/planillas"),
+    roles: rolesForPath("/planillas/mi-planilla"),
+    children: [
+      { label: "Gestión de planillas", path: "/planillas", roles: rolesForPath("/planillas") },
+      { label: "Mi planilla", path: "/planillas/mi-planilla", roles: rolesForPath("/planillas/mi-planilla") },
+    ],
+    childrenRoles: rolesForPath("/planillas/mi-planilla"),
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/planillas/mi-planilla",
+      },
+    },
   },
   {
     label: "Asistencia",

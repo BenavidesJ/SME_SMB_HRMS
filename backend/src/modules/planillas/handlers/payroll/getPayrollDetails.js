@@ -15,7 +15,7 @@ const { Planilla } = models;
 /**
  * Construye el desglose enriquecido de una planilla a partir de datos persistidos.
  */
-function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) {
+export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) {
   const salarioMensual = toNumber(contrato?.salario_base);
   const horasSemanales = toNumber(contrato?.horas_semanales);
   const salarioQuincenal = roundCurrency(salarioMensual / 2);
@@ -46,7 +46,7 @@ function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) {
   const deducciones = deduccionesDetalle.map((dp) => {
     const deduccion = dp.deduccion;
     const porcentaje = toNumber(deduccion?.valor);
-    const monto = roundCurrency((bruto * porcentaje) / 100);
+    const monto = roundCurrency(dp.monto ?? (bruto * porcentaje) / 100);
     return {
       id_deduccion: dp.id_deduccion,
       nombre: deduccion?.nombre ?? "Deducción",

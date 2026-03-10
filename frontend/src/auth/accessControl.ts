@@ -28,6 +28,7 @@ export const ACCESS_RULES: AccessRule[] = [
   // Planillas
   { path: "/planillas", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
   { path: "/planillas/periodo_planilla", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
+  { path: "/planillas/mi-planilla", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
 
   // Asistencia
   { path: "/asistencia", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },

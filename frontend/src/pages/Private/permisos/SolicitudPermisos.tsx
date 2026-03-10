@@ -274,12 +274,6 @@ export const SolicitudPermisos = () => {
   }, [hasAdminPermission]);
 
   useEffect(() => {
-    if (hasAdminPermission && selectedCollaboratorId) {
-      refetchOtherPermisos();
-    }
-  }, [hasAdminPermission, selectedCollaboratorId, refetchOtherPermisos]);
-
-  useEffect(() => {
     if (activeTab === "others" && !selectedCollaboratorId && colaboradorOptions.length > 0) {
       setSelectedCollaboratorId(colaboradorOptions[0].value);
     }

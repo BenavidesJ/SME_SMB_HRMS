@@ -12,6 +12,8 @@ import {
   obtenerDetallePlanillaController,
   eliminarPlanillaController,
   editarPlanillaController,
+  listarMisPlanillasController,
+  obtenerMiComprobantePlanillaController,
 } from "../modules/planillas/planillas.controller.js";
 
 const router = Router();
@@ -24,6 +26,8 @@ router.delete("/periodo_planilla/:id", authorization, deletePeriodoPlanillaContr
 
 router.post("/simular", authorization, simularPlanillaController);
 router.post("/detalle", authorization, obtenerDetallePlanillaController);
+router.get("/mis-planillas", authorization, listarMisPlanillasController);
+router.get("/mis-planillas/:id", authorization, obtenerMiComprobantePlanillaController);
 router.post("/", authorization, generarPlanillaController);
 router.patch("/recalcular", authorization, recalcularPlanillaController);
 router.delete("/:id", authorization, eliminarPlanillaController);

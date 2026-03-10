@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import axios from "axios";
 import { useCallback, useRef, useState } from "react";
 import { apiRequest, ApiError } from "../services/api";
 import type { HttpMethod } from "../types";
@@ -60,7 +61,7 @@ export function useApiMutation<TBody, TResponse, TKey = unknown>(
       setData(result);
       return result;
     } catch (err: any) {
-      if (err?.name === "AbortError") return null;
+      if (err?.name === "AbortError" || err?.code === "ERR_CANCELED" || axios.isCancel(err)) return null;
       setError(err);
       throw err;
     } finally {

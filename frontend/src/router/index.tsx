@@ -38,6 +38,7 @@ import { SolicitudPermisos } from "../pages/Private/permisos/SolicitudPermisos";
 import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
 import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
+import { MiPlanilla } from "../pages/Private/planillas/MiPlanilla";
 import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
 import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
 import { Aguinaldos } from "../pages/Private/aguinaldos/Aguinaldos";
@@ -187,6 +188,11 @@ export const router = createBrowserRouter([
           crumb: ({ params }: { params: Record<string, string> }) =>
             `Periodo (${shortId(params.id)})`,
         },
+      },
+      {
+        path: "/planillas/mi-planilla",
+        element: <MiPlanilla />,
+        handle: { crumb: "Mi planilla" },
       },
 
       {

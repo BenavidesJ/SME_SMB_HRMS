@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, ApiError } from "../services/api";
 
@@ -10,16 +11,25 @@ type UseApiQueryOptions<T> = {
 
 export function useApiQuery<T>(opts: UseApiQueryOptions<T>) {
   const { url, enabled = true, initialData } = opts;
+  const initialDataRef = useRef<T | undefined>(initialData);
+  const shouldFetch = enabled && Boolean(url);
 
-  const [data, setData] = useState<T | undefined>(initialData);
-  const [isLoading, setIsLoading] = useState<boolean>(enabled);
+  if (initialDataRef.current === undefined && initialData !== undefined) {
+    initialDataRef.current = initialData;
+  }
+
+  const [data, setData] = useState<T | undefined>(initialDataRef.current);
+  const [isLoading, setIsLoading] = useState<boolean>(shouldFetch);
   const [error, setError] = useState<ApiError | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const reqIdRef = useRef(0);
 
   const fetchNow = useCallback(async () => {
-    if (!enabled) return;
+    if (!shouldFetch) {
+      setIsLoading(false);
+      return;
+    }
 
     // Cancelar request anterior
     abortRef.current?.abort();
@@ -41,15 +51,15 @@ export function useApiQuery<T>(opts: UseApiQueryOptions<T>) {
 
       setData(result);
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
+      if (err?.name === "AbortError" || err?.code === "ERR_CANCELED" || axios.isCancel(err)) return;
       if (myReqId !== reqIdRef.current) return;
 
       setError(err);
-      setData(initialData);
+      setData(initialDataRef.current);
     } finally {
       if (myReqId === reqIdRef.current) setIsLoading(false);
     }
-  }, [enabled, url, initialData]);
+  }, [shouldFetch, url]);
 
   useEffect(() => {
     fetchNow();

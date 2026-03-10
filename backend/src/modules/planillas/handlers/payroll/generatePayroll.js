@@ -97,33 +97,51 @@ export const generarPlanillaQuincenal = (payload = {}) =>
           );
         }
 
-        resultados.generados.push({
+        resultados.push({
           id_colaborador: colaboradorId,
-          planilla: serializePlanilla({
-            ...detallePlanilla.get({ plain: true }),
-            ...calculo.dataPlanilla,
-            generado_por: generadoPor,
-          }),
+          nombre_completo: nombreCompleto,
+          identificacion: empleado?.identificacion ?? null,
+          salario_mensual: calculo.salarioMensual,
           salario_quincenal_base: calculo.salarioQuincenal,
+          salario_ordinario_programado: calculo.salarioOrdinarioProgramado,
+          salario_ordinario: calculo.salarioOrdinario,
+          salario_diario: calculo.salarioDiario,
+          tarifa_hora: roundCurrency(calculo.tarifaHora),
+          horas_ordinarias: {
+            cantidad: calculo.resumenDias.totalHorasOrdinariasPagadas,
+            programadas: calculo.resumenDias.totalHorasOrdinariasProgramadas,
+            trabajadas: calculo.resumenDias.totalHorasOrdinariasTrabajadas,
+            vacaciones: calculo.resumenDias.totalHorasVacacionesPagadas,
+            permisos_con_goce: calculo.resumenDias.totalHorasPermisosConGocePagadas,
+            feriado_no_trabajado: calculo.resumenDias.totalHorasFeriadoPagadoNoTrabajado,
+            incapacidad_cubiertas_patrono: calculo.resumenDias.totalHorasIncapacidadCubiertas,
+            total_no_pagadas: calculo.resumenDias.totalHorasNoPagadas,
+            monto: calculo.salarioOrdinario,
+          },
           descuentos_dias: {
             ausencias: {
               dias: calculo.resumenDias.diasAusencias,
+              horas: calculo.resumenDias.totalHorasAusenciaInjustificada,
               monto: calculo.resumenDias.montoDescuentoAusencias,
             },
             incapacidad: {
               dias: calculo.resumenDias.diasIncapacidad,
+              horas_cubiertas_patrono: calculo.resumenDias.totalHorasIncapacidadCubiertas,
+              horas_no_cubiertas: calculo.resumenDias.totalHorasIncapacidadNoCubiertas,
               monto: calculo.resumenDias.montoDescuentoIncapacidad,
             },
             total: calculo.resumenDias.totalDescuentosDias,
           },
-          horas_extra: { cantidad: calculo.resumenDias.totalHorasExtra, total: calculo.pagoExtra },
-          horas_nocturnas: { cantidad: calculo.resumenDias.totalHorasNocturnas, total: calculo.pagoNocturno },
-          horas_feriado: { cantidad: calculo.resumenDias.totalHorasFeriado, total: calculo.pagoFeriado },
+          horas_extra: { cantidad: calculo.resumenDias.totalHorasExtra, monto: calculo.pagoExtra },
+          horas_nocturnas: { cantidad: calculo.resumenDias.totalHorasNocturnas, monto: calculo.pagoNocturno },
+          horas_feriado: { cantidad: calculo.resumenDias.totalHorasFeriado, monto: calculo.pagoFeriado },
           salario_devengado: calculo.bruto,
           deducciones_detalle: calculo.deduccionesDetalle,
           renta: calculo.renta,
+          total_deducciones: calculo.totalDescuentos,
           salario_neto: calculo.neto,
           detalles_calculo: calculo.detalles_calculo,
+          error: null,
         });
       } catch (error) {
         resultados.errores.push({

@@ -278,12 +278,6 @@ export const SolicitudVacaciones = () => {
   }, [hasAdminPermission]);
 
   useEffect(() => {
-    if (hasAdminPermission && selectedCollaboratorId) {
-      refetchOtherVacaciones();
-    }
-  }, [hasAdminPermission, selectedCollaboratorId, refetchOtherVacaciones]);
-
-  useEffect(() => {
     if (activeTab === "others" && !selectedCollaboratorId && colaboradorOptions.length > 0) {
       setSelectedCollaboratorId(colaboradorOptions[0].value);
     }

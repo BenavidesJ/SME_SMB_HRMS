@@ -55,3 +55,41 @@ export function addDaysToDateInput(dateValue: string, daysToAdd: number): string
 
   return `${year}-${month}-${day}`;
 }
+
+function capitalize(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function parseIsoLikeDate(value?: string | null): Date | null {
+  if (!value) return null;
+
+  const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
+  const dateTimeRegex = /^\d{4}-\d{2}-\d{2}T/;
+
+  if (!dateOnlyRegex.test(value) && !dateTimeRegex.test(value)) return null;
+
+  const candidate = dateOnlyRegex.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+
+  return Number.isNaN(candidate.getTime()) ? null : candidate;
+}
+
+export function formatSpanishLongDate(value?: string | null): string {
+  const parsed = parseIsoLikeDate(value);
+  if (!parsed) return value ?? "—";
+
+  const parts = new Intl.DateTimeFormat("es-CR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).formatToParts(parsed);
+
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+
+  if (!day || !month || !year) return value ?? "—";
+  return `${day} de ${capitalize(month)} ${year}`;
+}

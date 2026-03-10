@@ -29,15 +29,25 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.message) {
-      const msg =
-        error.response.data.message || error.response.data.error || 'Error en la respuesta del servidor.';
+    if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
+      return Promise.reject(error);
+    }
+
+    const responseData = error?.response?.data;
+    const msg =
+      responseData?.message ||
+      responseData?.error ||
+      error?.message ||
+      'Error en la respuesta del servidor.';
+
+    if (responseData) {
       showToast(msg, 'error');
-    } else if (error.request) {
+    } else if (error?.request) {
       showToast('No se recibió respuesta del servidor.', 'warning');
     } else {
-      showToast(error.message, 'error');
+      showToast(msg, 'error');
     }
+
     return Promise.reject(error);
   }
 );

@@ -13,4 +13,6 @@ export {
   obtenerDetallePlanillaController,
   eliminarPlanillaController,
   editarPlanillaController,
+  listarMisPlanillasController,
+  obtenerMiComprobantePlanillaController,
 } from "./controllers/payroll.controller.js";

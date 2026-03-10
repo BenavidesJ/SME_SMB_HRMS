@@ -170,19 +170,27 @@ function procesarDiasPeriodo({
   vacacionesFechas,
   permisosConGoceFechas,
   diasLaboralesSet,
-  salarioDiario,
+  duracionTurno,
+  tarifaHora,
 }) {
   const jornadaMap = new Map(jornadas.map((j) => [j.fecha, j]));
+
+  let totalHorasOrdinariasProgramadas = 0;
+  let totalHorasOrdinariasPagadas = 0;
+  let totalHorasOrdinariasTrabajadas = 0;
+  let totalHorasVacacionesPagadas = 0;
+  let totalHorasPermisosConGocePagadas = 0;
+  let totalHorasFeriadoPagadoNoTrabajado = 0;
+  let totalHorasIncapacidadCubiertas = 0;
+  let totalHorasAusenciaInjustificada = 0;
+  let totalHorasIncapacidadNoCubiertas = 0;
 
   let totalHorasExtra = 0;
   let totalHorasNocturnas = 0;
   let totalHorasFeriado = 0;
 
   let diasAusencias = 0;
-  let montoDescuentoAusencias = 0;
   let diasIncapacidad = 0;
-  let montoDescuentoIncapacidad = 0;
-
   let diasTrabajados = 0;
   let diasFeriado = 0;
   let diasVacaciones = 0;
@@ -198,52 +206,153 @@ function procesarDiasPeriodo({
     const dayOfWeek = (actual.day() + 6) % 7;
     const esLaboral = diasLaboralesSet.has(dayOfWeek);
 
-    if (!esLaboral) {
-      if (jornada) {
-        totalHorasExtra += jornada.horas_extra;
-        totalHorasNocturnas += jornada.horas_nocturnas;
-      }
-      diasNoLaborales++;
-    } else if (jornada && jornada.horas_ordinarias > 0) {
-      diasTrabajados++;
-      totalHorasExtra += jornada.horas_extra;
-      totalHorasNocturnas += jornada.horas_nocturnas;
+    if (jornada) {
+      totalHorasExtra += Number(jornada.horas_extra ?? 0);
+      totalHorasNocturnas += Number(jornada.horas_nocturnas ?? 0);
+    }
 
-      if (jornada.es_feriado) {
-        totalHorasFeriado += jornada.horas_ordinarias;
+    if (!esLaboral) {
+      diasNoLaborales++;
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    const horasProgramadasDia = Math.max(Number(duracionTurno ?? 0), 0);
+    const horasTrabajadasDia = Math.min(
+      Math.max(Number(jornada?.horas_ordinarias ?? 0), 0),
+      horasProgramadasDia
+    );
+
+    totalHorasOrdinariasProgramadas += horasProgramadasDia;
+
+    const tieneVacaciones = vacacionesFechas.has(fechaStr) || Boolean(jornada?.id_vacaciones);
+    const tienePermisoConGoce =
+      permisosConGoceFechas.has(fechaStr) || Boolean(jornada?.id_permiso);
+    const tieneIncapacidad = Boolean(jornada?.id_incapacidad && jornada?.incapacidad_data);
+
+    if (feriadosFechas.has(fechaStr)) {
+      totalHorasOrdinariasPagadas += horasProgramadasDia;
+
+      if (horasTrabajadasDia > 0) {
+        diasTrabajados++;
+        totalHorasOrdinariasTrabajadas += horasTrabajadasDia;
+        totalHorasFeriado += horasTrabajadasDia;
+      } else {
+        diasFeriado++;
+        totalHorasFeriadoPagadoNoTrabajado += horasProgramadasDia;
       }
-    } else if (feriadosFechas.has(fechaStr)) {
-      diasFeriado++;
-    } else if (vacacionesFechas.has(fechaStr)) {
+
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    if (!jornada) {
+      if (tieneVacaciones) {
+        diasVacaciones++;
+        totalHorasOrdinariasPagadas += horasProgramadasDia;
+        totalHorasVacacionesPagadas += horasProgramadasDia;
+      } else if (tienePermisoConGoce) {
+        diasPermisosConGoce++;
+        totalHorasOrdinariasPagadas += horasProgramadasDia;
+        totalHorasPermisosConGocePagadas += horasProgramadasDia;
+      } else {
+        diasAusencias++;
+        totalHorasAusenciaInjustificada += horasProgramadasDia;
+      }
+
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    if (tieneVacaciones) {
       diasVacaciones++;
-    } else if (permisosConGoceFechas.has(fechaStr)) {
+      totalHorasOrdinariasPagadas += horasProgramadasDia;
+      totalHorasVacacionesPagadas += horasProgramadasDia;
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    if (tienePermisoConGoce) {
       diasPermisosConGoce++;
-    } else if (jornada && jornada.id_incapacidad && jornada.incapacidad_data) {
-      const { porcentaje_patrono } = jornada.incapacidad_data;
+      totalHorasOrdinariasPagadas += horasProgramadasDia;
+      totalHorasPermisosConGocePagadas += horasProgramadasDia;
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    if (tieneIncapacidad) {
+      const porcentajePatrono = Math.max(
+        0,
+        Math.min(Number(jornada.incapacidad_data?.porcentaje_patrono ?? 0), 100)
+      );
+
+      const horasFaltantes = Math.max(horasProgramadasDia - horasTrabajadasDia, 0);
+      const horasCubiertas = roundDecimal((horasFaltantes * porcentajePatrono) / 100);
+      const horasNoCubiertas = roundDecimal(Math.max(horasFaltantes - horasCubiertas, 0));
+
       diasIncapacidad++;
-      if (porcentaje_patrono <= 0) {
-        montoDescuentoIncapacidad += salarioDiario;
-      } else if (porcentaje_patrono < 100) {
-        const porcionNoCubierta = (100 - porcentaje_patrono) / 100;
-        montoDescuentoIncapacidad += roundCurrency(salarioDiario * porcionNoCubierta);
+
+      if (horasTrabajadasDia > 0) {
+        diasTrabajados++;
+        totalHorasOrdinariasTrabajadas += horasTrabajadasDia;
+      }
+
+      totalHorasOrdinariasPagadas += horasTrabajadasDia + horasCubiertas;
+      totalHorasIncapacidadCubiertas += horasCubiertas;
+      totalHorasIncapacidadNoCubiertas += horasNoCubiertas;
+
+      actual = actual.add(1, "day");
+      continue;
+    }
+
+    if (horasTrabajadasDia > 0) {
+      diasTrabajados++;
+      totalHorasOrdinariasTrabajadas += horasTrabajadasDia;
+      totalHorasOrdinariasPagadas += horasTrabajadasDia;
+
+      const horasAusentesDia = Math.max(horasProgramadasDia - horasTrabajadasDia, 0);
+      if (horasAusentesDia > 0) {
+        diasAusencias++;
+        totalHorasAusenciaInjustificada += horasAusentesDia;
       }
     } else {
       diasAusencias++;
-      montoDescuentoAusencias += salarioDiario;
+      totalHorasAusenciaInjustificada += horasProgramadasDia;
     }
 
     actual = actual.add(1, "day");
   }
 
+  const montoDescuentoAusencias = roundCurrency(totalHorasAusenciaInjustificada * tarifaHora);
+  const montoDescuentoIncapacidad = roundCurrency(totalHorasIncapacidadNoCubiertas * tarifaHora);
+  const totalDescuentosDias = roundCurrency(montoDescuentoAusencias + montoDescuentoIncapacidad);
+
   return {
-    totalHorasExtra: roundCurrency(totalHorasExtra),
-    totalHorasNocturnas: roundCurrency(totalHorasNocturnas),
-    totalHorasFeriado: roundCurrency(totalHorasFeriado),
+    totalHorasOrdinariasProgramadas: roundDecimal(totalHorasOrdinariasProgramadas),
+    totalHorasOrdinariasPagadas: roundDecimal(totalHorasOrdinariasPagadas),
+    totalHorasOrdinariasTrabajadas: roundDecimal(totalHorasOrdinariasTrabajadas),
+    totalHorasVacacionesPagadas: roundDecimal(totalHorasVacacionesPagadas),
+    totalHorasPermisosConGocePagadas: roundDecimal(totalHorasPermisosConGocePagadas),
+    totalHorasFeriadoPagadoNoTrabajado: roundDecimal(totalHorasFeriadoPagadoNoTrabajado),
+    totalHorasIncapacidadCubiertas: roundDecimal(totalHorasIncapacidadCubiertas),
+    totalHorasAusenciaInjustificada: roundDecimal(totalHorasAusenciaInjustificada),
+    totalHorasIncapacidadNoCubiertas: roundDecimal(totalHorasIncapacidadNoCubiertas),
+    totalHorasNoPagadas: roundDecimal(
+      totalHorasAusenciaInjustificada + totalHorasIncapacidadNoCubiertas
+    ),
+    salarioOrdinarioProgramado: roundCurrency(totalHorasOrdinariasProgramadas * tarifaHora),
+    salarioOrdinario: roundCurrency(totalHorasOrdinariasPagadas * tarifaHora),
+
+    totalHorasExtra: roundDecimal(totalHorasExtra),
+    totalHorasNocturnas: roundDecimal(totalHorasNocturnas),
+    totalHorasFeriado: roundDecimal(totalHorasFeriado),
+
     diasAusencias,
-    montoDescuentoAusencias: roundCurrency(montoDescuentoAusencias),
+    montoDescuentoAusencias,
     diasIncapacidad,
-    montoDescuentoIncapacidad: roundCurrency(montoDescuentoIncapacidad),
-    totalDescuentosDias: roundCurrency(montoDescuentoAusencias + montoDescuentoIncapacidad),
+    montoDescuentoIncapacidad,
+    totalDescuentosDias,
+
     diasTrabajados,
     diasFeriado,
     diasVacaciones,
@@ -275,43 +384,189 @@ function construirDetallesSalario({
   const lineas = [];
 
   lineas.push({ item: "Salario mensual", cantidad: 1, unitario: salarioMensual, total: salarioMensual });
-  lineas.push({ item: "Salario quincenal (base)", cantidad: 1, unitario: salarioQuincenal, total: salarioQuincenal });
-  lineas.push({ item: "Salario diario (mensual / 30)", cantidad: 1, unitario: roundCurrency(salarioDiario), total: roundCurrency(salarioDiario) });
-  lineas.push({ item: "Tarifa por hora (extras/nocturnos/feriados)", cantidad: 1, unitario: roundCurrency(tarifaHora), total: 0 });
+  lineas.push({
+    item: "Salario quincenal teórico (referencia)",
+    cantidad: 1,
+    unitario: salarioQuincenal,
+    total: salarioQuincenal,
+  });
+  lineas.push({
+    item: "Salario diario (mensual / 30) [referencia]",
+    cantidad: 1,
+    unitario: roundCurrency(salarioDiario),
+    total: roundCurrency(salarioDiario),
+  });
+  lineas.push({
+    item: "Tarifa por hora (ordinarias/extras/nocturnos/feriados)",
+    cantidad: 1,
+    unitario: roundCurrency(tarifaHora),
+    total: 0,
+  });
   lineas.push({ item: "Duración turno (hrs)", cantidad: duracionTurno, unitario: 0, total: 0 });
-  lineas.push({ item: "Días laborales esperados en período", cantidad: diasLaboralesEsperados, unitario: 0, total: 0 });
+  lineas.push({
+    item: "Días laborales esperados en período",
+    cantidad: diasLaboralesEsperados,
+    unitario: 0,
+    total: 0,
+  });
 
-  lineas.push({ item: "Días trabajados", cantidad: resumenDias.diasTrabajados, unitario: 0, total: 0 });
+  lineas.push({
+    item: "Horas ordinarias programadas en período",
+    cantidad: resumenDias.totalHorasOrdinariasProgramadas,
+    unitario: roundCurrency(tarifaHora),
+    total: resumenDias.salarioOrdinarioProgramado,
+  });
+  lineas.push({
+    item: "Horas ordinarias pagadas/efectivas",
+    cantidad: resumenDias.totalHorasOrdinariasPagadas,
+    unitario: 0,
+    total: 0,
+  });
+
+  if (resumenDias.diasTrabajados > 0) {
+    lineas.push({
+      item: "Días con jornada trabajada",
+      cantidad: resumenDias.diasTrabajados,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
+  if (resumenDias.totalHorasOrdinariasTrabajadas > 0) {
+    lineas.push({
+      item: "Horas ordinarias trabajadas",
+      cantidad: resumenDias.totalHorasOrdinariasTrabajadas,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
   if (resumenDias.diasFeriado > 0) {
-    lineas.push({ item: "Feriados no trabajados (pagados)", cantidad: resumenDias.diasFeriado, unitario: 0, total: 0 });
-  }
-  if (resumenDias.diasVacaciones > 0) {
-    lineas.push({ item: "Días de vacaciones (pagados)", cantidad: resumenDias.diasVacaciones, unitario: 0, total: 0 });
-  }
-  if (resumenDias.diasPermisosConGoce > 0) {
-    lineas.push({ item: "Días permiso con goce (pagados)", cantidad: resumenDias.diasPermisosConGoce, unitario: 0, total: 0 });
+    lineas.push({
+      item: "Feriados obligatorios no laborados (pagados)",
+      cantidad: resumenDias.diasFeriado,
+      unitario: 0,
+      total: 0,
+    });
   }
 
-  if (resumenDias.diasAusencias > 0) {
-    lineas.push({ item: "Ausencias injustificadas (-)", cantidad: resumenDias.diasAusencias, unitario: roundCurrency(salarioDiario), total: -resumenDias.montoDescuentoAusencias });
+  if (resumenDias.totalHorasFeriadoPagadoNoTrabajado > 0) {
+    lineas.push({
+      item: "Feriado obligatorio no laborado (hrs pagadas)",
+      cantidad: resumenDias.totalHorasFeriadoPagadoNoTrabajado,
+      unitario: 0,
+      total: 0,
+    });
   }
+
+  if (resumenDias.diasVacaciones > 0) {
+    lineas.push({
+      item: "Días de vacaciones (pagados)",
+      cantidad: resumenDias.diasVacaciones,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
+  if (resumenDias.totalHorasVacacionesPagadas > 0) {
+    lineas.push({
+      item: "Vacaciones pagadas (hrs)",
+      cantidad: resumenDias.totalHorasVacacionesPagadas,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
+  if (resumenDias.diasPermisosConGoce > 0) {
+    lineas.push({
+      item: "Días permiso con goce (pagados)",
+      cantidad: resumenDias.diasPermisosConGoce,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
+  if (resumenDias.totalHorasPermisosConGocePagadas > 0) {
+    lineas.push({
+      item: "Permisos con goce pagados (hrs)",
+      cantidad: resumenDias.totalHorasPermisosConGocePagadas,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
   if (resumenDias.diasIncapacidad > 0) {
-    lineas.push({ item: "Incapacidad – porción no cubierta por patrono (-)", cantidad: resumenDias.diasIncapacidad, unitario: 0, total: -resumenDias.montoDescuentoIncapacidad });
+    lineas.push({
+      item: "Días con incapacidad",
+      cantidad: resumenDias.diasIncapacidad,
+      unitario: 0,
+      total: 0,
+    });
   }
+
+  if (resumenDias.totalHorasIncapacidadCubiertas > 0) {
+    lineas.push({
+      item: "Horas incapacidad cubiertas por patrono",
+      cantidad: resumenDias.totalHorasIncapacidadCubiertas,
+      unitario: 0,
+      total: 0,
+    });
+  }
+
+  if (resumenDias.totalHorasAusenciaInjustificada > 0) {
+    lineas.push({
+      item: "Ausencias injustificadas (-)",
+      cantidad: resumenDias.totalHorasAusenciaInjustificada,
+      unitario: roundCurrency(tarifaHora),
+      total: -resumenDias.montoDescuentoAusencias,
+    });
+  }
+
+  if (resumenDias.totalHorasIncapacidadNoCubiertas > 0) {
+    lineas.push({
+      item: "Incapacidad – horas no cubiertas por patrono (-)",
+      cantidad: resumenDias.totalHorasIncapacidadNoCubiertas,
+      unitario: roundCurrency(tarifaHora),
+      total: -resumenDias.montoDescuentoIncapacidad,
+    });
+  }
+
   if (resumenDias.totalHorasExtra > 0) {
-    lineas.push({ item: "Horas extra (×1.5)", cantidad: resumenDias.totalHorasExtra, unitario: roundCurrency(tarifaHora * 1.5), total: pagoExtra });
+    lineas.push({
+      item: "Horas extra (×1.5)",
+      cantidad: resumenDias.totalHorasExtra,
+      unitario: roundCurrency(tarifaHora * 1.5),
+      total: pagoExtra,
+    });
   }
+
   if (resumenDias.totalHorasNocturnas > 0) {
-    lineas.push({ item: "Horas nocturnas (×0.25 recargo)", cantidad: resumenDias.totalHorasNocturnas, unitario: roundCurrency(tarifaHora * 0.25), total: pagoNocturno });
+    lineas.push({
+      item: "Horas nocturnas (×0.25 recargo)",
+      cantidad: resumenDias.totalHorasNocturnas,
+      unitario: roundCurrency(tarifaHora * 0.25),
+      total: pagoNocturno,
+    });
   }
+
   if (resumenDias.totalHorasFeriado > 0) {
-    lineas.push({ item: "Horas feriado trabajado (doble paga)", cantidad: resumenDias.totalHorasFeriado, unitario: roundCurrency(tarifaHora), total: pagoFeriado });
+    lineas.push({
+      item: "Horas feriado trabajado (doble paga)",
+      cantidad: resumenDias.totalHorasFeriado,
+      unitario: roundCurrency(tarifaHora),
+      total: pagoFeriado,
+    });
   }
 
   lineas.push({ item: "SALARIO DEVENGADO (BRUTO)", cantidad: 1, unitario: 0, total: bruto });
 
   for (const ded of deduccionesDetalle) {
-    lineas.push({ item: `${ded.nombre} (${ded.porcentaje}%) (-)`, cantidad: 1, unitario: 0, total: -ded.monto });
+    lineas.push({
+      item: `${ded.nombre} (${ded.porcentaje}%) (-)`,
+      cantidad: 1,
+      unitario: 0,
+      total: -ded.monto,
+    });
   }
 
   if (renta.monto_quincenal > 0) {
@@ -429,7 +684,8 @@ export async function calcularPlanillaColaborador({
     vacacionesFechas,
     permisosConGoceFechas,
     diasLaboralesSet,
-    salarioDiario,
+    duracionTurno,
+    tarifaHora,
   });
 
   // 8. Calcular montos
@@ -438,8 +694,7 @@ export async function calcularPlanillaColaborador({
   const pagoFeriado = roundCurrency(resumenDias.totalHorasFeriado * tarifaHora);
 
   const bruto = roundCurrency(
-    salarioQuincenal
-    - resumenDias.totalDescuentosDias
+    resumenDias.salarioOrdinario
     + pagoExtra
     + pagoNocturno
     + pagoFeriado
@@ -483,6 +738,8 @@ export async function calcularPlanillaColaborador({
     tarifaHora,
     duracionTurno,
     diasLaboralesEsperados,
+    salarioOrdinarioProgramado: resumenDias.salarioOrdinarioProgramado,
+    salarioOrdinario: resumenDias.salarioOrdinario,
     resumenDias,
     pagoExtra,
     pagoNocturno,
@@ -494,10 +751,9 @@ export async function calcularPlanillaColaborador({
     renta,
     neto,
     detalles_calculo,
-    // Datos para persistencia
     dataPlanilla: {
       id_contrato: contrato.id_contrato,
-      horas_ordinarias: roundDecimal(resumenDias.diasTrabajados * duracionTurno),
+      horas_ordinarias: roundDecimal(resumenDias.totalHorasOrdinariasPagadas),
       horas_extra: roundDecimal(resumenDias.totalHorasExtra),
       horas_nocturnas: roundDecimal(resumenDias.totalHorasNocturnas),
       horas_feriado: roundDecimal(resumenDias.totalHorasFeriado),
