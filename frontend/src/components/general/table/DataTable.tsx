@@ -67,7 +67,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
   };
 
   const hasActionColumn = Boolean(actionColumn);
-  const showStickyCss = (stickyHeader && enableStickyColumns) || hasActionColumn;
+  const actionColumnIsSticky = Boolean(actionColumn?.sticky ?? true);
+  const showStickyCss = (stickyHeader && enableStickyColumns) || (hasActionColumn && actionColumnIsSticky);
 
   const totalColSpan =
     visibleColumns.length + (selectionEnabled ? 1 : 0) + (hasActionColumn ? 1 : 0);
@@ -174,8 +175,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
             {actionColumn && (
               <Table.Cell
-                data-sticky="end"
-                insetInlineEnd={0}
+                {...(actionColumnIsSticky
+                  ? {
+                    "data-sticky": "end",
+                    insetInlineEnd: 0,
+                  }
+                  : {})}
                 w={actionColumn.w ?? "140px"}
                 textAlign="end"
               >
@@ -244,8 +249,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
           {actionColumn && (
             <Table.ColumnHeader
-              data-sticky="end"
-              insetInlineEnd={0}
+              {...(actionColumnIsSticky
+                ? {
+                  "data-sticky": "end",
+                  insetInlineEnd: 0,
+                }
+                : {})}
               w={actionColumn.w ?? "140px"}
               textAlign="end"
             >

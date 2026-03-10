@@ -6,12 +6,13 @@ import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { toTitleCase } from "../../../utils";
+import { addDaysToDateInput, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { EmptyStateIndicator } from "../../../components/general";
 import { AppLoader } from "../../../components/layout/loading";
 import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { LuUser, LuUsers } from "react-icons/lu";
+import { useFormContext } from "react-hook-form";
 
 interface TipoIncapacidad {
   id: number;
@@ -25,6 +26,8 @@ interface CrearIncapacidadPayload {
   fecha_fin: string;
   tipo_incap: string;
 }
+
+type CrearIncapacidadFormValues = CrearIncapacidadPayload;
 
 interface DiaIncapacidad {
   id_jornada: number;
@@ -55,11 +58,59 @@ const formatDateLong = (iso?: string | null) => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 };
 
+const IncapacidadDateFields = ({ minFechaInicio }: { minFechaInicio: string }) => {
+  const { watch } = useFormContext<CrearIncapacidadFormValues>();
+  const startDate = watch("fecha_inicio");
+  const minFechaFin = startDate || minFechaInicio;
+
+  return (
+    <>
+      <InputField
+        fieldType="date"
+        label="Fecha de Inicio de la Incapacidad"
+        name="fecha_inicio"
+        required
+        min={minFechaInicio}
+        rules={{
+          required: "El campo es obligatorio",
+          validate: (value) => {
+            const selectedDate = String(value ?? "");
+
+            if (!selectedDate) return true;
+
+            return selectedDate >= minFechaInicio || "La fecha de inicio no puede ser anterior a 2 días atrás.";
+          },
+        }}
+      />
+      <InputField
+        fieldType="date"
+        label="Fecha de Finalización de la Incapacidad"
+        name="fecha_fin"
+        required
+        min={minFechaFin}
+        rules={{
+          required: "El campo es obligatorio",
+          validate: (value, formValues) => {
+            const endDate = String(value ?? "");
+            const start = String(formValues?.fecha_inicio ?? "");
+
+            if (!endDate || !start) return true;
+
+            return endDate >= start || "La fecha de finalización no puede ser anterior a la fecha de inicio.";
+          },
+        }}
+      />
+    </>
+  );
+};
+
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const userID = user?.id;
   const loggedUserRole = user?.usuario?.rol;
+  const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
+  const minFechaInicio = useMemo(() => addDaysToDateInput(todayInCostaRica, -2), [todayInCostaRica]);
 
   const hasAdminPermission = useMemo(
     () => (loggedUserRole ? ["ADMIN", "SUPER_ADMIN"].includes(loggedUserRole) : false),
@@ -300,20 +351,7 @@ export const RegistroIncapacidades = () => {
           <Box bg="white" borderRadius="xl" boxShadow="md" p={6}>
             <Form onSubmit={handleCreateRequest} resetOnSuccess>
               <Wrap maxW="600px">
-                <InputField
-                  fieldType="date"
-                  label="Fecha de Inicio de la Incapacidad"
-                  name="fecha_inicio"
-                  required
-                  rules={{ required: "El campo es obligatorio" }}
-                />
-                <InputField
-                  fieldType="date"
-                  label="Fecha de Finalización de la Incapacidad"
-                  name="fecha_fin"
-                  required
-                  rules={{ required: "El campo es obligatorio" }}
-                />
+                <IncapacidadDateFields minFechaInicio={minFechaInicio} />
                 <InputField
                   fieldType="select"
                   label="Tipo de Incapacidad"

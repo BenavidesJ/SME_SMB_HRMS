@@ -475,21 +475,21 @@ export const SolicitudPermisos = () => {
     try {
       const result = await createPermiso(payload);
 
-      showToast("Solicitud de permiso registrada", "success", "Solicitud de permisos");
+      if (payload.tipo_permiso === "GOCE") {
+        if (typeof result?.cantidad_dias === "number") {
+          showToast(
+            `Esta solicitud cubre ${result.cantidad_dias} ${result.cantidad_dias === 1 ? "día" : "días"} laborables.`,
+            "info",
+            "Cálculo de permisos",
+          );
+        }
 
-      if (typeof result?.cantidad_dias === "number") {
-        showToast(
-          `Esta solicitud cubre ${result.cantidad_dias} ${result.cantidad_dias === 1 ? "día" : "días"} laborables.`,
-          "info",
-          "Cálculo de permisos",
-        );
-      }
-
-      if (Array.isArray(result?.warnings)) {
-        result.warnings.forEach((warning, index) => {
-          if (!warning) return;
-          showToast(warning, "warning", index === 0 ? "Avisos del periodo" : undefined);
-        });
+        if (Array.isArray(result?.warnings)) {
+          result.warnings.forEach((warning, index) => {
+            if (!warning) return;
+            showToast(warning, "warning", index === 0 ? "Avisos del periodo" : undefined);
+          });
+        }
       }
 
       await refetchMyPermisos();

@@ -33,13 +33,12 @@ export function useApiMutation<TBody, TResponse, TKey = unknown>(
 
     try {
       if (arg2 === undefined) {
-        const body = arg1 as TBody;
         const finalUrl = typeof url === "function" ? url(arg1 as TKey) : url;
 
         const result = await apiRequest<TResponse, TBody>({
           url: finalUrl,
           method,
-          body,
+          ...(typeof url === "function" ? {} : { body: arg1 as TBody }),
           signal: abortRef.current.signal,
         });
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import {
   Box,
   Button,
@@ -21,14 +21,18 @@ import { Form } from "../../../components/forms/Form";
 import { InputField } from "../../../components/forms/InputField";
 import { DataTable } from "../../../components/general/table/DataTable";
 import { EmptyStateIndicator } from "../../../components/general/feedback/EmptyState";
+import { Modal } from "../../../components/general";
+import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { RubrosManager } from "./components/RubrosManager";
 import { EvaluacionFormModal } from "./components/EvaluacionFormModal";
 import { EvaluacionDetalleModal } from "./components/EvaluacionDetalleModal";
 import type { Evaluacion, CrearEvaluacionPayload, RubroEvaluacion } from "../../../types/Evaluacion";
-import type { EmployeeRow } from "../../../types";
+import type { Contrato, EmployeeRow } from "../../../types";
 import type { DataTableColumn } from "../../../components/general/table/types";
+import { useFormContext } from "react-hook-form";
+import { getEvaluationTemplateForPuesto } from "./components/evaluationTemplates.repository";
 
 interface CrearEvalFormValues {
   id_colaborador: string;
@@ -37,8 +41,35 @@ interface CrearEvalFormValues {
   fecha_fin: string;
 }
 
+interface AppliedTemplateState {
+  puestoNombre: string;
+  hasTemplate: boolean;
+  missingRubros: number;
+  hasActiveContract: boolean;
+  templateRubroIds: number[];
+  templateKey: string;
+}
+
+interface ImmediateBossState {
+  id: string;
+  label: string;
+  hasImmediateBoss: boolean;
+}
+
+const getLatestActiveContract = (contracts: Contrato[]) => {
+  const activeContracts = contracts.filter((contract) => String(contract.estado ?? "").toUpperCase() === "ACTIVO");
+  const source = activeContracts.length ? activeContracts : contracts;
+
+  return source
+    .slice()
+    .sort((a, b) => String(b.fecha_inicio ?? "").localeCompare(String(a.fecha_inicio ?? "")))[0];
+};
+
 export const GeneracionEvaluaciones = () => {
-  // ─── State ──────────────────────────────────────────────────────────────
+  const { user } = useAuth();
+  const loggedUserId = user?.id;
+
+
   const [activeTab, setActiveTab] = useState<string>("evaluaciones");
   const [selectedRubros, setSelectedRubros] = useState<number[]>([]);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
@@ -46,14 +77,19 @@ export const GeneracionEvaluaciones = () => {
   const [selectedEval, setSelectedEval] = useState<Evaluacion | null>(null);
   const [filtroDepto, setFiltroDepto] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [appliedTemplateState, setAppliedTemplateState] = useState<AppliedTemplateState | null>(null);
+  const [immediateBossState, setImmediateBossState] = useState<ImmediateBossState | null>(null);
+  const [templateRubrosModalOpen, setTemplateRubrosModalOpen] = useState(false);
+  const templateSyncKeyRef = useRef("");
 
   // ─── API Queries ────────────────────────────────────────────────────────
   const queryParams = useMemo(() => {
     const parts: string[] = [];
+    if (loggedUserId) parts.push(`id_evaluador=${loggedUserId}`);
     if (filtroDepto) parts.push(`departamento=${filtroDepto}`);
     if (filtroEstado) parts.push(`finalizada=${filtroEstado}`);
     return parts.length > 0 ? `?${parts.join("&")}` : "";
-  }, [filtroDepto, filtroEstado]);
+  }, [filtroDepto, filtroEstado, loggedUserId]);
 
   const {
     data: evaluaciones,
@@ -61,10 +97,15 @@ export const GeneracionEvaluaciones = () => {
     refetch: refetchEvals,
   } = useApiQuery<Evaluacion[]>({
     url: `evaluacion-desempeno/evaluaciones${queryParams}`,
+    enabled: Boolean(loggedUserId),
   });
 
   const { data: empleados } = useApiQuery<EmployeeRow[]>({
     url: "empleados",
+  });
+
+  const { data: rubrosCatalog = [], isLoading: loadingRubros } = useApiQuery<RubroEvaluacion[]>({
+    url: "evaluacion-desempeno/rubros",
   });
 
   // ─── API Mutations ──────────────────────────────────────────────────────
@@ -86,6 +127,39 @@ export const GeneracionEvaluaciones = () => {
     [empleados]
   );
 
+  const empleadosList = useMemo(() => empleados ?? [], [empleados]);
+
+  const immediateBossOptions = useMemo(
+    () => (immediateBossState?.id ? [{ label: immediateBossState.label, value: immediateBossState.id }] : []),
+    [immediateBossState],
+  );
+
+  const effectiveSelectedRubroIds = useMemo(
+    () => (selectedRubros.length ? selectedRubros : (appliedTemplateState?.templateRubroIds ?? [])),
+    [appliedTemplateState?.templateRubroIds, selectedRubros],
+  );
+
+  const selectedRubroDetails = useMemo(
+    () =>
+      effectiveSelectedRubroIds
+        .map((rubroId) => rubrosCatalog.find((rubro) => rubro.id_rubro_evaluacion === rubroId))
+        .filter((rubro): rubro is RubroEvaluacion => Boolean(rubro)),
+    [effectiveSelectedRubroIds, rubrosCatalog],
+  );
+
+  const templateRubroDetails = useMemo(
+    () =>
+      (appliedTemplateState?.templateRubroIds ?? [])
+        .map((rubroId) => rubrosCatalog.find((rubro) => rubro.id_rubro_evaluacion === rubroId))
+        .filter((rubro): rubro is RubroEvaluacion => Boolean(rubro)),
+    [appliedTemplateState?.templateRubroIds, rubrosCatalog],
+  );
+
+  const displayedSelectedRubrosCount = useMemo(
+    () => effectiveSelectedRubroIds.length,
+    [effectiveSelectedRubroIds],
+  );
+
   const departamentos = useMemo(() => {
     if (!evaluaciones) return [];
     const depMap = new Map<number, string>();
@@ -98,7 +172,11 @@ export const GeneracionEvaluaciones = () => {
 
   const handleCrearEvaluacion = useCallback(
     async (data: CrearEvalFormValues) => {
-      if (selectedRubros.length === 0) {
+      if (!Number(data.id_evaluador)) {
+        throw new Error("No se pudo determinar el jefe inmediato del colaborador seleccionado");
+      }
+
+      if (effectiveSelectedRubroIds.length === 0) {
         throw new Error("Seleccione al menos un rubro");
       }
       await crearEval({
@@ -106,13 +184,13 @@ export const GeneracionEvaluaciones = () => {
         id_evaluador: Number(data.id_evaluador),
         fecha_inicio: data.fecha_inicio,
         fecha_fin: data.fecha_fin,
-        rubros_ids: selectedRubros,
+        rubros_ids: effectiveSelectedRubroIds,
       });
       setSelectedRubros([]);
       refetchEvals();
       return true;
     },
-    [selectedRubros, crearEval, refetchEvals]
+    [crearEval, effectiveSelectedRubroIds, refetchEvals]
   );
 
   const handleVerEvaluacion = useCallback((ev: Evaluacion) => {
@@ -129,6 +207,24 @@ export const GeneracionEvaluaciones = () => {
     setSelectedEval(null);
     refetchEvals();
   }, [refetchEvals]);
+
+  useEffect(() => {
+    if (!appliedTemplateState?.hasTemplate || !appliedTemplateState.templateRubroIds.length) {
+      templateSyncKeyRef.current = "";
+      return;
+    }
+
+    if (selectedRubros.length > 0) {
+      return;
+    }
+
+    if (templateSyncKeyRef.current === appliedTemplateState.templateKey) {
+      return;
+    }
+
+    setSelectedRubros(appliedTemplateState.templateRubroIds);
+    templateSyncKeyRef.current = appliedTemplateState.templateKey;
+  }, [appliedTemplateState, selectedRubros.length]);
 
   // ─── Tabla columnas ─────────────────────────────────────────────────────
   const columns: DataTableColumn<Evaluacion>[] = useMemo(
@@ -199,17 +295,28 @@ export const GeneracionEvaluaciones = () => {
         header: "Acciones",
         cell: (row) => (
           <HStack>
-            <IconButton
-              aria-label={row.finalizada ? "Ver detalle" : "Evaluar"}
-              size="xs"
-              variant="ghost"
-              onClick={() => handleVerEvaluacion(row)}
-            >
-              {row.finalizada ? <FiEye /> : <FiCheckCircle />}
-            </IconButton>
+            {row.finalizada ? (
+              <Button
+                aria-label="Ver detalle"
+                size="xs"
+                variant="ghost"
+                onClick={() => handleVerEvaluacion(row)}
+              >
+                <FiEye />
+                Ver
+              </Button>
+            ) : (
+              <IconButton
+                aria-label="Evaluar"
+                size="xs"
+                variant="ghost"
+                onClick={() => handleVerEvaluacion(row)}
+              >
+                <FiCheckCircle />
+              </IconButton>
+            )}
           </HStack>
         ),
-        sticky: "end",
       },
     ],
     [handleVerEvaluacion]
@@ -307,6 +414,14 @@ export const GeneracionEvaluaciones = () => {
                 resetOnSuccess
               >
                 <VStack align="stretch" gap="3">
+                  <EvaluationTemplateAutofill
+                    empleados={empleadosList}
+                    rubrosCatalog={rubrosCatalog}
+                    rubrosCatalogReady={!loadingRubros}
+                    onSelectedRubrosChange={setSelectedRubros}
+                    onTemplateStateChange={setAppliedTemplateState}
+                    onImmediateBossChange={setImmediateBossState}
+                  />
                   <InputField
                     fieldType="select"
                     name="id_colaborador"
@@ -319,11 +434,13 @@ export const GeneracionEvaluaciones = () => {
                   <InputField
                     fieldType="select"
                     name="id_evaluador"
-                    label="Evaluador"
-                    placeholder="Seleccione el evaluador"
-                    options={empleadoOptions}
+                    label="Jefe inmediato"
+                    placeholder={immediateBossOptions.length ? "Jefe inmediato asignado" : "Sin jefe inmediato asignado"}
+                    options={immediateBossOptions}
                     required
-                    rules={{ required: "Seleccione un evaluador" }}
+                    disableSelectPortal
+                    rules={{ required: "No se pudo determinar el jefe inmediato" }}
+                    selectRootProps={{ disabled: true }}
                   />
                   <InputField
                     fieldType="date"
@@ -340,17 +457,60 @@ export const GeneracionEvaluaciones = () => {
                     rules={{ required: "La fecha de fin es obligatoria" }}
                   />
 
-                  <Box>
-                    <Text fontWeight="medium" mb="2">
-                      Rubros seleccionados: {selectedRubros.length}
+                  <Box p="4" bg="gray.50" borderRadius="md" borderWidth="1px" borderColor="gray.200">
+                    <Text fontWeight="medium">
+                      Puesto detectado: {appliedTemplateState?.puestoNombre || "Pendiente de seleccionar colaborador"}
                     </Text>
-                    <Text fontSize="sm" color="gray.500">
-                      Seleccione los rubros que aplicarán a esta evaluación.
+                    <Text fontSize="sm" color="gray.500" mt="1">
+                      {!appliedTemplateState
+                        ? "Seleccione un colaborador para intentar cargar su plantilla por puesto."
+                        : !appliedTemplateState.hasActiveContract
+                          ? "El colaborador no tiene un contrato activo detectable. Debe seleccionar los rubros manualmente."
+                          : appliedTemplateState.hasTemplate
+                            ? `Se cargó automáticamente la plantilla del puesto. Puede ajustar los rubros antes de crear la evaluación.`
+                            : "No existe una plantilla guardada para este puesto. Seleccione los rubros manualmente."}
                     </Text>
+                    {appliedTemplateState && appliedTemplateState.hasActiveContract && !appliedTemplateState.hasTemplate && (
+                      <Button mt="3" size="sm" variant="outline" onClick={() => setActiveTab("rubros")}>
+                        Ir a Gestión de Rubros
+                      </Button>
+                    )}
+                    {appliedTemplateState?.hasTemplate && (
+                      <Button mt="3" size="sm" variant="outline" onClick={() => setTemplateRubrosModalOpen(true)}>
+                        Ver rubros de la plantilla
+                      </Button>
+                    )}
+                    {appliedTemplateState?.missingRubros ? (
+                      <Text fontSize="sm" color="orange.600" mt="2">
+                        {appliedTemplateState.missingRubros} rubro(s) de la plantilla ya no están disponibles y fueron omitidos.
+                      </Text>
+                    ) : null}
                   </Box>
 
+                  {!appliedTemplateState?.hasTemplate && (
+                    <Box>
+                      <Text fontWeight="medium" mb="2">
+                        Rubros seleccionados: {displayedSelectedRubrosCount}
+                      </Text>
+                      <Text fontSize="sm" color="gray.500">
+                        Seleccione los rubros que aplicarán a esta evaluación.
+                      </Text>
+                      {!!selectedRubroDetails.length && (
+                        <Wrap gap="2" mt="3">
+                          {selectedRubroDetails.map((rubro) => (
+                            <Badge key={rubro.id_rubro_evaluacion} colorPalette="teal" variant="subtle">
+                              {rubro.rubro}
+                            </Badge>
+                          ))}
+                        </Wrap>
+                      )}
+                    </Box>
+                  )}
+
                   <RubroSelector
-                    selectedRubros={selectedRubros}
+                    rubros={rubrosCatalog}
+                    isLoading={loadingRubros}
+                    selectedRubros={effectiveSelectedRubroIds}
                     onSelectedChange={setSelectedRubros}
                   />
 
@@ -358,7 +518,7 @@ export const GeneracionEvaluaciones = () => {
                     type="submit"
                     colorPalette="teal"
                     loading={creandoEval}
-                    disabled={selectedRubros.length === 0}
+                    disabled={effectiveSelectedRubroIds.length === 0}
                   >
                     <FiPlus />
                     Crear Evaluación
@@ -393,6 +553,34 @@ export const GeneracionEvaluaciones = () => {
           }}
         />
       )}
+
+      <Modal
+        title="Rubros de la plantilla"
+        isOpen={templateRubrosModalOpen}
+        size="lg"
+        onOpenChange={(e) => setTemplateRubrosModalOpen(e.open)}
+        content={
+          <VStack align="stretch" gap="4">
+            <Text fontSize="sm" color="gray.500">
+              {appliedTemplateState?.puestoNombre
+                ? `Plantilla asociada al puesto ${appliedTemplateState.puestoNombre}.`
+                : "No hay plantilla seleccionada."}
+            </Text>
+
+            {templateRubroDetails.length > 0 ? (
+              <Wrap gap="2">
+                {templateRubroDetails.map((rubro) => (
+                  <Badge key={rubro.id_rubro_evaluacion} colorPalette="teal" variant="subtle" px="3" py="1.5">
+                    {rubro.rubro}
+                  </Badge>
+                ))}
+              </Wrap>
+            ) : (
+              <Text color="gray.500">No hay rubros disponibles para esta plantilla.</Text>
+            )}
+          </VStack>
+        }
+      />
     </Layout>
   );
 };
@@ -400,15 +588,13 @@ export const GeneracionEvaluaciones = () => {
 // ─── Sub-componente: Selector de Rubros ──────────────────────────────────────
 
 interface RubroSelectorProps {
+  rubros: RubroEvaluacion[];
+  isLoading: boolean;
   selectedRubros: number[];
-  onSelectedChange: (ids: number[]) => void;
+  onSelectedChange: Dispatch<SetStateAction<number[]>>;
 }
 
-function RubroSelector({ selectedRubros, onSelectedChange }: RubroSelectorProps) {
-  const { data: rubros } = useApiQuery<RubroEvaluacion[]>({
-    url: "evaluacion-desempeno/rubros",
-  });
-
+function RubroSelector({ rubros, isLoading, selectedRubros, onSelectedChange }: RubroSelectorProps) {
   const toggle = (id: number) => {
     if (selectedRubros.includes(id)) {
       onSelectedChange(selectedRubros.filter((r) => r !== id));
@@ -417,7 +603,15 @@ function RubroSelector({ selectedRubros, onSelectedChange }: RubroSelectorProps)
     }
   };
 
-  if (!rubros || rubros.length === 0) {
+  if (isLoading) {
+    return (
+      <Text fontSize="sm" color="gray.500">
+        Cargando rubros...
+      </Text>
+    );
+  }
+
+  if (rubros.length === 0) {
     return (
       <Text fontSize="sm" color="orange.500">
         No hay rubros disponibles. Créelos primero en "Gestión de Rubros".
@@ -440,4 +634,122 @@ function RubroSelector({ selectedRubros, onSelectedChange }: RubroSelectorProps)
       ))}
     </Wrap>
   );
+}
+
+interface EvaluationTemplateAutofillProps {
+  empleados: EmployeeRow[];
+  rubrosCatalog: RubroEvaluacion[];
+  rubrosCatalogReady: boolean;
+  onSelectedRubrosChange: Dispatch<SetStateAction<number[]>>;
+  onTemplateStateChange: Dispatch<SetStateAction<AppliedTemplateState | null>>;
+  onImmediateBossChange: Dispatch<SetStateAction<ImmediateBossState | null>>;
+}
+
+function EvaluationTemplateAutofill({
+  empleados,
+  rubrosCatalog,
+  rubrosCatalogReady,
+  onSelectedRubrosChange,
+  onTemplateStateChange,
+  onImmediateBossChange,
+}: EvaluationTemplateAutofillProps) {
+  const { setValue, watch } = useFormContext<CrearEvalFormValues>();
+  const selectedCollaboratorId = watch("id_colaborador");
+  const collaboratorId = Number(selectedCollaboratorId);
+  const lastAppliedKeyRef = useRef<string>("");
+  const lastBossKeyRef = useRef<string>("");
+
+  const { data: contracts } = useApiQuery<Contrato[]>({
+    url: collaboratorId > 0 ? `empleados/${collaboratorId}/contratos` : "",
+    enabled: collaboratorId > 0,
+  });
+
+  const contractsList = useMemo(() => contracts ?? [], [contracts]);
+
+  useEffect(() => {
+    if (!collaboratorId) {
+      lastAppliedKeyRef.current = "";
+      lastBossKeyRef.current = "";
+      onSelectedRubrosChange([]);
+      onTemplateStateChange(null);
+      onImmediateBossChange(null);
+      setValue("id_evaluador", "", { shouldDirty: false, shouldValidate: false });
+      return;
+    }
+
+    const latestContract = getLatestActiveContract(contractsList);
+    const puestoNombre = String(latestContract?.puesto ?? "").trim();
+    const bossId = latestContract?.id_jefe_directo ? String(latestContract.id_jefe_directo) : "";
+    const bossEmployee = empleados.find((employee) => Number(employee.id) === Number(bossId));
+    const bossLabel = latestContract?.jefe_directo
+      ? `${latestContract.jefe_directo.nombre} ${latestContract.jefe_directo.primer_apellido} ${latestContract.jefe_directo.segundo_apellido}`.trim()
+      : bossEmployee
+        ? `${bossEmployee.nombre} ${bossEmployee.primer_apellido} ${bossEmployee.segundo_apellido}`.trim()
+        : bossId
+          ? `Colaborador #${bossId}`
+          : "";
+    const nextBossKey = `${collaboratorId}:${bossId}:${bossLabel}`;
+
+    if (lastBossKeyRef.current !== nextBossKey) {
+      setValue("id_evaluador", bossId, { shouldDirty: false, shouldValidate: false });
+      onImmediateBossChange(
+        bossId
+          ? {
+            id: bossId,
+            label: bossLabel,
+            hasImmediateBoss: true,
+          }
+          : {
+            id: "",
+            label: "",
+            hasImmediateBoss: false,
+          },
+      );
+      lastBossKeyRef.current = nextBossKey;
+    }
+
+    if (!puestoNombre) {
+      const nextKey = `no-contract:${collaboratorId}`;
+      if (lastAppliedKeyRef.current !== nextKey) {
+        onSelectedRubrosChange([]);
+        lastAppliedKeyRef.current = nextKey;
+      }
+
+      onTemplateStateChange({
+        puestoNombre: "",
+        hasTemplate: false,
+        missingRubros: 0,
+        hasActiveContract: false,
+        templateRubroIds: [],
+        templateKey: nextKey,
+      });
+      return;
+    }
+
+    const template = getEvaluationTemplateForPuesto({ puestoNombre });
+    const validRubros = new Set(rubrosCatalog.map((rubro) => rubro.id_rubro_evaluacion));
+    const templateRubros = template?.rubros_ids ?? [];
+    const nextRubros = rubrosCatalogReady
+      ? templateRubros.filter((id) => validRubros.has(id))
+      : templateRubros;
+    const nextKey = `${collaboratorId}:${puestoNombre}:${template?.id ?? "no-template"}:${nextRubros.join(",")}`;
+
+    if (lastAppliedKeyRef.current !== nextKey) {
+      onSelectedRubrosChange(nextRubros);
+      lastAppliedKeyRef.current = nextKey;
+    }
+
+    onTemplateStateChange({
+      puestoNombre,
+      hasTemplate: Boolean(template),
+      missingRubros: rubrosCatalogReady
+        ? Math.max(0, templateRubros.length - nextRubros.length)
+        : 0,
+      hasActiveContract: true,
+      templateRubroIds: nextRubros,
+      templateKey: nextKey,
+    });
+  }, [collaboratorId, contractsList, empleados, onImmediateBossChange, onSelectedRubrosChange, onTemplateStateChange, rubrosCatalog, rubrosCatalogReady, setValue]);
+
+  return null;
 }
