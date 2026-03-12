@@ -9,9 +9,40 @@ import {
 import { useMemo } from "react";
 
 type Crumb = { label: string; to?: string; isCurrent?: boolean };
+type CrumbValue = string | { label: string; to?: string };
 type CrumbHandle = {
-  crumb?: string | ((ctx: { params: Record<string, string> }) => string);
+  crumb?:
+  | CrumbValue
+  | CrumbValue[]
+  // eslint-disable-next-line no-unused-vars
+  | ((_ctx: { params: Record<string, string> }) => CrumbValue | CrumbValue[]);
 };
+
+function resolveCrumbValues({
+  crumb,
+  params,
+  pathname,
+}: {
+  crumb?: CrumbHandle["crumb"];
+  params: Record<string, string>;
+  pathname: string;
+}): Array<{ label: string; to?: string }> {
+  if (!crumb) return [];
+
+  const resolved = typeof crumb === "function" ? crumb({ params }) : crumb;
+  const values = Array.isArray(resolved) ? resolved : [resolved];
+
+  return values.reduce<Array<{ label: string; to?: string }>>((acc, value) => {
+    if (typeof value === "string") {
+      acc.push({ label: value, to: pathname });
+      return acc;
+    }
+
+    if (!value?.label) return acc;
+    acc.push({ label: value.label, to: value.to });
+    return acc;
+  }, []);
+}
 
 export function AppBreadcrumb() {
   const { pathname } = useLocation();
@@ -23,22 +54,17 @@ export function AppBreadcrumb() {
     if (pathname.startsWith("/login") || pathname.startsWith("/forgot-password")) return [];
 
     const routeCrumbs = matches
-      .map((match) => {
+      .flatMap((match) => {
         const handle = match.handle as CrumbHandle | undefined;
-        const crumb = handle?.crumb;
-        if (!crumb) return null;
-
-        const label =
-          typeof crumb === "function"
-            ? crumb({ params: match.params as Record<string, string> })
-            : crumb;
-
-        if (!label) return null;
-        return { label, to: match.pathname };
+        return resolveCrumbValues({
+          crumb: handle?.crumb,
+          params: match.params as Record<string, string>,
+          pathname: match.pathname,
+        });
       })
-      .filter((item): item is { label: string; to: string } => !!item);
+      .filter((item) => item.label);
 
-    const withHome = routeCrumbs.some((c) => c.to === "/")
+    const withHome = routeCrumbs.some((crumb) => crumb.to === "/")
       ? routeCrumbs
       : [{ label: "Inicio", to: "/" }, ...routeCrumbs];
 
@@ -58,25 +84,21 @@ export function AppBreadcrumb() {
     });
   }, [pathname, matches]);
 
-  const isDetailRoute = useMemo(() => {
-    const currentMatch = matches[matches.length - 1];
-    if (!currentMatch) return false;
-    return Object.keys(currentMatch.params ?? {}).length > 0;
-  }, [matches]);
-
-  const logicalParent = useMemo(() => {
-    for (let i = crumbs.length - 2; i >= 0; i--) {
-      const candidate = crumbs[i].to;
-      if (candidate) return candidate;
+  const previousCrumb = useMemo(() => {
+    for (let index = crumbs.length - 2; index >= 0; index -= 1) {
+      const candidate = crumbs[index];
+      if (candidate.to && candidate.to !== pathname) {
+        return candidate;
+      }
     }
-    return "/";
-  }, [crumbs]);
+    return null;
+  }, [crumbs, pathname]);
 
   const handleBack = () => {
     if (isRootPath) return;
 
-    if (isDetailRoute) {
-      navigate(logicalParent);
+    if (previousCrumb?.to) {
+      navigate(previousCrumb.to);
       return;
     }
 
@@ -104,6 +126,9 @@ export function AppBreadcrumb() {
           {crumbs.map((c, idx) => {
             const key = `${c.label}-${idx}`;
             if (c.isCurrent) {
+              return <BreadcrumbCurrentLink key={key}>{c.label}</BreadcrumbCurrentLink>;
+            }
+            if (!c.to) {
               return <BreadcrumbCurrentLink key={key}>{c.label}</BreadcrumbCurrentLink>;
             }
             return (

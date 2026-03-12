@@ -15,6 +15,9 @@ import { NAV_MAIN, NAV_SETTINGS } from "./navItems";
 import { FiSearch } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext";
 
+const FIXED_MAIN_LABEL = "Principal";
+const FIXED_PROFILE_LABEL = "Perfil de Usuario";
+
 export const DesktopNav = () => {
   const [collapsed, setCollapsed] = useState(false);
   const debounceRef = useRef<number | null>(null);
@@ -27,25 +30,40 @@ export const DesktopNav = () => {
     [userRoles]
   );
 
-  const filteredMainNav = useMemo(() => {
+  const visibleMainNav = useMemo(() => {
     return NAV_MAIN.filter(item => {
       if (!item.roles || item.roles.length === 0) return true;
       return item.roles.some(role => rolesArray.includes(role));
     });
   }, [rolesArray]);
 
-  const filteredSettingsNav = useMemo(() => {
+  const visibleSettingsNav = useMemo(() => {
     return NAV_SETTINGS.filter(item => {
       if (!item.roles || item.roles.length === 0) return true;
       return item.roles.some(role => rolesArray.includes(role));
     });
   }, [rolesArray]);
 
-  const [modules, setModules] = useState(filteredMainNav);
+  const fixedMainNav = useMemo(
+    () => visibleMainNav.filter((item) => item.label === FIXED_MAIN_LABEL),
+    [visibleMainNav],
+  );
+
+  const modulesNav = useMemo(
+    () => visibleMainNav.filter((item) => item.label !== FIXED_MAIN_LABEL),
+    [visibleMainNav],
+  );
+
+  const fixedProfileNav = useMemo(
+    () => visibleSettingsNav.filter((item) => item.label === FIXED_PROFILE_LABEL),
+    [visibleSettingsNav],
+  );
+
+  const [modules, setModules] = useState(modulesNav);
 
   useEffect(() => {
-    setModules(filteredMainNav);
-  }, [filteredMainNav]);
+    setModules(modulesNav);
+  }, [modulesNav]);
 
   const handleCollapseBar = useCallback(() => {
     setCollapsed((state) => !state)
@@ -53,12 +71,12 @@ export const DesktopNav = () => {
 
   const filterModules = (query: string) => {
     if (!query) {
-      setModules(filteredMainNav);
+      setModules(modulesNav);
       return;
     }
     const q = query.toLowerCase();
     setModules(
-      filteredMainNav.filter((item) =>
+      modulesNav.filter((item) =>
         item.label.toLowerCase().includes(q)
       )
     );
@@ -76,7 +94,7 @@ export const DesktopNav = () => {
         filterModules(value);
       }, 300);
     },
-    [filteredMainNav]
+    [modulesNav]
   );
 
   return (
@@ -119,6 +137,17 @@ export const DesktopNav = () => {
       </Flex>
 
       <Box mb="0.75rem">
+        <List.Root gap="2">
+          {fixedMainNav.map((item) => (
+            <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
+          ))}
+          {fixedProfileNav.map((item) => (
+            <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
+          ))}
+        </List.Root>
+      </Box>
+
+      <Box mb="0.75rem">
         {!collapsed && (
           <Text
             fontSize="md"
@@ -133,26 +162,6 @@ export const DesktopNav = () => {
 
         <List.Root gap="2">
           {modules.map((item) => (
-            <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
-          ))}
-        </List.Root>
-      </Box>
-
-      <Box mb="20px">
-        {!collapsed && (
-          <Text
-            fontSize="md"
-            fontWeight="bold"
-            color="brand.text"
-            mb="1"
-            letterSpacing="wide"
-          >
-            Configuraciones
-          </Text>
-        )}
-
-        <List.Root gap="2">
-          {filteredSettingsNav.map((item) => (
             <DesktopNavItem key={item.label} item={item} collapsed={collapsed} />
           ))}
         </List.Root>

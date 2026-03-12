@@ -76,7 +76,7 @@ const Mantenimientos = () => {
                 </IconButton>
                 <Stack gapY={0.05}>
                   <Text textStyle="md" textAlign="left" >{m.name}</Text>
-                  <Text textStyle="sm" textAlign="left" >{m.description}</Text>
+                  <Text textStyle="xs" textAlign="left" >{m.description}</Text>
                 </Stack>
               </Flex>
             </GridItem>

@@ -81,7 +81,7 @@ export const router = createBrowserRouter([
 
       {
         path: "/asistencia",
-        handle: { crumb: "Asistencia" },
+        handle: { crumb: { label: "Asistencia" } },
         children: [
           { index: true, element: <Navigate to="/asistencia/marca" replace /> },
 
@@ -99,7 +99,10 @@ export const router = createBrowserRouter([
             path: "gestion/colaborador/:id",
             element: <MarcasAsistenciaColaborador />,
             handle: {
-              crumb: ({ params }: { params: Record<string, string> }) => `Colaborador (${shortId(params.id)})`,
+              crumb: ({ params }: { params: Record<string, string> }) => [
+                { label: "Gestionar asistencias", to: "/asistencia/gestion" },
+                `Colaborador (${shortId(params.id)})`,
+              ],
             },
           },
         ],
@@ -107,7 +110,7 @@ export const router = createBrowserRouter([
 
       {
         path: "/horas-extra",
-        handle: { crumb: "Horas extra" },
+        handle: { crumb: { label: "Horas extra" } },
         children: [
           { index: true, element: <Navigate to="/horas-extra/solicitud" replace /> },
 
@@ -126,7 +129,7 @@ export const router = createBrowserRouter([
 
       {
         path: "/vacaciones",
-        handle: { crumb: "Vacaciones" },
+        handle: { crumb: { label: "Vacaciones" } },
         children: [
           { index: true, element: <Navigate to="/vacaciones/solicitud" replace /> },
 
@@ -145,7 +148,7 @@ export const router = createBrowserRouter([
 
       {
         path: "/permisos",
-        handle: { crumb: "Permisos" },
+        handle: { crumb: { label: "Permisos" } },
         children: [
           { index: true, element: <Navigate to="/permisos/solicitud" replace /> },
 
@@ -171,28 +174,43 @@ export const router = createBrowserRouter([
         path: "/incapacidades/:grupo",
         element: <DetalleIncapacidad />,
         handle: {
-          crumb: ({ params }: { params: Record<string, string> }) =>
+          crumb: ({ params }: { params: Record<string, string> }) => [
+            { label: "Incapacidades", to: "/incapacidades" },
             `Detalle (${shortId(params.grupo)})`,
+          ],
         },
       },
 
       {
         path: "/planillas",
         element: <Planillas />,
-        handle: { crumb: "Generación y gestión de planillas" },
+        handle: {
+          crumb: [
+            { label: "Planilla" },
+            "Generación y gestión de planillas",
+          ],
+        },
       },
       {
         path: "/planillas/periodo_planilla/:id",
         element: <DetallePlanilla />,
         handle: {
-          crumb: ({ params }: { params: Record<string, string> }) =>
+          crumb: ({ params }: { params: Record<string, string> }) => [
+            { label: "Planilla" },
+            { label: "Generación y gestión de planillas", to: "/planillas" },
             `Periodo (${shortId(params.id)})`,
+          ],
         },
       },
       {
         path: "/planillas/mi-planilla",
         element: <MiPlanilla />,
-        handle: { crumb: "Mi planilla" },
+        handle: {
+          crumb: [
+            { label: "Planilla" },
+            "Mi planilla",
+          ],
+        },
       },
 
       {
