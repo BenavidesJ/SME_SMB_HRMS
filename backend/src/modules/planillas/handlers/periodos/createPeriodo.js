@@ -7,11 +7,48 @@ import { resolveCicloPago, ensureEstado } from "../../shared/resolvers.js";
 import { serializePeriodo } from "../../shared/formatters.js";
 
 const { PeriodoPlanilla } = models;
+const QUINCENAL_CYCLE_NAME = "QUINCENAL";
 
 function validateDateOrder(inicio, fin) {
   if (dayjs(inicio).isAfter(dayjs(fin))) {
     throw new Error("La fecha de inicio no puede ser posterior a la fecha de fin");
   }
+}
+
+function resolveQuincenaPattern({ fechaInicio, fechaFin, fechaPago }) {
+  const inicio = dayjs(fechaInicio);
+  const fin = dayjs(fechaFin);
+  const pago = dayjs(fechaPago);
+
+  const sameMonth =
+    inicio.isSame(fin, "month")
+    && inicio.isSame(fin, "year")
+    && inicio.isSame(pago, "month")
+    && inicio.isSame(pago, "year");
+
+  if (!sameMonth) return null;
+
+  const lastDayOfMonth = inicio.endOf("month").date();
+
+  if (inicio.date() === 1 && fin.date() === 15 && pago.date() === 15) {
+    return {
+      tipo: "PRIMERA",
+      monthKey: inicio.format("YYYY-MM"),
+      firstHalfStart: inicio.startOf("month").format("YYYY-MM-DD"),
+      firstHalfEnd: inicio.date(15).format("YYYY-MM-DD"),
+    };
+  }
+
+  if (inicio.date() === 16 && fin.date() === lastDayOfMonth && pago.date() === lastDayOfMonth) {
+    return {
+      tipo: "SEGUNDA",
+      monthKey: inicio.format("YYYY-MM"),
+      firstHalfStart: inicio.startOf("month").format("YYYY-MM-DD"),
+      firstHalfEnd: inicio.date(15).format("YYYY-MM-DD"),
+    };
+  }
+
+  return null;
 }
 
 async function assertNoOverlap({ inicio, fin, cicloId, transaction }) {
@@ -35,6 +72,38 @@ async function assertNoOverlap({ inicio, fin, cicloId, transaction }) {
   }
 }
 
+async function assertQuincenalRules({ fechaInicio, fechaFin, fechaPago, ciclo, transaction }) {
+  if (String(ciclo.ciclo_pago).trim().toUpperCase() !== QUINCENAL_CYCLE_NAME) {
+    return;
+  }
+
+  const pattern = resolveQuincenaPattern({ fechaInicio, fechaFin, fechaPago });
+  if (!pattern) {
+    throw new Error(
+      "Para planilla quincenal solo se permiten periodos del 1 al 15 con pago el 15 o del 16 al ultimo dia del mes con pago el ultimo dia del mes"
+    );
+  }
+
+  if (pattern.tipo !== "SEGUNDA") {
+    return;
+  }
+
+  const firstHalfExists = await PeriodoPlanilla.count({
+    where: {
+      ciclo_pago: ciclo.id_ciclo_pago,
+      fecha_inicio: pattern.firstHalfStart,
+      fecha_fin: pattern.firstHalfEnd,
+    },
+    transaction,
+  });
+
+  if (firstHalfExists === 0) {
+    throw new Error(
+      "No corresponde crear la segunda quincena porque en ese mes falta registrar la primera quincena"
+    );
+  }
+}
+
 export const createPeriodoPlanilla = (payload = {}) =>
   runInTransaction(async (transaction) => {
     const fechaInicio = requireDateOnly(payload.fecha_inicio, "fecha_inicio");
@@ -46,6 +115,14 @@ export const createPeriodoPlanilla = (payload = {}) =>
       : await ensureEstado("PENDIENTE", transaction);
 
     validateDateOrder(fechaInicio, fechaFin);
+
+    await assertQuincenalRules({
+      fechaInicio,
+      fechaFin,
+      fechaPago,
+      ciclo,
+      transaction,
+    });
 
     await assertNoOverlap({
       inicio: fechaInicio,

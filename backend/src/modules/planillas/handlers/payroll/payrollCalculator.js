@@ -615,7 +615,11 @@ export async function calcularPlanillaColaborador({
 }) {
   // 1. Contrato activo
   const contrato = await Contrato.findOne({
-    where: { id_colaborador: colaboradorId, estado: estadoActivo.id_estado },
+    where: {
+      id_colaborador: colaboradorId,
+      estado: estadoActivo.id_estado,
+      fecha_inicio: { [Op.lte]: fechaFin },
+    },
     order: [["fecha_inicio", "DESC"]],
     transaction,
   });

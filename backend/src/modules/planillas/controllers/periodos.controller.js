@@ -4,6 +4,7 @@ import { listPeriodosPlanilla } from "../handlers/periodos/listPeriodos.js";
 import { getPeriodoPlanilla } from "../handlers/periodos/getPeriodo.js";
 import { updatePeriodoPlanilla } from "../handlers/periodos/updatePeriodo.js";
 import { deletePeriodoPlanilla } from "../handlers/periodos/deletePeriodo.js";
+import { listarColaboradoresElegiblesPeriodo } from "../handlers/payroll/eligibleCollaborators.js";
 
 const { SUCCESS } = HTTP_CODES;
 
@@ -70,6 +71,23 @@ export async function deletePeriodoPlanillaController(req, res, next) {
       success: true,
       status_code: SUCCESS.OK,
       message: "Periodo de planilla eliminado",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarColaboradoresElegiblesPeriodoController(req, res, next) {
+  try {
+    const data = await listarColaboradoresElegiblesPeriodo({
+      periodoId: req.params?.id,
+    });
+
+    return res.status(SUCCESS.OK).json({
+      success: true,
+      status_code: SUCCESS.OK,
+      message: "Colaboradores elegibles recuperados",
       data,
     });
   } catch (error) {

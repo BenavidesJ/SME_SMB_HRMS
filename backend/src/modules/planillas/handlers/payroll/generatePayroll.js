@@ -1,13 +1,13 @@
 import { models } from "../../../../models/index.js";
 import { runInTransaction } from "../../../mantenimientos_consultas/shared/transaction.js";
 import { requirePositiveInt } from "../../../mantenimientos_consultas/shared/validators.js";
-import { roundDecimal, serializePlanilla } from "../../shared/formatters.js";
+import { evaluarAprobacionPeriodoPlanilla } from "./eligibleCollaborators.js";
 import {
   calcularPlanillaColaborador,
   cargarDatosGlobalesPeriodo,
 } from "./payrollCalculator.js";
 
-const { Planilla, DeduccionPlanilla } = models;
+const { Planilla, DeduccionPlanilla, Colaborador } = models;
 
 /**
  * Genera y persiste la planilla quincenal para uno o más colaboradores.
@@ -21,11 +21,11 @@ const { Planilla, DeduccionPlanilla } = models;
  */
 export const generarPlanillaQuincenal = (payload = {}) =>
   runInTransaction(async (transaction) => {
-    // ── Validar entrada ──
     const periodoId = requirePositiveInt(payload.id_periodo, "id_periodo");
-    const generadoPor = payload.generado_por
-      ? requirePositiveInt(payload.generado_por, "generado_por")
-      : null;
+
+    if (payload.generado_por !== undefined && payload.generado_por !== null) {
+      requirePositiveInt(payload.generado_por, "generado_por");
+    }
 
     if (!Array.isArray(payload.colaboradores) || payload.colaboradores.length === 0) {
       throw new Error("Debe seleccionar al menos un colaborador");
@@ -44,12 +44,38 @@ export const generarPlanillaQuincenal = (payload = {}) =>
       estadoActivo,
     } = await cargarDatosGlobalesPeriodo({ periodoId, transaction });
 
+    const empleados = await Colaborador.findAll({
+      attributes: [
+        "id_colaborador",
+        "nombre",
+        "primer_apellido",
+        "segundo_apellido",
+        "identificacion",
+      ],
+      where: { id_colaborador: colaboradores },
+      raw: true,
+      transaction,
+    });
+
+    const empleadosMap = new Map(
+      empleados.map((empleado) => [Number(empleado.id_colaborador), empleado]),
+    );
+
     const resultados = { generados: [], duplicados: [], errores: [] };
 
-    // ── Iterar colaboradores ──
     for (const colaboradorId of colaboradores) {
+      const empleado = empleadosMap.get(colaboradorId);
+      const nombreCompleto = empleado
+        ? [
+          empleado.nombre,
+          empleado.primer_apellido,
+          empleado.segundo_apellido,
+        ]
+            .filter(Boolean)
+            .join(" ")
+        : `Colaborador #${colaboradorId}`;
+
       try {
-        // Verificar si ya existe planilla para este periodo+colaborador
         const existente = await Planilla.findOne({
           where: { id_periodo: periodoId, id_colaborador: colaboradorId },
           transaction,
@@ -58,12 +84,12 @@ export const generarPlanillaQuincenal = (payload = {}) =>
         if (existente) {
           resultados.duplicados.push({
             id_colaborador: colaboradorId,
+            nombre_completo: nombreCompleto,
             id_detalle: existente.id_detalle,
           });
           continue;
         }
 
-        // Calcular usando utility pura
         const calculo = await calcularPlanillaColaborador({
           colaboradorId,
           periodoId,
@@ -75,7 +101,6 @@ export const generarPlanillaQuincenal = (payload = {}) =>
           transaction,
         });
 
-        // Persistir en tabla planilla
         const detallePlanilla = await Planilla.create(
           {
             id_periodo: periodoId,
@@ -85,7 +110,6 @@ export const generarPlanillaQuincenal = (payload = {}) =>
           { transaction }
         );
 
-        // Persistir detalle de deducciones
         for (const ded of calculo.deduccionesDetalle) {
           await DeduccionPlanilla.create(
             {
@@ -97,62 +121,24 @@ export const generarPlanillaQuincenal = (payload = {}) =>
           );
         }
 
-        resultados.push({
+        resultados.generados.push({
           id_colaborador: colaboradorId,
           nombre_completo: nombreCompleto,
           identificacion: empleado?.identificacion ?? null,
-          salario_mensual: calculo.salarioMensual,
-          salario_quincenal_base: calculo.salarioQuincenal,
-          salario_ordinario_programado: calculo.salarioOrdinarioProgramado,
-          salario_ordinario: calculo.salarioOrdinario,
-          salario_diario: calculo.salarioDiario,
-          tarifa_hora: roundCurrency(calculo.tarifaHora),
-          horas_ordinarias: {
-            cantidad: calculo.resumenDias.totalHorasOrdinariasPagadas,
-            programadas: calculo.resumenDias.totalHorasOrdinariasProgramadas,
-            trabajadas: calculo.resumenDias.totalHorasOrdinariasTrabajadas,
-            vacaciones: calculo.resumenDias.totalHorasVacacionesPagadas,
-            permisos_con_goce: calculo.resumenDias.totalHorasPermisosConGocePagadas,
-            feriado_no_trabajado: calculo.resumenDias.totalHorasFeriadoPagadoNoTrabajado,
-            incapacidad_cubiertas_patrono: calculo.resumenDias.totalHorasIncapacidadCubiertas,
-            total_no_pagadas: calculo.resumenDias.totalHorasNoPagadas,
-            monto: calculo.salarioOrdinario,
-          },
-          descuentos_dias: {
-            ausencias: {
-              dias: calculo.resumenDias.diasAusencias,
-              horas: calculo.resumenDias.totalHorasAusenciaInjustificada,
-              monto: calculo.resumenDias.montoDescuentoAusencias,
-            },
-            incapacidad: {
-              dias: calculo.resumenDias.diasIncapacidad,
-              horas_cubiertas_patrono: calculo.resumenDias.totalHorasIncapacidadCubiertas,
-              horas_no_cubiertas: calculo.resumenDias.totalHorasIncapacidadNoCubiertas,
-              monto: calculo.resumenDias.montoDescuentoIncapacidad,
-            },
-            total: calculo.resumenDias.totalDescuentosDias,
-          },
-          horas_extra: { cantidad: calculo.resumenDias.totalHorasExtra, monto: calculo.pagoExtra },
-          horas_nocturnas: { cantidad: calculo.resumenDias.totalHorasNocturnas, monto: calculo.pagoNocturno },
-          horas_feriado: { cantidad: calculo.resumenDias.totalHorasFeriado, monto: calculo.pagoFeriado },
-          salario_devengado: calculo.bruto,
-          deducciones_detalle: calculo.deduccionesDetalle,
-          renta: calculo.renta,
-          total_deducciones: calculo.totalDescuentos,
           salario_neto: calculo.neto,
-          detalles_calculo: calculo.detalles_calculo,
-          error: null,
+          id_detalle: detallePlanilla.id_detalle,
+          id_contrato: calculo.id_contrato,
         });
       } catch (error) {
         resultados.errores.push({
           id_colaborador: colaboradorId,
+          nombre_completo: nombreCompleto,
           motivo: error.message,
         });
       }
     }
 
-    // Si TODOS son duplicados, lanzar error 409
-    if (resultados.generados.length === 0 && resultados.duplicados.length > 0) {
+    if (resultados.generados.length === 0 && resultados.duplicados.length > 0 && resultados.errores.length === 0) {
       const err = new Error(
         "Todos los colaboradores seleccionados ya tienen planilla generada para este periodo. Utilice la opción de recalcular."
       );
@@ -161,11 +147,47 @@ export const generarPlanillaQuincenal = (payload = {}) =>
       throw err;
     }
 
+    if (resultados.generados.length === 0 && resultados.errores.length > 0) {
+      const err = new Error(
+        resultados.errores[0]?.motivo
+        || "No se pudo generar ninguna planilla seleccionada."
+      );
+      err.statusCode = 400;
+      err.data = {
+        duplicados: resultados.duplicados,
+        errores: resultados.errores,
+      };
+      throw err;
+    }
+
+    const aprobacion = await evaluarAprobacionPeriodoPlanilla({
+      periodoId,
+      transaction,
+    });
+
+    const mensajes = [
+      `Se generaron ${resultados.generados.length} planilla(s) exitosamente.`,
+    ];
+
+    if (resultados.duplicados.length > 0) {
+      mensajes.push(
+        `${resultados.duplicados.length} colaborador(es) ya tenían planilla para este periodo.`,
+      );
+    }
+
+    if (resultados.errores.length > 0) {
+      mensajes.push(
+        `${resultados.errores.length} colaborador(es) no pudieron generarse.`,
+      );
+    }
+
+    if (aprobacion.estado_actualizado) {
+      mensajes.push("El periodo cambió automáticamente a APROBADO.");
+    }
+
     return {
       ...resultados,
-      mensaje:
-        resultados.duplicados.length > 0
-          ? `Se generaron ${resultados.generados.length} planillas. ${resultados.duplicados.length} colaborador(es) ya tenían planilla para este periodo.`
-          : `Se generaron ${resultados.generados.length} planillas exitosamente.`,
+      aprobacion,
+      mensaje: mensajes.join(" "),
     };
   });

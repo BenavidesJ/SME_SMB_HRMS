@@ -4,6 +4,7 @@ export {
   getPeriodoPlanillaController,
   updatePeriodoPlanillaController,
   deletePeriodoPlanillaController,
+  listarColaboradoresElegiblesPeriodoController,
 } from "./controllers/periodos.controller.js";
 
 export {

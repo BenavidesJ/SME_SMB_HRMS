@@ -6,7 +6,6 @@ import {
   Card,
   EmptyState,
   Heading,
-  Separator,
   SimpleGrid,
   Spinner,
   Stack,
@@ -14,13 +13,14 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
-import { FiScissors } from "react-icons/fi";
+import { FiFilePlus, FiScissors } from "react-icons/fi";
 import { Layout } from "../../../components/layout";
 import { Form } from "../../../components/forms/Form/Form";
 import {
   InputField,
   type SelectOption,
 } from "../../../components/forms/InputField/InputField";
+import { Modal } from "../../../components/general";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { toTitleCase, formatCRC } from "../../../utils";
@@ -77,6 +77,13 @@ type CausaLiquidacion = {
   causa_liquidacion: string;
 };
 
+function getCausaBadgeColor(causa: string | null | undefined) {
+  const normalized = String(causa ?? "").trim().toLowerCase();
+  if (normalized === "renuncia") return "yellow";
+  if (normalized.includes("con responsabilidad")) return "red";
+  return "gray";
+}
+
 export const Liquidaciones = () => {
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
@@ -128,6 +135,8 @@ export const Liquidaciones = () => {
     refetch: refetchRecords,
   } = useApiQuery<LiquidacionRegistro[]>({ url: "liquidaciones" });
 
+  const [showForm, setShowForm] = useState(false);
+
   const handleSimular = async (values: SimularFormValues) => {
     const idColaborador = Number(values.idColaborador);
 
@@ -159,390 +168,405 @@ export const Liquidaciones = () => {
     try {
       await crearLiquidacion({ datosLiquidacion: simulacion });
       setSimulacion(null);
-      refetchRecords();
+      setShowForm(false);
+      await refetchRecords();
       showToast("Liquidación creada exitosamente.", "success");
     } catch {
       // toast automático
     }
   };
 
+  const handleStartCreate = () => {
+    setShowForm((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSimulacion(null);
+      }
+      return next;
+    });
+  };
+
   return (
     <Layout pageTitle="Liquidaciones">
-      <Stack gap="8" marginBottom="5rem">
-        <Form<SimularFormValues>
-          onSubmit={handleSimular}
-          defaultValues={{
-            idColaborador: "",
-            causa: "",
-            fechaTerminacion: "",
-            realizo_preaviso: "false",
-          }}
+      <Stack gap="6">
+        <Button
+          colorPalette="blue"
+          alignSelf="flex-start"
+          onClick={handleStartCreate}
         >
-          <Stack
-            direction={{ base: "column", xl: "row" }}
-            align="flex-start"
-            gap="6"
-          >
-            {/* ── Panel izquierdo: Formulario ── */}
-            <Card.Root
-              as="section"
-              w={{ base: "full", xl: "560px" }}
-              flexShrink={0}
-            >
-              <Card.Header>
-                <Card.Title>Calcular liquidación</Card.Title>
-                <Card.Description>
-                  Seleccione el colaborador, la causa de terminación y la fecha
-                  para simular el cálculo de liquidación laboral.
-                </Card.Description>
-              </Card.Header>
+          <FiFilePlus />
+          {showForm ? " Cerrar formulario" : " Crear liquidación"}
+        </Button>
 
-              <Card.Body>
-                <Stack gap="4">
-                  <InputField
-                    fieldType="select"
-                    name="idColaborador"
-                    label="Colaborador"
-                    required
-                    disableSelectPortal
-                    options={options}
-                    placeholder={
-                      employeesLoading
-                        ? "Cargando colaboradores..."
-                        : options.length === 0
-                          ? "Sin colaboradores disponibles"
-                          : "Seleccione un colaborador"
-                    }
-                    selectRootProps={{
-                      disabled: employeesLoading || options.length === 0,
-                    }}
-                    rules={{
-                      validate: (value: any) =>
-                        value && Number(value) > 0
-                          ? true
-                          : "Seleccione un colaborador.",
-                    }}
-                  />
-
-                  <InputField
-                    fieldType="select"
-                    name="causa"
-                    label="Causa de liquidación"
-                    required
-                    disableSelectPortal
-                    options={causasOptions}
-                    placeholder={
-                      causasLoading
-                        ? "Cargando causas..."
-                        : causasOptions.length === 0
-                          ? "Sin causas disponibles"
-                          : "Seleccione la causa"
-                    }
-                    selectRootProps={{
-                      disabled: causasLoading || causasOptions.length === 0,
-                    }}
-                  />
-
-                  <SimpleGrid columns={2} gap="3">
-                    <InputField
-                      fieldType="date"
-                      name="fechaTerminacion"
-                      label="Fecha de terminación"
-                      required
-                    />
+        <Modal
+          title="Nueva liquidación"
+          isOpen={showForm}
+          size="full"
+          onOpenChange={(e) => {
+            setShowForm(e.open);
+            if (!e.open) {
+              setSimulacion(null);
+            }
+          }}
+          content={
+            showForm ? (
+              <Form<SimularFormValues>
+                key={simulacion ? `liquidacion-${simulacion.colaborador.id}` : "liquidacion-create"}
+                onSubmit={handleSimular}
+                defaultValues={{
+                  idColaborador: "",
+                  causa: "",
+                  fechaTerminacion: "",
+                  realizo_preaviso: "false",
+                }}
+              >
+                <Stack gap="6">
+                  <Stack gap="4">
                     <InputField
                       fieldType="select"
-                      name="realizo_preaviso"
-                      label="¿Realizó preaviso?"
-                      disableSelectPortal
+                      name="idColaborador"
+                      label="Colaborador"
                       required
-                      options={[
-                        { label: "No", value: "false" },
-                        { label: "Sí", value: "true" },
-                      ]}
+                      disableSelectPortal
+                      options={options}
+                      placeholder={
+                        employeesLoading
+                          ? "Cargando colaboradores..."
+                          : options.length === 0
+                            ? "Sin colaboradores disponibles"
+                            : "Seleccione un colaborador"
+                      }
+                      selectRootProps={{
+                        disabled: employeesLoading || options.length === 0,
+                      }}
+                      rules={{
+                        validate: (value: any) =>
+                          value && Number(value) > 0
+                            ? true
+                            : "Seleccione un colaborador.",
+                      }}
                     />
-                  </SimpleGrid>
-                </Stack>
-              </Card.Body>
 
-              <Card.Footer justifyContent="flex-end" gap="3">
-                <Button
-                  type="submit"
-                  colorPalette="blue"
-                  variant="outline"
-                  loading={isSimulating}
-                  disabled={employeesLoading || causasLoading || options.length === 0 || causasOptions.length === 0 || isSimulating}
-                >
-                  Simular cálculo
-                </Button>
+                    <InputField
+                      fieldType="select"
+                      name="causa"
+                      label="Causa de liquidación"
+                      required
+                      disableSelectPortal
+                      options={causasOptions}
+                      placeholder={
+                        causasLoading
+                          ? "Cargando causas..."
+                          : causasOptions.length === 0
+                            ? "Sin causas disponibles"
+                            : "Seleccione la causa"
+                      }
+                      selectRootProps={{
+                        disabled: causasLoading || causasOptions.length === 0,
+                      }}
+                    />
 
-                {simulacion && (
-                  <Button
-                    colorPalette="green"
-                    loading={isCreating}
-                    disabled={isCreating}
-                    onClick={handleCrear}
-                  >
-                    Crear liquidación
-                  </Button>
-                )}
-              </Card.Footer>
-            </Card.Root>
+                    <SimpleGrid columns={2} gap="3">
+                      <InputField
+                        fieldType="date"
+                        name="fechaTerminacion"
+                        label="Fecha de terminación"
+                        required
+                      />
+                      <InputField
+                        fieldType="select"
+                        name="realizo_preaviso"
+                        label="¿Realizó preaviso?"
+                        disableSelectPortal
+                        required
+                        options={[
+                          { label: "No", value: "false" },
+                          { label: "Sí", value: "true" },
+                        ]}
+                      />
+                    </SimpleGrid>
+                  </Stack>
 
-            <Stack flex="1" gap="4" w="full">
-              {isSimulating ? (
-                <Stack align="center" py="10" gap="3">
-                  <Spinner size="lg" />
-                  <Text color="fg.muted">Calculando liquidación…</Text>
-                </Stack>
-              ) : simulacion ? (
-                <Stack gap="4">
-                  <Card.Root>
-                    <Card.Body>
-                      <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
-                        <Box>
-                          <Text textStyle="xs" color="fg.muted">Colaborador</Text>
-                          <Text fontWeight="semibold">{simulacion.colaborador.nombre}</Text>
-                        </Box>
-                        <Box>
-                          <Text textStyle="xs" color="fg.muted">Causa</Text>
-                          <Badge
-                            colorPalette={
-                              simulacion.causa === "Renuncia"
-                                ? "yellow"
-                                : simulacion.causa === "Despido con responsabilidad"
-                                  ? "red"
-                                  : "gray"
-                            }
-                            variant="subtle"
-                          >
-                            {simulacion.causa}
-                          </Badge>
-                        </Box>
-                        <Box>
-                          <Text textStyle="xs" color="fg.muted">Antigüedad</Text>
-                          <Text fontWeight="semibold">
-                            {simulacion.antiguedad.anios}a {simulacion.antiguedad.meses}m
-                          </Text>
-                        </Box>
-                        <Box>
-                          <Text textStyle="xs" color="fg.muted">Total liquidación</Text>
-                          <Heading size="md" color="green.600">
-                            {formatCRC(simulacion.totales.totalBruto)}
-                          </Heading>
-                        </Box>
-                      </SimpleGrid>
-                    </Card.Body>
-                  </Card.Root>
+                  <Stack direction="row" justifyContent="flex-end" gap="3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowForm(false);
+                        setSimulacion(null);
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      colorPalette="blue"
+                      variant="outline"
+                      loading={isSimulating}
+                      disabled={
+                        employeesLoading
+                        || causasLoading
+                        || options.length === 0
+                        || causasOptions.length === 0
+                        || isSimulating
+                      }
+                    >
+                      Pre cálculo
+                    </Button>
+                    {simulacion && (
+                      <Button
+                        colorPalette="green"
+                        loading={isCreating}
+                        disabled={isCreating}
+                        onClick={handleCrear}
+                      >
+                        Crear liquidación
+                      </Button>
+                    )}
+                  </Stack>
 
-                  {/* Tabla desglose */}
-                  <Card.Root>
-                    <Card.Header>
-                      <Card.Title>Desglose de componentes</Card.Title>
-                    </Card.Header>
-                    <Card.Body p="0">
-                      <Table.Root size="sm" variant="outline">
-                        <Table.Header>
-                          <Table.Row>
-                            <Table.ColumnHeader>Componente</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
-                            <Table.ColumnHeader>Detalle</Table.ColumnHeader>
-                          </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                          <Table.Row>
-                            <Table.Cell>Salario diario</Table.Cell>
-                            <Table.Cell textAlign="right">
+                  {isSimulating ? (
+                    <Stack align="center" py="10" gap="3">
+                      <Spinner size="lg" />
+                      <Text color="fg.muted">Ejecutando pre cálculo…</Text>
+                    </Stack>
+                  ) : simulacion ? (
+                    <Stack gap="4">
+                      <Card.Root>
+                        <Card.Body>
+                          <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
+                            <Box>
+                              <Text textStyle="xs" color="fg.muted">Colaborador</Text>
+                              <Text fontWeight="semibold">{simulacion.colaborador.nombre}</Text>
+                            </Box>
+                            <Box>
+                              <Text textStyle="xs" color="fg.muted">Causa</Text>
+                              <Badge colorPalette={getCausaBadgeColor(simulacion.causa)} variant="subtle">
+                                {simulacion.causa}
+                              </Badge>
+                            </Box>
+                            <Box>
+                              <Text textStyle="xs" color="fg.muted">Antigüedad</Text>
                               <Text fontWeight="semibold">
-                                {formatCRC(simulacion.componentes.salarioDiario.valor)}
+                                {simulacion.antiguedad.anios}a {simulacion.antiguedad.meses}m
                               </Text>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Text textStyle="xs" color="fg.muted">
-                                {simulacion.componentes.salarioDiario.origen}
-                              </Text>
-                            </Table.Cell>
-                          </Table.Row>
-                          <Table.Row>
-                            <Table.Cell>Aguinaldo proporcional</Table.Cell>
-                            <Table.Cell textAlign="right">
-                              <Text fontWeight="bold" color="green.600">
-                                {formatCRC(simulacion.componentes.aguinaldoProporcional.valor)}
-                              </Text>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Text textStyle="xs" color="fg.muted">
-                                {simulacion.componentes.aguinaldoProporcional.detalles?.mesesIncluidos ?? 0} meses
-                              </Text>
-                            </Table.Cell>
-                          </Table.Row>
-                          <Table.Row>
-                            <Table.Cell>Vacaciones proporcionales</Table.Cell>
-                            <Table.Cell textAlign="right">
-                              <Text fontWeight="bold" color="green.600">
-                                {formatCRC(simulacion.componentes.vacacionesProporcionales.valor)}
-                              </Text>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Text textStyle="xs" color="fg.muted">
-                                {simulacion.componentes.vacacionesProporcionales.diasPendientes} días pendientes
-                              </Text>
-                            </Table.Cell>
-                          </Table.Row>
-                          <Table.Row>
-                            <Table.Cell>Cesantía</Table.Cell>
-                            <Table.Cell textAlign="right">
-                              <Text fontWeight="bold" color="green.600">
-                                {formatCRC(simulacion.componentes.cesantia.valor)}
-                              </Text>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Text textStyle="xs" color="fg.muted">
-                                {simulacion.componentes.cesantia.diasCalculados} días
-                              </Text>
-                            </Table.Cell>
-                          </Table.Row>
-                          <Table.Row>
-                            <Table.Cell>Preaviso</Table.Cell>
-                            <Table.Cell textAlign="right">
-                              <Text fontWeight="bold" color="green.600">
-                                {formatCRC(simulacion.componentes.preaviso.valor)}
-                              </Text>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Text textStyle="xs" color="fg.muted">
-                                {simulacion.componentes.preaviso.diasCalculados} días
-                              </Text>
-                            </Table.Cell>
-                          </Table.Row>
-                          <Table.Row bg="gray.50">
-                            <Table.Cell>
-                              <Text fontWeight="bold">TOTAL</Text>
-                            </Table.Cell>
-                            <Table.Cell textAlign="right">
+                            </Box>
+                            <Box>
+                              <Text textStyle="xs" color="fg.muted">Total liquidación</Text>
                               <Heading size="md" color="green.600">
                                 {formatCRC(simulacion.totales.totalBruto)}
                               </Heading>
-                            </Table.Cell>
-                            <Table.Cell />
-                          </Table.Row>
-                        </Table.Body>
-                      </Table.Root>
-                    </Card.Body>
-                  </Card.Root>
+                            </Box>
+                          </SimpleGrid>
+                        </Card.Body>
+                      </Card.Root>
 
-                  {/* Advertencias */}
-                  {simulacion.validaciones.advertencias.length > 0 && (
-                    <Card.Root borderColor="yellow.300" borderWidth="1px">
-                      <Card.Body>
-                        <Stack gap="1">
-                          {simulacion.validaciones.advertencias.map((adv: string, i: number) => (
-                            <Text key={i} textStyle="sm" color="yellow.700">
-                              ⚠ {adv}
-                            </Text>
-                          ))}
-                        </Stack>
-                      </Card.Body>
-                    </Card.Root>
-                  )}
+                      <Card.Root>
+                        <Card.Header>
+                          <Card.Title>Desglose de componentes</Card.Title>
+                        </Card.Header>
+                        <Card.Body p="0">
+                          <Table.Root size="sm" variant="outline">
+                            <Table.Header>
+                              <Table.Row>
+                                <Table.ColumnHeader>Componente</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+                                <Table.ColumnHeader>Detalle</Table.ColumnHeader>
+                              </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                              <Table.Row>
+                                <Table.Cell>Salario diario</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="semibold">
+                                    {formatCRC(simulacion.componentes.salarioDiario.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.salarioDiario.origen}
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row>
+                                <Table.Cell>Aguinaldo proporcional</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="bold" color="green.600">
+                                    {formatCRC(simulacion.componentes.aguinaldoProporcional.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.aguinaldoProporcional.detalles?.mesesIncluidos ?? 0} meses
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row>
+                                <Table.Cell>Vacaciones proporcionales</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="bold" color="green.600">
+                                    {formatCRC(simulacion.componentes.vacacionesProporcionales.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.vacacionesProporcionales.diasPendientes} días pendientes
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row>
+                                <Table.Cell>Cesantía</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="bold" color="green.600">
+                                    {formatCRC(simulacion.componentes.cesantia.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.cesantia.diasCalculados} días
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row>
+                                <Table.Cell>Preaviso</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="bold" color="green.600">
+                                    {formatCRC(simulacion.componentes.preaviso.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.preaviso.diasCalculados} días
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row>
+                                <Table.Cell>Salario pendiente</Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Text fontWeight="bold" color="green.600">
+                                    {formatCRC(simulacion.componentes.salarioPendiente.valor)}
+                                  </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text textStyle="xs" color="fg.muted">
+                                    {simulacion.componentes.salarioPendiente.diasPendientes} días
+                                  </Text>
+                                </Table.Cell>
+                              </Table.Row>
+                              <Table.Row bg="gray.50">
+                                <Table.Cell>
+                                  <Text fontWeight="bold">TOTAL</Text>
+                                </Table.Cell>
+                                <Table.Cell textAlign="right">
+                                  <Heading size="md" color="green.600">
+                                    {formatCRC(simulacion.totales.totalBruto)}
+                                  </Heading>
+                                </Table.Cell>
+                                <Table.Cell />
+                              </Table.Row>
+                            </Table.Body>
+                          </Table.Root>
+                        </Card.Body>
+                      </Card.Root>
+
+                      {simulacion.validaciones.advertencias.length > 0 && (
+                        <Card.Root borderColor="yellow.300" borderWidth="1px">
+                          <Card.Body>
+                            <Stack gap="1">
+                              {simulacion.validaciones.advertencias.map((adv: string, i: number) => (
+                                <Text key={i} textStyle="sm" color="yellow.700">
+                                  ⚠ {adv}
+                                </Text>
+                              ))}
+                            </Stack>
+                          </Card.Body>
+                        </Card.Root>
+                      )}
+                    </Stack>
+                  ) : null}
                 </Stack>
-              ) : (
-                <EmptyState.Root
-                  colorPalette="blue"
-                  border="0.15rem dashed"
-                  borderColor="blue.600"
-                  py="12"
-                >
-                  <EmptyState.Content>
-                    <EmptyState.Indicator>
-                      <FiScissors />
-                    </EmptyState.Indicator>
-                    <EmptyState.Title>
-                      Simule el cálculo de liquidación
-                    </EmptyState.Title>
-                    <EmptyState.Description>
-                      Seleccione un colaborador, la causa de terminación y la
-                      fecha, luego presione &quot;Simular cálculo&quot; para
-                      obtener una vista previa de los montos.
-                    </EmptyState.Description>
-                  </EmptyState.Content>
-                </EmptyState.Root>
-              )}
-            </Stack>
-          </Stack>
-        </Form>
+              </Form>
+            ) : null
+          }
+        />
 
-        <Separator />
-
-        <Card.Root>
-          <Card.Header>
-            <Box>
-              <Card.Title>Liquidaciones registradas</Card.Title>
-              <Card.Description>
-                Registros de liquidaciones creadas previamente.
-              </Card.Description>
-            </Box>
-          </Card.Header>
-
-          <Card.Body p="0">
-            {loadingRecords ? (
-              <Stack align="center" py="10" gap="3">
-                <Spinner size="lg" />
-                <Text color="fg.muted">Cargando registros…</Text>
+        {loadingRecords ? (
+          <Spinner alignSelf="center" size="lg" />
+        ) : existingRecords.length === 0 ? (
+          <EmptyState.Root
+            colorPalette="blue"
+            h="400px"
+            border="0.15rem dashed"
+            borderColor="blue.600"
+            alignContent="center"
+            mt="1rem"
+          >
+            <EmptyState.Content>
+              <EmptyState.Indicator>
+                <FiScissors />
+              </EmptyState.Indicator>
+              <Stack textAlign="center" gap="2">
+                <EmptyState.Title>
+                  Aún no existen liquidaciones registradas.
+                </EmptyState.Title>
+                <EmptyState.Description>
+                  Empieza creando una liquidación con pre cálculo previo.
+                </EmptyState.Description>
               </Stack>
-            ) : existingRecords.length > 0 ? (
-              <Table.Root size="sm" variant="outline">
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader>Colaborador</Table.ColumnHeader>
-                    <Table.ColumnHeader>Causa</Table.ColumnHeader>
-                    <Table.ColumnHeader>Fecha término</Table.ColumnHeader>
-                    <Table.ColumnHeader textAlign="right">Monto total</Table.ColumnHeader>
-                    <Table.ColumnHeader>Fecha aprobación</Table.ColumnHeader>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {existingRecords.map((record) => (
-                    <Table.Row key={record.id_caso_termina}>
-                      <Table.Cell>{record.colaborador}</Table.Cell>
-                      <Table.Cell>
-                        <Badge
-                          colorPalette={
-                            record.causa === "Renuncia"
-                              ? "yellow"
-                              : record.causa?.includes("con")
-                                ? "red"
-                                : "gray"
-                          }
-                          variant="subtle"
-                        >
-                          {record.causa}
-                        </Badge>
-                      </Table.Cell>
-                      <Table.Cell>{formatDate(record.fechaTerminacion)}</Table.Cell>
-                      <Table.Cell textAlign="right">
-                        <Text fontWeight="semibold" color="green.600">
-                          {formatCRC(record.montoTotal)}
-                        </Text>
-                      </Table.Cell>
-                      <Table.Cell>{formatDate(record.fechaAprobacion)}</Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Root>
-            ) : (
-              <EmptyState.Root py="10">
-                <EmptyState.Content>
-                  <EmptyState.Title>Sin registros</EmptyState.Title>
-                  <EmptyState.Description>
-                    No hay liquidaciones registradas. Utilice la sección superior
-                    para calcular y crear registros.
-                  </EmptyState.Description>
-                </EmptyState.Content>
-              </EmptyState.Root>
-            )}
-          </Card.Body>
-        </Card.Root>
+            </EmptyState.Content>
+          </EmptyState.Root>
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 2, "2xl": 3 }} gap="6">
+            {existingRecords.map((record) => (
+              <Card.Root
+                key={record.id_caso_termina}
+                minW="0"
+                minH="100%"
+                transition="transform 150ms ease"
+                _hover={{ transform: "scale(1.01)" }}
+              >
+                <Card.Header>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap="3">
+                    <Card.Title>{record.colaborador}</Card.Title>
+                    <Badge colorPalette={getCausaBadgeColor(record.causa)} flexShrink={0}>
+                      {record.causa}
+                    </Badge>
+                  </Stack>
+                </Card.Header>
+                <Card.Body>
+                  <Stack gap="3">
+                    <Stack gap="0">
+                      <Text textStyle="sm" color="fg.muted">
+                        Fecha de terminación
+                      </Text>
+                      <Text fontWeight="medium">{formatDate(record.fechaTerminacion)}</Text>
+                    </Stack>
+                    <Stack gap="0">
+                      <Text textStyle="sm" color="fg.muted">
+                        Fecha de aprobación
+                      </Text>
+                      <Text fontWeight="medium">{formatDate(record.fechaAprobacion)}</Text>
+                    </Stack>
+                    <Stack gap="0">
+                      <Text textStyle="sm" color="fg.muted">
+                        Monto total
+                      </Text>
+                      <Text fontWeight="medium" color="green.600">
+                        {formatCRC(record.montoTotal)}
+                      </Text>
+                    </Stack>
+                    <Stack gap="0">
+                      <Text textStyle="sm" color="fg.muted">
+                        Aprobador
+                      </Text>
+                      <Text fontWeight="medium">#{record.aprobador}</Text>
+                    </Stack>
+                  </Stack>
+                </Card.Body>
+              </Card.Root>
+            ))}
+          </SimpleGrid>
+        )}
       </Stack>
     </Layout>
   );

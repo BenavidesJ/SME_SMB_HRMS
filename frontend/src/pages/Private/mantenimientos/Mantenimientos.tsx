@@ -1,4 +1,4 @@
-import { Grid, GridItem, IconButton, Flex, Text, InputGroup, Input, Center } from '@chakra-ui/react';
+import { Grid, GridItem, IconButton, Flex, Text, InputGroup, Input, Center, Stack } from '@chakra-ui/react';
 import { Layout } from "../../../components/layout";
 import { useNavigate } from 'react-router';
 import { modules } from './modulesList';
@@ -74,7 +74,10 @@ const Mantenimientos = () => {
                 >
                   {m.icon}
                 </IconButton>
-                <Text textStyle="md" textAlign="center" >{m.name}</Text>
+                <Stack gapY={0.05}>
+                  <Text textStyle="md" textAlign="left" >{m.name}</Text>
+                  <Text textStyle="sm" textAlign="left" >{m.description}</Text>
+                </Stack>
               </Flex>
             </GridItem>
           ))

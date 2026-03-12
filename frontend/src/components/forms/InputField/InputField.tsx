@@ -16,7 +16,7 @@ import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
 import { formatCurrencyInputValue, onlyDigitsMax } from "../../../utils";
 
-type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "time";
+type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "month" | "time";
 
 export type SelectOption = { label: string; value: string | number; disabled?: boolean };
 
@@ -227,6 +227,17 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       {fieldType === "date" && (
         <Input
           type="date"
+          required={required}
+          {...restInputProps}
+          {...register(name, { required, ...rules })}
+          _focusVisible={focusStyles}
+          aria-invalid={isInvalid || undefined}
+        />
+      )}
+
+      {fieldType === "month" && (
+        <Input
+          type="month"
           required={required}
           {...restInputProps}
           {...register(name, { required, ...rules })}
