@@ -52,6 +52,11 @@ import {
   getContractTemplateById,
 } from "../components/contractTemplates";
 
+const ADMIN_BOSS_ROLES = new Set(["ADMINISTRADOR", "SUPER_ADMIN"]);
+
+const normalizeRoleName = (role?: string | null) =>
+  String(role ?? "").trim().toUpperCase();
+
 
 const InfoBlock = ({
   label,
@@ -207,7 +212,7 @@ export default function ColaboradorDetalle() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: employee, isLoading: isEmployeeLoading } = useApiQuery<EmployeeRow>({ url: `/empleados/${id}` });
-  const { data: colaboradores = [] } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const { data: colaboradores = [], isLoading: isColaboradoresLoading } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const { data: contracts = [], isLoading: isContractsLoading, refetch: refetchContracts } = useApiQuery<Contrato[]>({ url: `empleados/${id}/contratos`, enabled: Boolean(id) });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornada[]>({ url: "mantenimientos/tipos-jornada" });
   const { data: positions = [] } = useApiQuery<Puesto[]>({ url: "mantenimientos/puestos" });
@@ -255,7 +260,11 @@ export default function ColaboradorDetalle() {
     const colaboradorId = Number(id);
 
     return colaboradores
-      .filter((item) => Number(item.id) !== colaboradorId)
+      .filter((item) => {
+        if (Number(item.id) === colaboradorId) return false;
+
+        return ADMIN_BOSS_ROLES.has(normalizeRoleName(item.usuario?.rol));
+      })
       .map((item) => ({
         label: `${item.nombre} ${item.primer_apellido} ${item.segundo_apellido}`.trim(),
         value: String(item.id),
@@ -825,7 +834,7 @@ export default function ColaboradorDetalle() {
                 label="Jefe Directo"
                 name="id_jefe_directo"
                 required
-                placeholder={jefeDirectoOptions.length ? "Seleccione una opción" : "Cargando..."}
+                placeholder={isColaboradoresLoading ? "Cargando..." : jefeDirectoOptions.length ? "Seleccione una opción" : "Sin administradores disponibles"}
                 disableSelectPortal
                 options={jefeDirectoOptions}
                 rules={{ required: "El campo es obligatorio" }}
@@ -965,7 +974,7 @@ export default function ColaboradorDetalle() {
                   label="Jefe Directo"
                   name="id_jefe_directo"
                   required
-                  placeholder={jefeDirectoOptions.length ? "Seleccione una opción" : "Cargando..."}
+                  placeholder={isColaboradoresLoading ? "Cargando..." : jefeDirectoOptions.length ? "Seleccione una opción" : "Sin administradores disponibles"}
                   disableSelectPortal
                   options={jefeDirectoOptions}
                   rules={{ required: "El campo es obligatorio" }}
