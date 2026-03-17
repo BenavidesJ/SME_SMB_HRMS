@@ -196,6 +196,7 @@ export const Departamentos = () => {
               label="Departamento"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {
@@ -239,6 +240,7 @@ export const Departamentos = () => {
               label="Departamento"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {

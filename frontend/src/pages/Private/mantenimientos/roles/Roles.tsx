@@ -195,6 +195,7 @@ export const RolesPage = () => {
               label="Rol"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {
@@ -238,6 +239,7 @@ export const RolesPage = () => {
               label="Rol"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {

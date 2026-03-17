@@ -322,6 +322,7 @@ const Distritos = () => {
               label="Cantón"
               name="id_canton"
               required
+              disableSelectPortal
               options={cantonOptions}
               rules={{
                 required: "Seleccione un cantón",
@@ -332,6 +333,7 @@ const Distritos = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -383,6 +385,7 @@ const Distritos = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

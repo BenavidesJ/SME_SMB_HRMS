@@ -190,6 +190,7 @@ const CausasLiquidacion = () => {
               label="Descripción"
               name="causa_liquidacion"
               required
+              textOnly
               rules={{
                 required: "La descripción es obligatoria",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -228,6 +229,7 @@ const CausasLiquidacion = () => {
               label="Descripción"
               name="causa_liquidacion"
               required
+              textOnly
               rules={{
                 required: "La descripción es obligatoria",
                 setValueAs: (value) => String(value ?? "").trim(),

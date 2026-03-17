@@ -505,6 +505,7 @@ export default function Puestos() {
                 label="Nombre del puesto"
                 name="nombre"
                 required
+                textOnly
                 rules={{
                   required: "El campo es obligatorio",
                   pattern: {
@@ -627,6 +628,7 @@ export default function Puestos() {
                 label="Nombre del puesto"
                 name="nombre"
                 required
+                textOnly
                 rules={{
                   required: "El campo es obligatorio",
                   pattern: {
@@ -758,6 +760,7 @@ export default function Puestos() {
                 label="Nombre de plantilla"
                 name="nombre"
                 required
+                textOnly
                 rules={{ required: "El campo es obligatorio" }}
               />
 

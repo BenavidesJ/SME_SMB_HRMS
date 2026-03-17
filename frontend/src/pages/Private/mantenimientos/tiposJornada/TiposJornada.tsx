@@ -244,6 +244,7 @@ export const TiposJornada = () => {
               label="Tipo de jornada"
               name="tipo"
               required
+              textOnly
               rules={{
                 required: "El tipo es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -308,6 +309,7 @@ export const TiposJornada = () => {
               label="Tipo de jornada"
               name="tipo"
               required
+              textOnly
               rules={{
                 required: "El tipo es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

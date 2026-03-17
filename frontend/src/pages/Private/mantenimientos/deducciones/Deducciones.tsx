@@ -211,6 +211,7 @@ const Deducciones = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -232,6 +233,7 @@ const Deducciones = () => {
               label="¿Es voluntaria?"
               name="es_voluntaria"
               required
+              disableSelectPortal
               options={BOOLEAN_OPTIONS}
               rules={{ required: "Seleccione una opción" }}
             />
@@ -272,6 +274,7 @@ const Deducciones = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

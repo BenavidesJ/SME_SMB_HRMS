@@ -216,6 +216,8 @@ const TiposContrato = () => {
                 label="Tipo de Contrato"
                 name="tipo_contrato"
                 required
+                textOnly
+                allowHyphen
                 rules={{
                   required: "El campo es obligatorio",
                   setValueAs: (v) => String(v ?? "").trim(),
@@ -262,6 +264,8 @@ const TiposContrato = () => {
                 label="Tipo de contrato"
                 name="tipo_contrato"
                 required
+                textOnly
+                allowHyphen
                 rules={{
                   required: "El campo es obligatorio",
                   setValueAs: (v) => String(v ?? "").trim(),

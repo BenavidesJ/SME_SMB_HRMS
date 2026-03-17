@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { PasswordInput } from "../../ui/password-input";
 import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
-import { formatCurrencyInputValue, onlyDigitsMax } from "../../../utils";
+import { formatCurrencyInputValue, onlyDigitsMax, onlyText } from "../../../utils";
 
 type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "month" | "time";
 
@@ -32,6 +32,8 @@ interface FieldProps extends InputProps {
   startElement?: React.ReactNode;
   endElement?: React.ReactNode;
   numericOnly?: boolean;
+  textOnly?: boolean;
+  allowHyphen?: boolean;
   maxDigits?: number;
   currencyMask?: boolean;
   currencyMaxDecimals?: number;
@@ -77,6 +79,8 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     startElement,
     endElement,
     numericOnly = false,
+    textOnly = false,
+    allowHyphen = false,
     maxDigits,
     currencyMask = false,
     currencyMaxDecimals = 2,
@@ -98,6 +102,10 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     if (numericOnly) {
       const normalized = onlyDigitsMax(event.target.value, maxDigits);
       event.target.value = normalized;
+    }
+
+    if (textOnly) {
+      event.target.value = onlyText(event.target.value, { allowHyphen });
     }
 
     registeredTextField.onChange(event);

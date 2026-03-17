@@ -215,6 +215,7 @@ const Feriados = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -225,6 +226,7 @@ const Feriados = () => {
               fieldType="select"
               label="Obligatorio"
               name="es_obligatorio"
+              disableSelectPortal
               required
               options={BOOLEAN_OPTIONS}
               rules={{ required: "El estado es obligatorio" }}
@@ -274,6 +276,7 @@ const Feriados = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

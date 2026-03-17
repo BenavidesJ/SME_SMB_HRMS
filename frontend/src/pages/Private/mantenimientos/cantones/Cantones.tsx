@@ -267,6 +267,7 @@ const Cantones = () => {
               label="Provincia"
               name="id_provincia"
               required
+              disableSelectPortal
               options={provinceOptions}
               rules={{
                 required: "Seleccione una provincia",
@@ -277,6 +278,7 @@ const Cantones = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -328,6 +330,7 @@ const Cantones = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

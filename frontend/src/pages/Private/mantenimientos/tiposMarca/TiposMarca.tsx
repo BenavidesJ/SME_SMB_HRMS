@@ -190,6 +190,7 @@ const TiposMarca = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -228,6 +229,7 @@ const TiposMarca = () => {
               label="Nombre"
               name="nombre"
               required
+              textOnly
               rules={{
                 required: "El nombre es obligatorio",
                 setValueAs: (value) => String(value ?? "").trim(),

@@ -581,6 +581,7 @@ export const RubrosManager = () => {
                 label="Nombre del rubro"
                 placeholder="Ej: Trabajo en equipo"
                 required
+                textOnly
                 rules={{ required: "El nombre del rubro es obligatorio" }}
               />
               <InputField

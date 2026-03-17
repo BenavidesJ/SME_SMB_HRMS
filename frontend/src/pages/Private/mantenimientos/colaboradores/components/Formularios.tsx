@@ -54,6 +54,7 @@ export function Formularios({
           label="Nombre"
           name="nombre"
           required
+          textOnly
           rules={{
             required: "El campo es obligatorio",
             maxLength: { value: 25, message: "El máximo son 25 caracteres" },
@@ -70,6 +71,7 @@ export function Formularios({
           label="Primer Apellido"
           name="primer_apellido"
           required
+          textOnly
           rules={{
             required: "El campo es obligatorio",
             maxLength: { value: 20, message: "El máximo son 20 caracteres" },
@@ -86,6 +88,7 @@ export function Formularios({
           label="Segundo Apellido"
           name="segundo_apellido"
           required
+          textOnly
           rules={{
             required: "El campo es obligatorio",
             maxLength: { value: 20, message: "El máximo son 20 caracteres" },

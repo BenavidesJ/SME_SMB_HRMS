@@ -16,7 +16,7 @@ type CicloPagoRow = { id: number; ciclo_pago: string };
 type CreateFormValues = { id_ciclo_pago: number; ciclo_pago: string };
 type UpdateFormValues = { ciclo_pago: string };
 
-type CreatePayload = { id_ciclo_pago: number; ciclo_pago: string };
+type CreatePayload = { ciclo_pago: string };
 type UpdatePayload = { ciclo_pago: string };
 
 const BASE_URL = "mantenimientos/ciclos-pago";
@@ -66,7 +66,6 @@ const CiclosPago = () => {
   const handleCreate = async (values: CreateFormValues) => {
     try {
       const payload: CreatePayload = {
-        id_ciclo_pago: Number(values.id_ciclo_pago),
         ciclo_pago: String(values.ciclo_pago ?? "").trim().toUpperCase(),
       };
 
@@ -187,21 +186,11 @@ const CiclosPago = () => {
         content={
           <Form<CreateFormValues> onSubmit={handleCreate} resetOnSuccess>
             <InputField
-              fieldType="number"
-              label="ID del ciclo"
-              name="id_ciclo_pago"
-              required
-              rules={{
-                required: "El ID es obligatorio",
-                min: { value: 1, message: "Debe ser mayor o igual a 1" },
-                setValueAs: (value) => Number(value),
-              }}
-            />
-            <InputField
               fieldType="text"
               label="Descripción"
               name="ciclo_pago"
               required
+              textOnly
               rules={{
                 required: "La descripción es obligatoria",
                 setValueAs: (value) => String(value ?? "").trim(),
@@ -240,6 +229,7 @@ const CiclosPago = () => {
               label="Descripción"
               name="ciclo_pago"
               required
+              textOnly
               rules={{
                 required: "La descripción es obligatoria",
                 setValueAs: (value) => String(value ?? "").trim(),

@@ -195,6 +195,7 @@ export const EstadosCiviles = () => {
               label="Estado Civil"
               name="estado_civil"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {
@@ -238,6 +239,7 @@ export const EstadosCiviles = () => {
               label="Estado Civil"
               name="estado_civil"
               required
+              textOnly
               rules={{
                 required: "El campo es obligatorio",
                 pattern: {
