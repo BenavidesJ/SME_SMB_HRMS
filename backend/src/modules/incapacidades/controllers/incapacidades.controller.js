@@ -42,10 +42,10 @@ export async function listarIncapacidadesPorColaboradorController(req, res, next
 
 export async function extenderIncapacidadController(req, res, next) {
   try {
-    const { grupo } = req.params;
+    const { numero_boleta } = req.params;
     const { fecha_fin } = req.body ?? {};
 
-    const data = await extenderIncapacidad({ grupo, fecha_fin });
+    const data = await extenderIncapacidad({ numero_boleta, fecha_fin });
 
     return res.status(OK).json({
       success: true,

@@ -16,8 +16,8 @@ export const deleteTipoIncapacidad = (id: number) => {
 };
 
 export const extenderIncapacidad = (
-  grupo: string,
+  numero_boleta: string,
   data: { fecha_fin: string },
 ) => {
-  return api.patch<ApiResponse<unknown>>(`incapacidades/${grupo}`, data);
+  return api.patch<ApiResponse<unknown>>(`incapacidades/${encodeURIComponent(numero_boleta)}`, data);
 };

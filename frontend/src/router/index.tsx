@@ -171,12 +171,12 @@ export const router = createBrowserRouter([
         handle: { crumb: "Incapacidades" },
       },
       {
-        path: "/incapacidades/:grupo",
+        path: "/incapacidades/:numero_boleta",
         element: <DetalleIncapacidad />,
         handle: {
           crumb: ({ params }: { params: Record<string, string> }) => [
             { label: "Incapacidades", to: "/incapacidades" },
-            `Detalle (${shortId(params.grupo)})`,
+            `Detalle (${params.numero_boleta ?? shortId(params.numero_boleta)})`,
           ],
         },
       },

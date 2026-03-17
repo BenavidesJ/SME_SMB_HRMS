@@ -25,6 +25,7 @@ interface CrearIncapacidadPayload {
   fecha_inicio: string;
   fecha_fin: string;
   tipo_incap: string;
+  numero_boleta: string;
 }
 
 type CrearIncapacidadFormValues = CrearIncapacidadPayload;
@@ -38,7 +39,7 @@ interface DiaIncapacidad {
 }
 
 interface IncapacidadGrupo {
-  grupo: string | null;
+  numero_boleta: string | null;
   tipo_incapacidad: string | null;
   fecha_inicio: string | null;
   fecha_fin: string | null;
@@ -224,17 +225,20 @@ export const RegistroIncapacidades = () => {
 
               return (
                 <Box
-                  key={item.grupo ?? `${item.fecha_inicio}-${item.fecha_fin}`}
+                  key={item.numero_boleta ?? `${item.fecha_inicio}-${item.fecha_fin}`}
                   p={4}
                   borderRadius="lg"
                   bg="gray.50"
                   _hover={{ bg: "gray.100", cursor: "pointer" }}
-                  onClick={() => item.grupo && navigate(`/incapacidades/${item.grupo}`)}
+                  onClick={() => item.numero_boleta && navigate(`/incapacidades/${encodeURIComponent(item.numero_boleta)}`)}
                   transition="background 0.15s"
                 >
                   <Text fontWeight="semibold" fontSize="sm">{titulo}</Text>
                   <Text fontSize="xs" color="gray.600" mt="1">
                     {tipoLabel}
+                  </Text>
+                  <Text fontSize="xs" color="gray.600" mt="1">
+                    Boleta: {item.numero_boleta ?? "No definida"}
                   </Text>
                   <HStack gap="1" mt="3" wrap="wrap">
                     {item.dias.map((dia) => (
@@ -351,6 +355,27 @@ export const RegistroIncapacidades = () => {
           <Box bg="white" borderRadius="xl" boxShadow="md" p={6}>
             <Form onSubmit={handleCreateRequest} resetOnSuccess>
               <Wrap maxW="600px">
+                <InputField
+                  fieldType="text"
+                  label="Número de Boleta"
+                  name="numero_boleta"
+                  required
+                  maxLength={50}
+                  rules={{
+                    required: "El campo es obligatorio",
+                    setValueAs: (value) => String(value ?? "").trim().toUpperCase(),
+                    validate: (value) => {
+                      const boleta = String(value ?? "").trim();
+
+                      if (!boleta) return "El campo es obligatorio";
+                      if (boleta.length > 50) return "La boleta no puede exceder 50 caracteres.";
+                      if (boleta.includes("/")) return "La boleta no puede contener '/'.";
+
+                      return true;
+                    },
+                  }}
+                  helperText="Use el número legal de boleta emitido por la entidad correspondiente."
+                />
                 <IncapacidadDateFields minFechaInicio={minFechaInicio} />
                 <InputField
                   fieldType="select"

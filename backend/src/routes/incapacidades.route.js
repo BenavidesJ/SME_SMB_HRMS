@@ -10,6 +10,6 @@ const router = Router();
 
 router.post("/", authorization, registrarIncapacidadController);
 router.get("/colaborador/:id", authorization, listarIncapacidadesPorColaboradorController);
-router.patch("/:grupo", authorization, extenderIncapacidadController);
+router.patch("/:numero_boleta", authorization, extenderIncapacidadController);
 
 export default router;

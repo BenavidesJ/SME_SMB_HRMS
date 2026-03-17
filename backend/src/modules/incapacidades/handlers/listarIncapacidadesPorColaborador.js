@@ -42,18 +42,18 @@ export async function listarIncapacidadesPorColaborador({ id_colaborador }) {
     ],
   });
 
-  // Agrupar por UUID de grupo para devolver un solo evento por incapacidad
+  // Agrupar por numero_boleta para devolver un solo evento por incapacidad
   const gruposMap = new Map();
 
   for (const row of rows) {
     const plain = row.get({ plain: true });
     const incapacidad = plain.incapacidadRef ?? {};
     const tipo = incapacidad.tipo ?? {};
-    const grupoKey = incapacidad.grupo ?? `sin_grupo_${incapacidad.id_incapacidad}`;
+    const boletaKey = incapacidad.numero_boleta ?? `sin_boleta_${incapacidad.id_incapacidad}`;
 
-    if (!gruposMap.has(grupoKey)) {
-      gruposMap.set(grupoKey, {
-        grupo: incapacidad.grupo ?? null,
+    if (!gruposMap.has(boletaKey)) {
+      gruposMap.set(boletaKey, {
+        numero_boleta: incapacidad.numero_boleta ?? null,
         tipo_incapacidad: tipo.nombre ? String(tipo.nombre) : null,
         fecha_inicio: incapacidad.fecha_inicio ?? null,
         fecha_fin: incapacidad.fecha_fin ?? null,
@@ -61,7 +61,7 @@ export async function listarIncapacidadesPorColaborador({ id_colaborador }) {
       });
     }
 
-    const entry = gruposMap.get(grupoKey);
+    const entry = gruposMap.get(boletaKey);
 
     entry.dias.push({
       id_jornada: Number(plain.id_jornada),

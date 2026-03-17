@@ -4,8 +4,6 @@ import {
   Badge,
   Card,
   Flex,
-  Grid,
-  GridItem,
   Heading,
   HStack,
   SimpleGrid,
@@ -64,7 +62,7 @@ interface DiaIncapacidad {
 }
 
 interface IncapacidadGrupo {
-  grupo: string | null;
+  numero_boleta: string | null;
   tipo_incapacidad: string | null;
   fecha_inicio: string | null;
   fecha_fin: string | null;
@@ -72,7 +70,7 @@ interface IncapacidadGrupo {
 }
 
 export default function DetalleIncapacidad() {
-  const { grupo } = useParams<{ grupo: string }>();
+  const { numero_boleta } = useParams<{ numero_boleta: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const userID = user?.id;
@@ -87,8 +85,8 @@ export default function DetalleIncapacidad() {
   });
 
   const incapacidad = useMemo(
-    () => incapacidades.find((i) => i.grupo === grupo) ?? null,
-    [incapacidades, grupo],
+    () => incapacidades.find((i) => i.numero_boleta === numero_boleta) ?? null,
+    [incapacidades, numero_boleta],
   );
 
   const tipoLabel = useMemo(() => {
@@ -97,6 +95,8 @@ export default function DetalleIncapacidad() {
     return raw.toUpperCase() === raw ? raw : toTitleCase(raw);
   }, [incapacidad]);
 
+  const extensionMinDate = incapacidad?.fecha_fin ?? "";
+
   const totalDias = incapacidad?.dias.length ?? 0;
   const diasLaborales = incapacidad?.dias.filter((d) => d.porcentaje_patrono > 0 || d.porcentaje_ccss > 0).length ?? 0;
 
@@ -104,10 +104,10 @@ export default function DetalleIncapacidad() {
   const [isExtending, setIsExtending] = useState(false);
 
   const handleExtender = async (form: { fecha_fin: string }) => {
-    if (!grupo) return;
+    if (!numero_boleta) return;
     try {
       setIsExtending(true);
-      await extenderIncapacidad(grupo, { fecha_fin: form.fecha_fin });
+      await extenderIncapacidad(numero_boleta, { fecha_fin: form.fecha_fin });
       showToast("Incapacidad extendida correctamente.", "success");
       setOpenExtendModal(false);
       await refetch();
@@ -178,57 +178,59 @@ export default function DetalleIncapacidad() {
         </Card.Root>
 
         {!isLoading && incapacidad && (
-          <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap="6">
-            <GridItem colSpan={1}>
-              <Card.Root h="full">
-                <Card.Header>
-                  <Card.Title>Información General</Card.Title>
-                </Card.Header>
-                <Card.Body>
-                  <SimpleGrid columns={{ base: 1, sm: 2 }} gap="4">
-                    <InfoBlock
-                      label="Tipo de incapacidad"
-                      value={tipoLabel}
-                    />
-                    <InfoBlock
-                      label="Fecha de inicio"
-                      value={formatDateLong(incapacidad.fecha_inicio)}
-                    />
-                    <InfoBlock
-                      label="Fecha de fin"
-                      value={formatDateLong(incapacidad.fecha_fin)}
-                    />
-                    <InfoBlock label="Total de días" value={totalDias} />
-                    <InfoBlock
-                      label="Días con cobertura"
-                      value={diasLaborales}
-                    />
-                    <InfoBlock
-                      label="Grupo"
-                      value={incapacidad.grupo ? incapacidad.grupo.slice(0, 8) + "…" : "—"}
-                    />
-                  </SimpleGrid>
-                </Card.Body>
-              </Card.Root>
-            </GridItem>
+          <Card.Root>
+            <Card.Header>
+              <Card.Title>Información General</Card.Title>
+            </Card.Header>
+            <Card.Body>
+              <Stack gap="6">
+                <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap="4">
+                  <InfoBlock
+                    label="Tipo de incapacidad"
+                    value={tipoLabel}
+                  />
+                  <InfoBlock
+                    label="Fecha de inicio"
+                    value={formatDateLong(incapacidad.fecha_inicio)}
+                  />
+                  <InfoBlock
+                    label="Fecha de fin"
+                    value={formatDateLong(incapacidad.fecha_fin)}
+                  />
+                  <InfoBlock label="Total de días" value={totalDias} />
+                  <InfoBlock
+                    label="Días con cobertura"
+                    value={diasLaborales}
+                  />
+                  <InfoBlock
+                    label="Número de boleta"
+                    value={incapacidad.numero_boleta ?? "—"}
+                  />
+                </SimpleGrid>
 
-            <GridItem colSpan={1}>
-              <Card.Root h="full">
-                <Card.Header>
-                  <Card.Title>Días incluidos</Card.Title>
-                </Card.Header>
-                <Card.Body>
-                  <HStack gap="1.5" wrap="wrap">
+                <Stack gap="3">
+                  <Text textStyle="sm" fontWeight="semibold">
+                    Días incluidos
+                  </Text>
+                  <HStack gap="2" wrap="wrap" align="start">
                     {incapacidad.dias.map((dia) => (
-                      <Badge key={dia.id_jornada} variant="surface" size="sm">
+                      <Badge
+                        key={dia.id_jornada}
+                        size="sm"
+                        bg="blue.100"
+                        color="blue.800"
+                        borderRadius="full"
+                        px="2.5"
+                        py="1"
+                      >
                         {formatDateLong(dia.fecha)}
                       </Badge>
                     ))}
                   </HStack>
-                </Card.Body>
-              </Card.Root>
-            </GridItem>
-          </Grid>
+                </Stack>
+              </Stack>
+            </Card.Body>
+          </Card.Root>
         )}
 
         {!isLoading && incapacidad && (
@@ -290,7 +292,10 @@ export default function DetalleIncapacidad() {
         isOpen={openExtendModal}
         onOpenChange={(e) => setOpenExtendModal(e.open)}
         content={
-          <Form onSubmit={handleExtender}>
+          <Form
+            onSubmit={handleExtender}
+            defaultValues={{ fecha_fin: extensionMinDate }}
+          >
             <Stack gap="4">
               <Text fontSize="sm" color="fg.muted">
                 La incapacidad actual termina el{" "}
@@ -303,7 +308,17 @@ export default function DetalleIncapacidad() {
                 label="Nueva fecha de fin"
                 name="fecha_fin"
                 required
-                rules={{ required: "El campo es obligatorio" }}
+                min={extensionMinDate || undefined}
+                rules={{
+                  required: "El campo es obligatorio",
+                  validate: (value) => {
+                    const nextDate = String(value ?? "");
+
+                    if (!nextDate || !extensionMinDate) return true;
+
+                    return nextDate > extensionMinDate || "La nueva fecha debe ser posterior a la fecha fin actual.";
+                  },
+                }}
               />
 
               <Button

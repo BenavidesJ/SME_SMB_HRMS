@@ -86,13 +86,13 @@ function buildRestDaysSet(horario) {
 }
 
 /**
- * Cuenta los días pagables que ya existen en el grupo para continuar el contador.
- * Reconstruye la lógica: recorre las jornadas existentes del grupo en orden cronológico,
+ * Cuenta los días pagables que ya existen en la boleta para continuar el contador.
+ * Reconstruye la lógica: recorre las jornadas existentes de la boleta en orden cronológico,
  * y por cada día laboral (no de descanso) incrementa el contador.
  */
-async function countExistingPayableDays({ grupo, tipo, restDays, tx }) {
+async function countExistingPayableDays({ numero_boleta, tipo, restDays, tx }) {
   const existingRecords = await Incapacidad.findAll({
-    where: { grupo },
+    where: { numero_boleta },
     include: [{ model: JornadaDiaria, as: "jornadas", attributes: ["fecha"] }],
     order: [["id_incapacidad", "ASC"]],
     transaction: tx,
@@ -118,19 +118,33 @@ async function countExistingPayableDays({ grupo, tipo, restDays, tx }) {
   return count;
 }
 
-export async function extenderIncapacidad({ grupo, fecha_fin }) {
+function normalizeNumeroBoleta(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+
+  if (!raw) {
+    throw new Error("El numero_boleta de incapacidad es obligatorio");
+  }
+
+  if (raw.length > 50) {
+    throw new Error("numero_boleta no puede exceder 50 caracteres");
+  }
+
+  if (raw.includes("/")) {
+    throw new Error("numero_boleta no puede contener '/'");
+  }
+
+  return raw;
+}
+
+export async function extenderIncapacidad({ numero_boleta, fecha_fin }) {
   const tx = await sequelize.transaction();
 
   try {
-    if (!grupo || typeof grupo !== "string" || grupo.trim() === "") {
-      throw new Error("El grupo (UUID) de incapacidad es obligatorio");
-    }
+    const numeroBoleta = normalizeNumeroBoleta(numero_boleta);
 
-    const grupoId = grupo.trim();
-
-    // Obtener todos los registros existentes del grupo
+    // Obtener todos los registros existentes de la boleta
     const existingRecords = await Incapacidad.findAll({
-      where: { grupo: grupoId },
+      where: { numero_boleta: numeroBoleta },
       include: [
         { model: TipoIncapacidad, as: "tipo", attributes: ["id_tipo_incap", "nombre"] },
       ],
@@ -140,7 +154,7 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
     });
 
     if (existingRecords.length === 0) {
-      throw new Error(`No existe un grupo de incapacidad con UUID ${grupoId}`);
+      throw new Error(`No existe una incapacidad con numero_boleta ${numeroBoleta}`);
     }
 
     const firstRecord = existingRecords[0];
@@ -151,7 +165,7 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
       throw new Error(`Tipo de incapacidad no soportado: ${tipoNombre}`);
     }
 
-    // Determinar el rango actual del grupo
+    // Determinar el rango actual de la boleta
     const fechaInicioGrupo = firstRecord.fecha_inicio;
     const fechaFinActual = firstRecord.fecha_fin;
 
@@ -180,7 +194,7 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
     });
 
     if (!firstJornada) {
-      throw new Error("No se encontró la jornada diaria vinculada al grupo de incapacidad");
+      throw new Error("No se encontró la jornada diaria vinculada a la incapacidad");
     }
 
     const idColaborador = Number(firstJornada.id_colaborador);
@@ -225,7 +239,7 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
 
     // Contar días pagables existentes para continuar el contador
     let payableDayCounter = await countExistingPayableDays({
-      grupo: grupoId,
+      numero_boleta: numeroBoleta,
       tipo: tipoNombre,
       restDays,
       tx,
@@ -271,7 +285,7 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
           id_tipo_incap: Number(tipoRow.id_tipo_incap),
           porcentaje_patrono,
           porcentaje_ccss,
-          grupo: grupoId,
+          numero_boleta: numeroBoleta,
           fecha_inicio: fechaInicioGrupo,
           fecha_fin: newFechaFinStr,
         },
@@ -320,17 +334,17 @@ export async function extenderIncapacidad({ grupo, fecha_fin }) {
       });
     }
 
-    // Actualizar fecha_fin en todos los registros previos del grupo
+    // Actualizar fecha_fin en todos los registros previos de la boleta
     await Incapacidad.update(
       { fecha_fin: newFechaFinStr },
-      { where: { grupo: grupoId }, transaction: tx },
+      { where: { numero_boleta: numeroBoleta }, transaction: tx },
     );
 
     await tx.commit();
 
     return {
       id_colaborador: idColaborador,
-      grupo: grupoId,
+      numero_boleta: numeroBoleta,
       tipo_incapacidad: tipoNombre,
       fecha_inicio: fechaInicioGrupo,
       fecha_fin: newFechaFinStr,

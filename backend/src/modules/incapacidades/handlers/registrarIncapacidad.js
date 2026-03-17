@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -22,6 +21,24 @@ function normalizeTipo(value) {
   const raw = String(value ?? "").trim();
   if (!raw) throw new Error("tipo_incap es obligatorio");
   return raw.replace(/\s+/g, "_").toUpperCase();
+}
+
+function normalizeNumeroBoleta(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+
+  if (!raw) {
+    throw new Error("numero_boleta es obligatorio");
+  }
+
+  if (raw.length > 50) {
+    throw new Error("numero_boleta no puede exceder 50 caracteres");
+  }
+
+  if (raw.includes("/")) {
+    throw new Error("numero_boleta no puede contener '/'");
+  }
+
+  return raw;
 }
 
 function assertDate(value, fieldName) {
@@ -101,11 +118,14 @@ export async function registrarIncapacidad({
   fecha_inicio,
   fecha_fin,
   tipo_incap,
+  numero_boleta,
 }) {
   const tx = await sequelize.transaction();
 
   try {
     const tipo = normalizeTipo(tipo_incap);
+    const numeroBoleta = normalizeNumeroBoleta(numero_boleta);
+
     if (!Object.values(SUPPORTED_TYPES).includes(tipo)) {
       throw new Error(`Tipo de incapacidad no soportado todavía: ${tipo}`);
     }
@@ -124,9 +144,19 @@ export async function registrarIncapacidad({
 
     const dates = listDatesInclusive(startDate, endDate);
 
-    const grupo = uuidv4();
     const fechaInicioStr = startDate.format("YYYY-MM-DD");
     const fechaFinStr = endDate.format("YYYY-MM-DD");
+
+    const boletaExistente = await Incapacidad.findOne({
+      where: { numero_boleta: numeroBoleta },
+      attributes: ["id_incapacidad"],
+      transaction: tx,
+      lock: tx.LOCK.UPDATE,
+    });
+
+    if (boletaExistente) {
+      throw new Error(`El numero_boleta ${numeroBoleta} ya está registrado`);
+    }
 
     const colaborador = await Colaborador.findByPk(idColaborador, {
       transaction: tx,
@@ -229,7 +259,7 @@ export async function registrarIncapacidad({
           id_tipo_incap: Number(tipoRow.id_tipo_incap),
           porcentaje_patrono,
           porcentaje_ccss,
-          grupo,
+          numero_boleta: numeroBoleta,
           fecha_inicio: fechaInicioStr,
           fecha_fin: fechaFinStr,
         },
@@ -282,7 +312,7 @@ export async function registrarIncapacidad({
 
     return {
       id_colaborador: idColaborador,
-      grupo,
+      numero_boleta: numeroBoleta,
       tipo_incapacidad: tipoRow.nombre,
       fecha_inicio: fechaInicioStr,
       fecha_fin: fechaFinStr,
