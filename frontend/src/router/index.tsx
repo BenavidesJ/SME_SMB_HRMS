@@ -32,9 +32,9 @@ import TiposIncapacidad from "../pages/Private/mantenimientos/tiposIncapacidad/T
 import TiposMarca from "../pages/Private/mantenimientos/tiposMarca/TiposMarca";
 import { RolesPage } from "../pages/Private/mantenimientos/roles/Roles";
 import NotFoundPage from "../pages/Public/NotFoundPage";
-import { SolicitudVacaciones } from "../pages/Private/vacaciones/SolicitudVacaciones";
+import { SolicitudVacacionesPage } from "../pages/Private/vacaciones/SolicitudVacacionesPage";
 import { GestionVacaciones } from "../pages/Private/vacaciones/GestionVacaciones";
-import { SolicitudPermisos } from "../pages/Private/permisos/SolicitudPermisos";
+import { SolicitudPermisosPage } from "../pages/Private/permisos/SolicitudPermisosPage";
 import { GestionPermisos } from "../pages/Private/permisos/GestionPermisos";
 import { Planillas } from "../pages/Private/planillas/Planillas";
 import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
@@ -135,7 +135,7 @@ export const router = createBrowserRouter([
 
           {
             path: "solicitud",
-            element: <SolicitudVacaciones />,
+            element: <SolicitudVacacionesPage />,
             handle: { crumb: "Solicitud" },
           },
           {
@@ -154,7 +154,7 @@ export const router = createBrowserRouter([
 
           {
             path: "solicitud",
-            element: <SolicitudPermisos />,
+            element: <SolicitudPermisosPage />,
             handle: { crumb: "Solicitud" },
           },
           {

@@ -1,5 +1,6 @@
 import { HTTP_CODES } from "../../../common/strings.js";
 import { listarVacacionesPorColaborador } from "../handlers/listarVacacionesPorColaborador.js";
+import { listarVacaciones } from "../handlers/listarVacaciones.js";
 import { solicitarVacaciones } from "../handlers/solicitarVacaciones.js";
 import { actualizarEstadoSolicitudVacaciones } from "../handlers/actualizarEstadoSolicitudVacaciones.js";
 import { Usuario } from "../../../models/index.js";
@@ -79,6 +80,35 @@ export async function listarVacacionesPorColaboradorController(req, res, next) {
       id_colaborador: targetColaboradorId,
       aprobador_filter:
         actor.id_colaborador !== targetColaboradorId ? actor.id_colaborador : null,
+    });
+
+    return res.status(OK).json({
+      success: true,
+      status_code: OK,
+      message: "Solicitudes de vacaciones recuperadas",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarVacacionesController(req, res, next) {
+  try {
+    const { id_colaborador, estado } = req.query ?? {};
+
+    const targetColaboradorId =
+      id_colaborador !== undefined && id_colaborador !== null && String(id_colaborador).trim() !== ""
+        ? Number(id_colaborador)
+        : null;
+
+    if (targetColaboradorId !== null && (!Number.isInteger(targetColaboradorId) || targetColaboradorId <= 0)) {
+      throw new Error("id_colaborador debe ser un entero positivo");
+    }
+
+    const data = await listarVacaciones({
+      id_colaborador: targetColaboradorId,
+      estado,
     });
 
     return res.status(OK).json({

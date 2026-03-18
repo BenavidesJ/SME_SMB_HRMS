@@ -2,6 +2,7 @@ import { HTTP_CODES } from "../../../common/strings.js";
 import { solicitarPermiso } from "../handlers/solicitarPermiso.js";
 import { actualizarEstadoSolicitudPermiso } from "../handlers/actualizarEstadoSolicitudPermiso.js";
 import { listarPermisosPorColaborador } from "../handlers/listarPermisosPorColaborador.js";
+import { listarPermisos } from "../handlers/listarPermisos.js";
 import { Usuario } from "../../../models/index.js";
 
 const CREATED = HTTP_CODES.SUCCESS.CREATED;
@@ -101,6 +102,35 @@ export async function listarPermisosPorColaboradorController(req, res, next) {
       id_colaborador: targetColaboradorId,
       aprobador_filter:
         actor.id_colaborador !== targetColaboradorId ? actor.id_colaborador : null,
+    });
+
+    return res.status(OK).json({
+      success: true,
+      status_code: OK,
+      message: "Solicitudes de permisos recuperadas",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarPermisosController(req, res, next) {
+  try {
+    const { id_colaborador, estado } = req.query ?? {};
+
+    const targetColaboradorId =
+      id_colaborador !== undefined && id_colaborador !== null && String(id_colaborador).trim() !== ""
+        ? Number(id_colaborador)
+        : null;
+
+    if (targetColaboradorId !== null && (!Number.isInteger(targetColaboradorId) || targetColaboradorId <= 0)) {
+      throw new Error("id_colaborador debe ser un entero positivo");
+    }
+
+    const data = await listarPermisos({
+      id_colaborador: targetColaboradorId,
+      estado,
     });
 
     return res.status(OK).json({

@@ -1,26 +1,37 @@
 import type { ReactNode } from "react";
 import { EmptyState, VStack } from "@chakra-ui/react";
+import { FiFileMinus } from "react-icons/fi";
 
 interface EmptyStateIndicatorProps {
   title: string | ReactNode;
   subtitle?: string | ReactNode;
   icon?: ReactNode;
   action?: ReactNode;
+  variant?: "page" | "compact";
 }
 
-export const EmptyStateIndicator = ({ title, subtitle, icon, action }: EmptyStateIndicatorProps) => {
+export const EmptyStateIndicator = ({
+  title,
+  subtitle,
+  icon,
+  action,
+  variant = "page",
+}: EmptyStateIndicatorProps) => {
+  const isCompact = variant === "compact";
+
   return (
     <EmptyState.Root
       colorPalette="blue"
-      h="500px"
+      h={isCompact ? "220px" : "500px"}
       border="0.15rem dashed"
       borderColor="blue.600"
       alignContent="center"
-      mt="2rem"
+      mt={isCompact ? "0" : "2rem"}
+      px={isCompact ? "3" : undefined}
     >
       <EmptyState.Content>
         <EmptyState.Indicator>
-          {icon}
+          {icon ?? <FiFileMinus />}
         </EmptyState.Indicator>
         <VStack textAlign="center">
           <EmptyState.Title>

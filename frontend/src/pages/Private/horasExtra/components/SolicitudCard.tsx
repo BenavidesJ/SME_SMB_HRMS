@@ -5,7 +5,6 @@ import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/es";
 
 import {
-  Avatar,
   Badge,
   Button,
   Card,
@@ -15,12 +14,12 @@ import {
   GridItem,
   HStack,
   Portal,
+  Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
 
 import type { SolicitudHoraExtra } from "../../../../types/Overtime";
-import { getNameInitials } from "./helpers/getNameInitials";
 import { LuCheck, LuX } from "react-icons/lu";
 
 dayjs.extend(utc);
@@ -33,6 +32,7 @@ interface SolicitudCardProps {
   onDecline?: (id: number) => void;
   isSubmitting?: boolean;
   canManageActions?: boolean;
+  view?: "personal" | "management";
 }
 
 const estadoBadgeProps = (estado: string) => {
@@ -50,22 +50,6 @@ const estadoBadgeProps = (estado: string) => {
       return { colorPalette: "gray", variant: "subtle" as const };
   }
 };
-const estadoBorderColor = (estado: string) => {
-  const key = estado.toUpperCase();
-  switch (key) {
-    case "PENDIENTE":
-      return "rgb(253, 224, 71)";
-    case "APROBADO":
-      return "rgb(59, 130, 246)"
-    case "CANCELADO":
-      return "rgb(161, 161, 170)";
-    case "RECHAZADO":
-      return "rgb(239, 68, 68)";
-    default:
-      return "rgb(161, 161, 170)"
-  }
-};
-
 const formatFecha = (iso: string) => {
   const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
   const d = isDateOnly ? dayjs(iso) : dayjs.utc(iso).local();
@@ -83,22 +67,100 @@ export const SolicitudCard = ({
   onDecline,
   isSubmitting = false,
   canManageActions = false,
+  view = "management",
 }: SolicitudCardProps) => {
   const estado = item.estado.estado;
 
+  if (isSubmitting) {
+    return (
+      <Card.Root py={3} px={4}>
+        <Card.Body pb={2} pt={0} px={0}>
+          <Grid
+            templateColumns={{ base: "1fr", md: "1fr auto" }}
+            gap={{ base: 4, md: 3 }}
+            alignItems="start"
+          >
+            <GridItem>
+              <Stack gap={2} fontSize="sm">
+                <HStack gap={2} wrap="wrap">
+                  <Skeleton height="5" width="6rem" />
+                  <Skeleton height="5" width="10rem" />
+                  <Skeleton height="5" width="5.5rem" />
+                </HStack>
+                <HStack gap={2} wrap="wrap">
+                  <Skeleton height="5" width="4rem" />
+                  <Skeleton height="5" width="14rem" maxW="100%" />
+                </HStack>
+                <HStack gap={2} wrap="wrap">
+                  <Skeleton height="5" width="7rem" />
+                  <Skeleton height="5" width="12rem" maxW="100%" />
+                </HStack>
+                <HStack gap={2} wrap="wrap">
+                  <Skeleton height="5" width="8rem" />
+                  <Skeleton height="5" width="3rem" />
+                </HStack>
+              </Stack>
+            </GridItem>
+
+            <GridItem w={{ base: "full", md: "auto" }}>
+              <Stack gap={1} align={{ base: "flex-start", md: "flex-end" }}>
+                <Skeleton height="4" width="7rem" />
+                <Skeleton height="4" width="9rem" />
+              </Stack>
+            </GridItem>
+          </Grid>
+        </Card.Body>
+
+        {estado === "PENDIENTE" && canManageActions && (
+          <Card.Footer pt={3} px={0}>
+            <HStack w="full" justify="end" gap="2">
+              <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
+              <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
+            </HStack>
+          </Card.Footer>
+        )}
+      </Card.Root>
+    );
+  }
+
+  if (view === "personal") {
+    return (
+      <Card.Root py={3} px={4}>
+        <Card.Body pb={0} pt={0} px={0}>
+          <Stack gap={2} fontSize="sm">
+            <HStack gap={2} wrap="wrap">
+              <Text color="fg.muted">Solicitante:</Text>
+              <Text fontWeight="semibold">{item.colaborador.nombre_completo}</Text>
+            </HStack>
+
+            <HStack gap={2} wrap="wrap">
+              <Text color="fg.muted">Correo:</Text>
+              <Text>{item.colaborador.correo}</Text>
+            </HStack>
+
+            <HStack gap={2} wrap="wrap">
+              <Text color="fg.muted">Fecha de trabajo:</Text>
+              <Text fontWeight="semibold">{formatFecha(item.fecha_trabajo)}</Text>
+            </HStack>
+
+            <HStack gap={2} wrap="wrap">
+              <Text color="fg.muted">Horas solicitadas:</Text>
+              <Text fontWeight="semibold">{item.horas_solicitadas}</Text>
+            </HStack>
+          </Stack>
+        </Card.Body>
+      </Card.Root>
+    );
+  }
+
   return (
-    <Card.Root borderLeftWidth={6} py={3} px={4} style={{ borderLeftColor: estadoBorderColor(estado) }}>
+    <Card.Root py={3} px={4}>
       <Card.Body pb={2} pt={0} px={0}>
         <Grid
           templateColumns={{ base: "1fr", md: "auto 1fr auto" }}
           gap={{ base: 4, md: 3 }}
           alignItems="start"
         >
-          <GridItem>
-            <Avatar.Root size="lg">
-              <Avatar.Fallback name={getNameInitials(item.colaborador.nombre_completo)} />
-            </Avatar.Root>
-          </GridItem>
 
           <GridItem>
             <Stack gap={2} fontSize="sm">
@@ -141,15 +203,9 @@ export const SolicitudCard = ({
       {estado === "PENDIENTE" && canManageActions && (
         <Card.Footer pt={3} px={0}>
           <HStack w="full" justify="end">
-            {/* RECHAZAR - con confirmación */}
             <Dialog.Root size="sm">
               <Dialog.Trigger asChild>
-                <Button
-                  variant="subtle"
-                  colorPalette="red"
-                  disabled={isSubmitting}
-                  loading={isSubmitting}
-                >
+                <Button variant="subtle" colorPalette="red">
                   <LuX />
                   Rechazar
                 </Button>
@@ -171,18 +227,11 @@ export const SolicitudCard = ({
 
                     <Dialog.Footer>
                       <Dialog.ActionTrigger asChild>
-                        <Button variant="outline" disabled={isSubmitting}>
-                          Cancelar
-                        </Button>
+                        <Button variant="outline">Cancelar</Button>
                       </Dialog.ActionTrigger>
 
                       <Dialog.ActionTrigger asChild>
-                        <Button
-                          colorPalette="red"
-                          disabled={isSubmitting}
-                          loading={isSubmitting}
-                          onClick={() => onDecline?.(item.id_solicitud_hx)}
-                        >
+                        <Button colorPalette="red" onClick={() => onDecline?.(item.id_solicitud_hx)}>
                           Rechazar
                         </Button>
                       </Dialog.ActionTrigger>
@@ -198,12 +247,7 @@ export const SolicitudCard = ({
 
             <Dialog.Root size="sm">
               <Dialog.Trigger asChild>
-                <Button
-                  variant="subtle"
-                  colorPalette="green"
-                  disabled={isSubmitting}
-                  loading={isSubmitting}
-                >
+                <Button variant="subtle" colorPalette="green">
                   <LuCheck />
                   Aprobar
                 </Button>
@@ -225,18 +269,11 @@ export const SolicitudCard = ({
 
                     <Dialog.Footer>
                       <Dialog.ActionTrigger asChild>
-                        <Button variant="outline" disabled={isSubmitting}>
-                          Cancelar
-                        </Button>
+                        <Button variant="outline">Cancelar</Button>
                       </Dialog.ActionTrigger>
 
                       <Dialog.ActionTrigger asChild>
-                        <Button
-                          colorPalette="green"
-                          disabled={isSubmitting}
-                          loading={isSubmitting}
-                          onClick={() => onApprove?.(item.id_solicitud_hx)}
-                        >
+                        <Button colorPalette="green" onClick={() => onApprove?.(item.id_solicitud_hx)}>
                           Aprobar
                         </Button>
                       </Dialog.ActionTrigger>

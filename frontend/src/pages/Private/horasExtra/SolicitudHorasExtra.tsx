@@ -1,26 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Box,
-  Grid,
-  GridItem,
-  Heading,
   Stack,
-  Tabs,
   Wrap,
 } from "@chakra-ui/react";
-import { LuUser, LuUsers } from "react-icons/lu";
 import { Layout } from "../../../components/layout";
 import { Form, InputField } from "../../../components/forms";
 import { Button } from "../../../components/general/button/Button";
+import { Modal } from "../../../components/general";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useAuth } from "../../../context/AuthContext";
 import { getCostaRicaTodayDate, toTitleCase } from "../../../utils";
 import type { Contrato, EmployeeRow } from "../../../types";
-import type { SolicitudesQuery } from "../../../types/Overtime";
-import { ListaSolicitudes } from "./components";
-import { FiltrosSolicitudes } from "./components/FiltrosSolicitudes";
+import type { DataConsultaSolicitudes } from "../../../types/Overtime";
+import { SolicitudCard } from "./components";
+import { SolicitudesBoard } from "../../../components/general/requests/SolicitudesBoard";
+import { PERSONAL_REQUEST_COLUMNS } from "../../../utils/requestStatus";
 
 interface TipoHx {
   id: number;
@@ -51,26 +48,25 @@ type CreateRequestFormValues = {
   id_tipo_hx: string;
 };
 
-type CollaboratorForm = { id_colaborador: string };
-
 export const SolicitudHorasExtra = () => {
   const { user } = useAuth();
   const userId = user?.id;
   const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
-
-  const hasAdminPermission = useMemo(
-    () => {
-      const userRoles = user?.usuario?.rol ? [user.usuario.rol] : [];
-      return userRoles.some((role) => role === "ADMINISTRADOR" || role === "SUPER_ADMIN");
-    },
-    [user]
-  );
+  const [openModal, setOpenModal] = useState(false);
 
   const { data: tipoHx = [] } = useApiQuery<TipoHx[]>({ url: "mantenimientos/tipos-hora-extra" });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornadaCatalog[]>({ url: "mantenimientos/tipos-jornada" });
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const { data: myContracts = [] } = useApiQuery<Contrato[]>({
     url: userId ? `empleados/${userId}/contratos` : "",
+    enabled: Boolean(userId),
+  });
+  const {
+    data: myRequestsResponse,
+    isLoading: isLoadingRequests,
+    refetch: refetchMyRequests,
+  } = useApiQuery<DataConsultaSolicitudes>({
+    url: userId ? `/horas-extra/solicitudes?id_colaborador=${userId}` : "",
     enabled: Boolean(userId),
   });
 
@@ -83,57 +79,6 @@ export const SolicitudHorasExtra = () => {
     () => tipoHx.map((item) => ({ label: toTitleCase(item.nombre), value: String(item.id) })),
     [tipoHx]
   );
-
-  const [myFilters, setMyFilters] = useState<SolicitudesQuery>({
-    modo: "reciente",
-    id_colaborador: userId ? Number(userId) : undefined,
-  });
-  const [othersFilters, setOthersFilters] = useState<SolicitudesQuery>({ modo: "reciente" });
-  const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
-
-  useEffect(() => {
-    if (userId) {
-      setMyFilters((prev) => ({ ...prev, id_colaborador: Number(userId) }));
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    setOthersFilters((prev) => ({
-      ...prev,
-      id_colaborador: selectedCollaboratorId ? Number(selectedCollaboratorId) : undefined,
-    }));
-  }, [selectedCollaboratorId]);
-
-  const handleMyFiltersChange = useCallback(
-    (next: SolicitudesQuery) => {
-      setMyFilters({
-        ...next,
-        id_colaborador: userId ? Number(userId) : undefined,
-      });
-    },
-    [userId]
-  );
-
-  const handleOthersFiltersChange = useCallback(
-    (next: SolicitudesQuery) => {
-      setOthersFilters({
-        ...next,
-        id_colaborador: selectedCollaboratorId ? Number(selectedCollaboratorId) : undefined,
-      });
-    },
-    [selectedCollaboratorId]
-  );
-
-  const collaboratorOptions = useMemo(() => {
-    return (employees ?? []).map((employee) => {
-      const baseName = [employee.nombre, employee.primer_apellido, employee.segundo_apellido]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-      const label = baseName ? toTitleCase(baseName) : `Colaborador ${employee.id}`;
-      return { label, value: String(employee.id) };
-    });
-  }, [employees]);
 
   const jefeDirectoId = useMemo(() => {
     const activeContracts = myContracts.filter((contract) => String(contract.estado ?? "").toUpperCase() === "ACTIVO");
@@ -234,6 +179,10 @@ export const SolicitudHorasExtra = () => {
 
   const isOvertimeBlocked = overtimeAvailability.blocked;
   const overtimeHoursOptions = overtimeAvailability.options;
+  const myRequests = useMemo(
+    () => (myRequestsResponse && "grupos" in myRequestsResponse ? myRequestsResponse.grupos.flatMap((group) => group.items) : myRequestsResponse?.items ?? []),
+    [myRequestsResponse],
+  );
 
   const handleCreateRequest = async (solicitud: CreateRequestFormValues) => {
     const employeeId = user?.id;
@@ -258,6 +207,8 @@ export const SolicitudHorasExtra = () => {
       };
 
       await createHxRequest(payload);
+      await refetchMyRequests();
+      setOpenModal(false);
 
       return true;
     } catch (error) {
@@ -266,190 +217,121 @@ export const SolicitudHorasExtra = () => {
     }
   };
 
-  const handleOtherCollaboratorSubmit = async (values: CollaboratorForm) => {
-    setSelectedCollaboratorId(values.id_colaborador ?? "");
-    return true;
-  };
-
   return (
     <Layout pageTitle="Solicitudes de horas extra">
-      <Grid templateColumns={{ base: "1fr", lg: "800px 1fr" }} gap={{ base: 4, lg: 6 }}>
-        <GridItem>
-          <Box bg="white" borderRadius="xl" boxShadow="md" p={6} h={{ base: "auto", lg: "full" }}>
-            <Heading size="sm" mb={4}>
-              Solicitudes registradas
-            </Heading>
+      <Stack gap="5" pb="6">
+        <Box>
+          <Button appearance="login" size="lg" onClick={() => setOpenModal(true)}>
+            Crear Solicitud
+          </Button>
+        </Box>
 
-            <Tabs.Root variant="line" defaultValue="mine">
-              <Tabs.List>
-                <Tabs.Trigger value="mine">
-                  <LuUser />
-                  Mis solicitudes
-                </Tabs.Trigger>
-                {hasAdminPermission && (
-                  <Tabs.Trigger value="others">
-                    <LuUsers />
-                    Otros colaboradores
-                  </Tabs.Trigger>
-                )}
-              </Tabs.List>
+        <SolicitudesBoard
+          columns={PERSONAL_REQUEST_COLUMNS}
+          items={myRequests}
+          isLoading={isLoadingRequests}
+          getStatus={(item) => item.estado.estado}
+          getKey={(item) => item.id_solicitud_hx}
+          renderItem={(item) => <SolicitudCard item={item} view="personal" />}
+        />
+      </Stack>
 
-              <Tabs.Content value="mine">
-                <Stack gap={4} mt={4}>
-                  <FiltrosSolicitudes value={myFilters} onChange={handleMyFiltersChange} />
-                  <ListaSolicitudes filtros={myFilters} />
-                </Stack>
-              </Tabs.Content>
-
-              {hasAdminPermission && (
-                <Tabs.Content value="others">
-                  <Stack gap={4} mt={4}>
-                    <Form<CollaboratorForm>
-                      onSubmit={handleOtherCollaboratorSubmit}
-                      resetOnSuccess={false}
-                      defaultValues={{ id_colaborador: selectedCollaboratorId }}
-                    >
-                      <Stack
-                        direction={{ base: "column", md: "row" }}
-                        gap={{ base: 1, md: 2 }}
-                        align={{ base: "stretch", md: "flex-end" }}
-                        flexWrap="wrap"
-                        justifyContent="center"
-                        alignItems="center"
-                      >
-                        <Box w={{ base: "100%", md: "200px" }}>
-                          <InputField
-                            fieldType="select"
-                            label="Colaborador"
-                            name="id_colaborador"
-                            required
-                            disableSelectPortal
-                            placeholder={isLoadingEmployees ? "Cargando colaboradores..." : "Seleccione un colaborador"}
-                            options={collaboratorOptions}
-                            selectRootProps={{
-                              disabled: isLoadingEmployees || collaboratorOptions.length === 0,
-                            }}
-                            rules={{ required: "El campo es obligatorio" }}
-                          />
-                        </Box>
-
-                        <Box flex="1" minW={{ base: "100%", md: "260px" }}>
-                          <FiltrosSolicitudes value={othersFilters} onChange={handleOthersFiltersChange} />
-                        </Box>
-
-                        <Box w={{ base: "100%", sm: "100px" }}>
-                          <Button appearance="login" type="submit" size="lg" w="100%">
-                            Consultar
-                          </Button>
-                        </Box>
-                      </Stack>
-                    </Form>
-
-                    <ListaSolicitudes filtros={othersFilters} />
-                  </Stack>
-                </Tabs.Content>
-              )}
-            </Tabs.Root>
-          </Box>
-        </GridItem>
-
-        <GridItem>
-          <Box bg="white" borderRadius="xl" boxShadow="md" p={6}>
-            <Heading size="sm" mb={4}>
-              Registrar nueva solicitud
-            </Heading>
-
-            <Form<CreateRequestFormValues>
-              key={formKey}
-              onSubmit={handleCreateRequest}
-              resetOnSuccess
-              defaultValues={{ id_aprobador: defaultApproverId, horas_solicitadas: "" }}
-            >
-              <Wrap maxW="600px">
+      <Modal
+        title="Crear Solicitud"
+        isOpen={openModal}
+        onOpenChange={(event) => setOpenModal(event.open)}
+        size="lg"
+        content={
+          <Form<CreateRequestFormValues>
+            key={formKey}
+            onSubmit={handleCreateRequest}
+            resetOnSuccess
+            defaultValues={{ id_aprobador: defaultApproverId, horas_solicitadas: "" }}
+          >
+            <Wrap maxW="600px">
+              <InputField
+                fieldType="select"
+                label="Aprobador"
+                name="id_aprobador"
+                required
+                disableSelectPortal
+                placeholder={
+                  isLoadingEmployees ? "Cargando jefe directo..." : "Jefe directo no disponible"
+                }
+                options={approverOptions}
+                selectRootProps={{ disabled: true }}
+                rules={{ required: "El campo es obligatorio" }}
+              />
+              <InputField
+                fieldType="date"
+                label="Fecha de realización"
+                name="fecha_trabajo"
+                required
+                min={todayInCostaRica}
+                rules={{
+                  required: "El campo es obligatorio",
+                  validate: (value) => {
+                    const selectedDate = String(value ?? "");
+                    if (!selectedDate) return true;
+                    return selectedDate >= todayInCostaRica || "La fecha no puede ser anterior a hoy.";
+                  },
+                }}
+              />
+              {!isOvertimeBlocked && (
                 <InputField
                   fieldType="select"
-                  label="Aprobador"
-                  name="id_aprobador"
+                  label="Cantidad de horas"
+                  name="horas_solicitadas"
                   required
                   disableSelectPortal
-                  placeholder={
-                    isLoadingEmployees ? "Cargando jefe directo..." : "Jefe directo no disponible"
-                  }
-                  options={approverOptions}
-                  selectRootProps={{ disabled: true }}
+                  placeholder={overtimeHoursOptions.length ? "Seleccione una opción" : "Sin opciones disponibles"}
+                  options={overtimeHoursOptions}
                   rules={{ required: "El campo es obligatorio" }}
+                  selectRootProps={{ disabled: overtimeHoursOptions.length === 0 }}
                 />
-                <InputField
-                  fieldType="date"
-                  label="Fecha de realización"
-                  name="fecha_trabajo"
-                  required
-                  min={todayInCostaRica}
-                  rules={{
-                    required: "El campo es obligatorio",
-                    validate: (value) => {
-                      const selectedDate = String(value ?? "");
-                      if (!selectedDate) return true;
-                      return selectedDate >= todayInCostaRica || "La fecha no puede ser anterior a hoy.";
-                    },
-                  }}
-                />
-                {!isOvertimeBlocked && (
-                  <InputField
-                    fieldType="select"
-                    label="Cantidad de horas"
-                    name="horas_solicitadas"
-                    required
-                    disableSelectPortal
-                    placeholder={overtimeHoursOptions.length ? "Seleccione una opción" : "Sin opciones disponibles"}
-                    options={overtimeHoursOptions}
-                    rules={{ required: "El campo es obligatorio" }}
-                    selectRootProps={{ disabled: overtimeHoursOptions.length === 0 }}
-                  />
-                )}
-                <InputField
-                  fieldType="select"
-                  label="Tipo de hora extra"
-                  name="id_tipo_hx"
-                  required
-                  disableSelectPortal
-                  placeholder={tipoHxOptions.length ? "Seleccione una opción" : "Cargando..."}
-                  options={tipoHxOptions}
-                  rules={{
-                    required: "El campo es obligatorio",
-                    setValueAs: (value) => String(value ?? "").trim(),
-                  }}
-                  selectRootProps={{ disabled: tipoHxOptions.length === 0 }}
-                />
-              </Wrap>
-
-              {isOvertimeBlocked && (
-                <Alert.Root status="warning" mt={4}>
-                  <Alert.Indicator />
-                  <Alert.Content>
-                    <Alert.Title>No se puede registrar la solicitud</Alert.Title>
-                    <Alert.Description>{overtimeAvailability.reason}</Alert.Description>
-                  </Alert.Content>
-                </Alert.Root>
               )}
+              <InputField
+                fieldType="select"
+                label="Tipo de hora extra"
+                name="id_tipo_hx"
+                required
+                disableSelectPortal
+                placeholder={tipoHxOptions.length ? "Seleccione una opción" : "Cargando..."}
+                options={tipoHxOptions}
+                rules={{
+                  required: "El campo es obligatorio",
+                  setValueAs: (value) => String(value ?? "").trim(),
+                }}
+                selectRootProps={{ disabled: tipoHxOptions.length === 0 }}
+              />
+            </Wrap>
 
-              <Box w={{ base: "100%", sm: "250px" }} mt={4}>
-                <Button
-                  loading={isSubmitting}
-                  loadingText="Enviando"
-                  appearance="login"
-                  type="submit"
-                  size="lg"
-                  w="100%"
-                  disabled={!approverOptions.length || isOvertimeBlocked}
-                >
-                  Enviar solicitud
-                </Button>
-              </Box>
-            </Form>
-          </Box>
-        </GridItem>
-      </Grid>
+            {isOvertimeBlocked && (
+              <Alert.Root status="warning" mt={4}>
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>No se puede registrar la solicitud</Alert.Title>
+                  <Alert.Description>{overtimeAvailability.reason}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            )}
+
+            <Box w={{ base: "100%", sm: "250px" }} mt={4}>
+              <Button
+                loading={isSubmitting}
+                loadingText="Enviando"
+                appearance="login"
+                type="submit"
+                size="lg"
+                w="100%"
+                disabled={!approverOptions.length || isOvertimeBlocked}
+              >
+                Enviar solicitud
+              </Button>
+            </Box>
+          </Form>
+        }
+      />
     </Layout>
   );
 };
