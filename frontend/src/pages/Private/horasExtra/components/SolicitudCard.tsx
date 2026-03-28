@@ -1,9 +1,4 @@
 /* eslint-disable no-unused-vars */
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import localizedFormat from "dayjs/plugin/localizedFormat";
-import "dayjs/locale/es";
-
 import {
   Badge,
   Button,
@@ -21,10 +16,7 @@ import {
 
 import type { SolicitudHoraExtra } from "../../../../types/Overtime";
 import { LuCheck, LuX } from "react-icons/lu";
-
-dayjs.extend(utc);
-dayjs.extend(localizedFormat);
-dayjs.locale("es");
+import { formatDateTimeUi, formatDateUiDefault } from "../../../../utils";
 
 interface SolicitudCardProps {
   item: SolicitudHoraExtra;
@@ -52,13 +44,7 @@ const estadoBadgeProps = (estado: string) => {
 };
 const formatFecha = (iso: string) => {
   const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
-  const d = isDateOnly ? dayjs(iso) : dayjs.utc(iso).local();
-
-  const s = isDateOnly
-    ? d.format("dddd D [de] MMMM, YYYY")
-    : d.format("dddd D [de] MMMM, YYYY h:mm A");
-
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return isDateOnly ? formatDateUiDefault(iso) : formatDateTimeUi(iso);
 };
 
 export const SolicitudCard = ({

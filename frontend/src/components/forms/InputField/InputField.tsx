@@ -1,70 +1,19 @@
-import React, { forwardRef, useMemo } from "react";
+import { forwardRef } from "react";
+import { Badge, Field, type InputProps } from "@chakra-ui/react";
+import { useFormContext } from "react-hook-form";
 import {
-  Badge,
-  Field,
-  Input,
-  NumberInput,
-  Select,
-  Portal,
-  createListCollection,
-  type InputProps,
-  type NumberInputRootProps,
-  type SelectRootProps,
-  InputGroup,
-} from "@chakra-ui/react";
-import { PasswordInput } from "../../ui/password-input";
-import { Controller, useFormContext, type RegisterOptions } from "react-hook-form";
-import { formatCurrencyInputValue, onlyDigitsMax, onlyText } from "../../../utils";
+  DateFieldVariant,
+  MonthFieldVariant,
+  NumberFieldVariant,
+  PasswordFieldVariant,
+  SelectFieldVariant,
+  TextFieldVariant,
+  TimeFieldVariant,
+} from "./fields";
+import { getFocusStyles } from "./internal/focusStyles";
+import type { FieldProps } from "./types";
 
-type FieldType = "text" | "password" | "email" | "number" | "select" | "date" | "month" | "time";
-
-export type SelectOption = { label: string; value: string | number; disabled?: boolean };
-
-interface FieldProps extends InputProps {
-  fieldType: FieldType;
-  label?: string;
-  name: string;
-  placeholder?: string;
-  helperText?: React.ReactNode | string;
-  required?: boolean;
-  noIndicator?: boolean;
-  rules?: RegisterOptions;
-  startElement?: React.ReactNode;
-  endElement?: React.ReactNode;
-  numericOnly?: boolean;
-  textOnly?: boolean;
-  allowHyphen?: boolean;
-  maxDigits?: number;
-  currencyMask?: boolean;
-  currencyMaxDecimals?: number;
-
-  // number
-  numberProps?: Omit<NumberInputRootProps, "name" | "value" | "onValueChange" | "disabled">;
-
-  // select
-  options?: SelectOption[];
-  selectRootProps?: Omit<SelectRootProps, "collection" | "value" | "onValueChange" | "name">;
-  clearable?: boolean;
-  disableSelectPortal?: boolean;
-}
-
-
-function getFocusStyles(isInvalid: boolean) {
-  if (isInvalid) {
-    return {
-      outline: "2px solid",
-      outlineColor: "red.600",
-    } as const;
-  }
-
-  return {
-    outline: "1px solid",
-    outlineColor: "brand.blue.100",
-  } as const;
-}
-
-const TextField = (props: Omit<FieldProps, "fieldType">) => <Input {...props} />;
-const PasswordField = (props: Omit<FieldProps, "fieldType">) => <PasswordInput {...props} />;
+export type { FieldProps, FieldType, SelectOption } from "./types";
 
 export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputField(props, ref) {
   const {
@@ -95,21 +44,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     ...restInputProps
   } = props;
 
-  const { register, control, getFieldState, formState } = useFormContext();
-  const registeredTextField = register(name, { required, ...rules });
-
-  const onTextFieldChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
-    if (numericOnly) {
-      const normalized = onlyDigitsMax(event.target.value, maxDigits);
-      event.target.value = normalized;
-    }
-
-    if (textOnly) {
-      event.target.value = onlyText(event.target.value, { allowHyphen });
-    }
-
-    registeredTextField.onChange(event);
-  };
+  const { getFieldState, formState } = useFormContext();
 
   const { error } = getFieldState(name, formState);
   const errorMessage = (error?.message as string | undefined) ?? undefined;
@@ -117,28 +52,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
 
   const focusStyles = getFocusStyles(isInvalid);
 
-  const collection = useMemo(() => {
-    return createListCollection({
-      items: options.map((o) => ({
-        label: o.label,
-        value: o.value,
-        disabled: o.disabled,
-      })),
-    });
-  }, [options]);
-
-  const positioner = (
-    <Select.Positioner>
-      <Select.Content>
-        {collection.items.map((item) => (
-          <Select.Item item={item} key={item.value}>
-            {item.label}
-            <Select.ItemIndicator />
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select.Positioner>
-  );
+  const restInputPropsTyped = restInputProps as InputProps;
 
   return (
     <Field.Root
@@ -167,188 +81,95 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
         )}
       </Field.Label>
 
-      {(fieldType === "text" || fieldType === "email") && !currencyMask && (
-        <InputGroup startElement={startElement} endElement={endElement}>
-          <TextField
-            type={fieldType}
-            placeholder={placeholder}
-            required={required}
-            {...restInputProps}
-            {...registeredTextField}
-            onChange={onTextFieldChange}
-            inputMode={numericOnly ? "numeric" : restInputProps.inputMode}
-            _focusVisible={focusStyles}
-            aria-invalid={isInvalid || undefined}
-          />
-        </InputGroup>
-      )}
-
-      {fieldType === "text" && currencyMask && (
-        <Controller
+      {(fieldType === "text" || fieldType === "email") && (
+        <TextFieldVariant
           name={name}
-          control={control}
-          rules={{ required, ...rules }}
-          defaultValue=""
-          render={({ field }) => {
-            const value = formatCurrencyInputValue(field.value ?? "", {
-              maxDecimals: currencyMaxDecimals,
-            });
-
-            return (
-              <InputGroup startElement={startElement} endElement={endElement}>
-                <TextField
-                  type="text"
-                  placeholder={placeholder}
-                  required={required}
-                  {...restInputProps}
-                  name={field.name}
-                  value={value}
-                  onChange={(event) => {
-                    const maskedValue = formatCurrencyInputValue(event.target.value, {
-                      maxDecimals: currencyMaxDecimals,
-                    });
-
-                    field.onChange(maskedValue);
-                  }}
-                  onBlur={field.onBlur}
-                  inputMode="decimal"
-                  _focusVisible={focusStyles}
-                  aria-invalid={isInvalid || undefined}
-                />
-              </InputGroup>
-            );
-          }}
+          fieldType={fieldType}
+          placeholder={placeholder}
+          required={required}
+          rules={rules}
+          startElement={startElement}
+          endElement={endElement}
+          numericOnly={numericOnly}
+          textOnly={textOnly}
+          allowHyphen={allowHyphen}
+          maxDigits={maxDigits}
+          currencyMask={currencyMask}
+          currencyMaxDecimals={currencyMaxDecimals}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
         />
       )}
 
       {fieldType === "password" && (
-        <PasswordField
+        <PasswordFieldVariant
+          name={name}
           placeholder={placeholder}
           required={required}
-          {...restInputProps}
-          {...register(name, { required, ...rules })}
-          _focusVisible={focusStyles}
-          aria-invalid={isInvalid || undefined}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
         />
       )}
 
       {fieldType === "date" && (
-        <Input
-          type="date"
+        <DateFieldVariant
+          name={name}
           required={required}
-          {...restInputProps}
-          {...register(name, { required, ...rules })}
-          _focusVisible={focusStyles}
-          aria-invalid={isInvalid || undefined}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
         />
       )}
 
       {fieldType === "month" && (
-        <Input
-          type="month"
+        <MonthFieldVariant
+          name={name}
           required={required}
-          {...restInputProps}
-          {...register(name, { required, ...rules })}
-          _focusVisible={focusStyles}
-          aria-invalid={isInvalid || undefined}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
         />
       )}
 
       {fieldType === "time" && (
-        <Input
-          type="time"
+        <TimeFieldVariant
+          name={name}
           required={required}
-          {...restInputProps}
-          {...register(name, { required, ...rules })}
-          _focusVisible={focusStyles}
-          aria-invalid={isInvalid || undefined}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
         />
       )}
 
       {fieldType === "select" && (
-        <Controller
+        <SelectFieldVariant
           name={name}
-          control={control}
-          rules={{ required, ...rules }}
-          defaultValue={selectRootProps?.multiple ? [] : ""}
-          render={({ field }) => {
-            const isMultiple = Boolean(selectRootProps?.multiple);
-
-            const value = isMultiple
-              ? Array.isArray(field.value)
-                ? field.value.map(String)
-                : []
-              : field.value
-                ? [String(field.value)]
-                : [];
-
-            return (
-              <Select.Root
-                collection={collection}
-                value={value}
-                onValueChange={(details) => {
-                  if (isMultiple) {
-                    field.onChange(details.value ?? []);
-                  } else {
-                    const next = details.value?.[0] ?? "";
-                    field.onChange(next);
-                  }
-                }}
-                name={field.name}
-                disabled={field.disabled}
-                {...selectRootProps}
-              >
-                <Select.HiddenSelect onBlur={field.onBlur} />
-
-                <Select.Control _focusWithin={focusStyles}>
-                  <Select.Trigger _focusVisible={focusStyles}>
-                    <Select.ValueText placeholder={placeholder ?? "Seleccione una opción"} />
-                  </Select.Trigger>
-
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                    {clearable && <Select.ClearTrigger />}
-                  </Select.IndicatorGroup>
-                </Select.Control>
-
-                {disableSelectPortal ? positioner : <Portal>{positioner}</Portal>}
-              </Select.Root>
-            );
-          }}
+          placeholder={placeholder}
+          required={required}
+          rules={rules}
+          options={options}
+          selectRootProps={selectRootProps}
+          clearable={clearable}
+          disableSelectPortal={disableSelectPortal}
+          focusStyles={focusStyles}
         />
       )}
 
       {fieldType === "number" && (
-        <Controller
+        <NumberFieldVariant
           name={name}
-          control={control}
-          rules={{ required, ...rules }}
-          defaultValue={0}
-          render={({ field }) => (
-            <NumberInput.Root
-              {...numberProps}
-              disabled={field.disabled}
-              name={field.name}
-              value={field.value ?? ""}
-              onValueChange={({ value }) => {
-                const next = value === "" ? undefined : Number(value);
-                field.onChange(Number.isNaN(next as number) ? undefined : next);
-              }}
-              min={0}
-            >
-              <NumberInput.Control>
-                <NumberInput.IncrementTrigger />
-                <NumberInput.DecrementTrigger />
-              </NumberInput.Control>
-
-              <NumberInput.Input
-                placeholder={placeholder}
-                onBlur={field.onBlur}
-                _focusVisible={focusStyles}
-                aria-invalid={isInvalid || undefined}
-              />
-            </NumberInput.Root>
-          )}
+          placeholder={placeholder}
+          required={required}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          numberProps={numberProps}
         />
       )}
 

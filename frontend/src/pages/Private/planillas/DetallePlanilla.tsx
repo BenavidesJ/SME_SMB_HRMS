@@ -26,23 +26,12 @@ import { DataTable } from "../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../components/general/table/types";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase, formatCRC } from "../../../utils";
+import { toTitleCase, formatCRC, formatDateUiCompact } from "../../../utils";
 import { showToast } from "../../../services/toast/toastService";
 import { useAuth } from "../../../context/AuthContext";
 import type { EmployeeRow } from "../../../types";
 
 const COMPANY_NAME = "BioAlquimia";
-
-// ── Helpers ──
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "N/D";
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(
-    parsed,
-  );
-}
 
 // ── Types ──
 
@@ -422,7 +411,7 @@ export const DetallePlanilla = () => {
 
   const periodoRangeLabel = useMemo(() => {
     if (!periodo) return "No disponible";
-    return `${formatDate(periodo.fecha_inicio)} al ${formatDate(periodo.fecha_fin)}`;
+    return `${formatDateUiCompact(periodo.fecha_inicio)} al ${formatDateUiCompact(periodo.fecha_fin)}`;
   }, [periodo]);
 
   // ── Load existing details ──
@@ -1183,7 +1172,7 @@ export const DetallePlanilla = () => {
                               Período
                             </Text>
                             <Text fontWeight="semibold">
-                              {formatDate(simulacionMeta?.fecha_inicio)} – {formatDate(simulacionMeta?.fecha_fin)}
+                              {formatDateUiCompact(simulacionMeta?.fecha_inicio)} - {formatDateUiCompact(simulacionMeta?.fecha_fin)}
                             </Text>
                           </Box>
                           <Box>
@@ -1643,7 +1632,7 @@ const GeneratedPayrollDetailCard = ({
           <Card.Body>
             <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
               <DetailInfoItem label="Rango" value={periodoLabel} />
-              <DetailInfoItem label="Fecha de pago" value={formatDate(fechaPago)} />
+              <DetailInfoItem label="Fecha de pago" value={formatDateUiCompact(fechaPago)} />
               <DetailInfoItem label="Salario mensual" value={formatCRC(detail.salario_mensual)} />
               <DetailInfoItem label="Tarifa por hora" value={formatCRC(detail.tarifa_hora)} />
             </SimpleGrid>

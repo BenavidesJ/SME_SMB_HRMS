@@ -22,6 +22,7 @@ import { useApiMutation } from '../../../hooks/useApiMutations';
 import { Modal } from '../../../components/general';
 import { Form, InputField } from '../../../components/forms';
 import { Button as PrimaryButton } from '../../../components/general/button/Button';
+import { formatDateUiDefault } from '../../../utils';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -136,7 +137,7 @@ export const MarcasAsistenciaColaborador = () => {
         key: `${colab?.id_colaborador ?? "x"}-${dia}-${m.id_marca}`,
         identificacion,
         nombre_completo: nombreCompleto,
-        dia,
+        dia: formatDateUiDefault(dia),
         tipo_marca: m.tipo_marca,
         timestamp: m.timestamp,
         observaciones: m.observaciones,

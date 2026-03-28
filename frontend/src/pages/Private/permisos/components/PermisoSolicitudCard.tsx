@@ -1,12 +1,8 @@
-import dayjs from "dayjs";
-import "dayjs/locale/es";
 /* eslint-disable no-unused-vars */
 import { Badge, Card, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { toTitleCase } from "../../../../utils";
+import { toTitleCase, formatDateUiDefault } from "../../../../utils";
 import type { PermisoListItem, PermisoTipo } from "../types";
-
-dayjs.locale("es");
 
 const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
   { code: "GOCE", label: "Permiso con goce salarial" },
@@ -38,11 +34,7 @@ const buildCollaboratorName = (item: PermisoListItem) => {
 };
 
 const formatDisplayDate = (date: string) => {
-  const parsed = dayjs(date);
-  if (!parsed.isValid()) return date;
-
-  const formatted = parsed.locale("es").format("dddd D [de] MMMM, YYYY");
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  return formatDateUiDefault(date);
 };
 
 interface PermisoSolicitudCardProps {

@@ -33,6 +33,7 @@ import { FiEdit2, FiFilePlus, FiFileText, FiPower } from "react-icons/fi";
 import { Form, InputField } from "../../../../../components/forms";
 import {
   formatCurrencyInputValue,
+  formatDateUiDefault,
   parseCurrencyInputValue,
   toTitleCase,
 } from "../../../../../utils";
@@ -84,16 +85,7 @@ const formatMoneyCRC = (value: string | number) => {
 };
 
 const formatDate = (iso?: string | null) => {
-  if (!iso) return "—";
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  const formatted = d.toLocaleDateString("es-CR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  return formatDateUiDefault(iso);
 };
 
 const DAY_LABELS: Record<string, string> = {

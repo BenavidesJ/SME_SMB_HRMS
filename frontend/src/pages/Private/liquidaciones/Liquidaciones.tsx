@@ -23,18 +23,9 @@ import {
 import { Modal } from "../../../components/general";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase, formatCRC } from "../../../utils";
+import { toTitleCase, formatCRC, formatDateUiCompact } from "../../../utils";
 import { showToast } from "../../../services/toast/toastService";
 import type { EmployeeRow } from "../../../types";
-
-// ── Helpers ──
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "N/D";
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(parsed);
-}
 
 // ── Types ──
 
@@ -539,13 +530,13 @@ export const Liquidaciones = () => {
                       <Text textStyle="sm" color="fg.muted">
                         Fecha de terminación
                       </Text>
-                      <Text fontWeight="medium">{formatDate(record.fechaTerminacion)}</Text>
+                      <Text fontWeight="medium">{formatDateUiCompact(record.fechaTerminacion)}</Text>
                     </Stack>
                     <Stack gap="0">
                       <Text textStyle="sm" color="fg.muted">
                         Fecha de aprobación
                       </Text>
-                      <Text fontWeight="medium">{formatDate(record.fechaAprobacion)}</Text>
+                      <Text fontWeight="medium">{formatDateUiCompact(record.fechaAprobacion)}</Text>
                     </Stack>
                     <Stack gap="0">
                       <Text textStyle="sm" color="fg.muted">

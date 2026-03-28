@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { FiArrowLeft, FiCalendar } from "react-icons/fi";
 import { Form, InputField } from "../../../components/forms";
-import { toTitleCase } from "../../../utils";
+import { formatDateUiDefault, toTitleCase } from "../../../utils";
 import { showToast } from "../../../services/toast/toastService";
 import { Modal } from "../../../components/general";
 import { useApiQuery } from "../../../hooks/useApiQuery";
@@ -41,16 +41,7 @@ const InfoBlock = ({
 );
 
 const formatDateLong = (iso?: string | null) => {
-  if (!iso) return "—";
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  const formatted = d.toLocaleDateString("es-CR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  return formatDateUiDefault(iso);
 };
 
 interface DiaIncapacidad {

@@ -6,7 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { addDaysToDateInput, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
+import { addDaysToDateInput, formatDateUiDefault, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { EmptyStateIndicator } from "../../../components/general";
 import { AppLoader } from "../../../components/layout/loading";
@@ -47,16 +47,7 @@ interface IncapacidadGrupo {
 }
 
 const formatDateLong = (iso?: string | null) => {
-  if (!iso) return "—";
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  const formatted = d.toLocaleDateString("es-CR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  return formatDateUiDefault(iso);
 };
 
 const IncapacidadDateFields = ({ minFechaInicio }: { minFechaInicio: string }) => {

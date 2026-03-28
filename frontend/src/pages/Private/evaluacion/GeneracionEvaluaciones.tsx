@@ -33,6 +33,7 @@ import type { Contrato, EmployeeRow } from "../../../types";
 import type { DataTableColumn } from "../../../components/general/table/types";
 import { useFormContext } from "react-hook-form";
 import { getEvaluationTemplateForPuesto } from "./components/evaluationTemplates.repository";
+import { formatDateRangeUi } from "../../../utils";
 
 interface CrearEvalFormValues {
   id_colaborador: string;
@@ -278,7 +279,7 @@ export const GeneracionEvaluaciones = () => {
       {
         id: "periodo",
         header: "Período",
-        cell: (row) => `${row.fecha_inicio} → ${row.fecha_fin}`,
+        cell: (row) => formatDateRangeUi(row.fecha_inicio, row.fecha_fin),
       },
       {
         id: "estado",

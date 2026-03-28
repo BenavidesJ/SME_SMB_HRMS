@@ -27,6 +27,7 @@ import { useFormContext } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { showToast } from "../../../services/toast/toastService";
 import { deletePeriodoPlanilla } from "../../../services/api/planillas";
+import { formatDateUiCompact, parseUiDateSafe } from "../../../utils";
 
 const QUINCENAL_CYCLE_NAME = "QUINCENAL";
 
@@ -236,8 +237,8 @@ function hasFirstHalfPeriodForMonth({
 
 function toDateSortValue(value: string) {
   if (!value) return Number.NEGATIVE_INFINITY;
-  const parsed = new Date(`${value}T00:00:00`).getTime();
-  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+  const parsed = parseUiDateSafe(value);
+  return parsed ? parsed.getTime() : Number.NEGATIVE_INFINITY;
 }
 
 function CreatePeriodFields({ quincenalCycleId }: { quincenalCycleId: number | null }) {
@@ -430,22 +431,7 @@ export const Planillas = () => {
   const navigate = useNavigate();
   const pageSize = 10;
 
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-CR", {
-        dateStyle: "medium",
-      }),
-    [],
-  );
-
-  const renderDate = useCallback(
-    (value: string) => {
-      if (!value) return "Sin definir";
-      const parsed = new Date(`${value}T00:00:00`);
-      return Number.isNaN(parsed.getTime()) ? value : dateFormatter.format(parsed);
-    },
-    [dateFormatter],
-  );
+  const renderDate = useCallback((value: string) => formatDateUiCompact(value), []);
 
   const cycleOptions = useMemo(
     () =>

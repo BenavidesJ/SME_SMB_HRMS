@@ -1,6 +1,5 @@
 import { Alert, Link, Stack, Text } from "@chakra-ui/react";
 import dayjs from "dayjs";
-import "dayjs/locale/es";
 import { LuPercent } from "react-icons/lu";
 import { QuarterCalendar } from "../../components/general";
 import { Layout } from "../../components/layout"
@@ -8,14 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useApiQuery } from "../../hooks/useApiQuery";
 import { buildCalendarEventsUrl } from "../../services/api";
 import type { CalendarEventsResponse } from "../../types";
-
-
-const formatDateLabel = (date: string) => {
-  const parsed = dayjs(date);
-  if (!parsed.isValid()) return date;
-  const formatted = parsed.locale("es").format("DD [de] MMMM [de] YYYY");
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-};
+import { formatDateUiDefault } from "../../utils";
 
 const getEventLink = (eventType?: string | null) => {
   switch (eventType) {
@@ -61,7 +53,7 @@ const Main = () => {
             <Alert.Title>Eventos próximos</Alert.Title>
             <Alert.Description>
               {upcoming
-                ? `Eventos próximos: ${upcoming.title} desde ${formatDateLabel(upcoming.start_date)} hasta ${formatDateLabel(upcoming.end_date)}.`
+                ? `Eventos próximos: ${upcoming.title} desde ${formatDateUiDefault(upcoming.start_date)} hasta ${formatDateUiDefault(upcoming.end_date)}.`
                 : "No hay eventos próximos en el rango actual."}
             </Alert.Description>
           </Alert.Content>

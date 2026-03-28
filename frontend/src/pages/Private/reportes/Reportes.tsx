@@ -31,6 +31,7 @@ import {
   type ReporteDataResponse,
   type ReporteQueryParams,
 } from "../../../services/api/reportes";
+import { formatDateUiDefault } from "../../../utils";
 
 import logoColor from "../../../assets/LogoColor.svg";
 import logoPdf from "../../../assets/logo.jpg";
@@ -167,44 +168,10 @@ const pdfStyles = StyleSheet.create({
   },
 });
 
-function capitalize(value: string) {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function tryParseDate(value: unknown): Date | null {
-  if (typeof value !== "string") return null;
-
-  const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
-  const dateTimeRegex = /^\d{4}-\d{2}-\d{2}T/;
-
-  if (!dateOnlyRegex.test(value) && !dateTimeRegex.test(value)) return null;
-
-  const candidate = dateOnlyRegex.test(value)
-    ? new Date(`${value}T00:00:00`)
-    : new Date(value);
-
-  return Number.isNaN(candidate.getTime()) ? null : candidate;
-}
-
 function formatLongDate(value: unknown) {
-  const parsed = tryParseDate(value);
-  if (!parsed) return null;
-
-  const parts = new Intl.DateTimeFormat("es-CR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).formatToParts(parsed);
-
-  const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-
-  if (!weekday || !day || !month || !year) return null;
-  return `${capitalize(weekday)} ${day} de ${capitalize(month)}, ${year}`;
+  if (typeof value !== "string") return null;
+  const formatted = formatDateUiDefault(value);
+  return formatted === value ? null : formatted;
 }
 
 function isMoneyColumn(columnKey: string) {

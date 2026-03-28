@@ -15,7 +15,7 @@ import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
 import { useAuth } from "../../../context/AuthContext";
 import { useWatch } from "react-hook-form";
-import { onlyDigitsMax } from "../../../utils";
+import { formatDateTimeUi, formatDateUiDefault, onlyDigitsMax } from "../../../utils";
 
 const IDENTIFICATION_MAX_DIGITS = 12;
 
@@ -80,24 +80,12 @@ type MarcasFormValues = {
   identificacion: string;
 };
 
-const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : "");
-
 const formatClockText = (source: dayjs.Dayjs) => {
-  const localized = source.locale("es");
-  const dayName = capitalize(localized.format("dddd"));
-  const dayNumber = localized.format("D");
-  const monthName = capitalize(localized.format("MMMM"));
-  const year = localized.format("YYYY");
-  const time = localized.format("h:mm a");
-  return `${dayName} ${dayNumber} de ${monthName} de ${year}, ${time}`;
+  return formatDateTimeUi(source.toISOString());
 };
 
 const formatDayLabel = (dateStr: string) => {
-  const localized = dayjs(dateStr).locale("es");
-  const dayName = capitalize(localized.format("dddd"));
-  const dayNumber = localized.format("D");
-  const monthName = localized.format("MMMM");
-  return `${dayName} ${dayNumber} de ${monthName}`;
+  return formatDateUiDefault(dateStr);
 };
 
 const formatTimeCR = (timestamp: string) =>

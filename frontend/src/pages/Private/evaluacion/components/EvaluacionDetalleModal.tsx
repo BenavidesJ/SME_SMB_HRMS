@@ -16,6 +16,7 @@ import { Modal } from "../../../../components/general/modal";
 import { RadarChartEvaluacion } from "./RadarChartEvaluacion";
 import type { Evaluacion } from "../../../../types/Evaluacion";
 import logoPdf from "../../../../assets/logo.jpg";
+import { formatDateUiDefault } from "../../../../utils";
 
 const pdfStyles = StyleSheet.create({
   page: {
@@ -123,43 +124,8 @@ const pdfStyles = StyleSheet.create({
 
 const COMPANY_NAME = "BioAlquimia";
 
-function tryParseDate(value?: string | null) {
-  if (!value) return null;
-  const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
-  const dateTimeRegex = /^\d{4}-\d{2}-\d{2}T/;
-
-  if (!dateOnlyRegex.test(value) && !dateTimeRegex.test(value)) return null;
-
-  const candidate = dateOnlyRegex.test(value)
-    ? new Date(`${value}T00:00:00`)
-    : new Date(value);
-
-  return Number.isNaN(candidate.getTime()) ? null : candidate;
-}
-
-function capitalize(value: string) {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 function formatLongDate(value?: string | null) {
-  const parsed = tryParseDate(value);
-  if (!parsed) return value ?? "—";
-
-  const parts = new Intl.DateTimeFormat("es-CR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).formatToParts(parsed);
-
-  const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-
-  if (!weekday || !day || !month || !year) return value ?? "—";
-  return `${capitalize(weekday)} ${day} de ${capitalize(month)}, ${year}`;
+  return formatDateUiDefault(value);
 }
 
 function EvaluacionPdfDocument({

@@ -26,7 +26,7 @@ import {
 } from "../../../components/forms/InputField/InputField";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase, formatCRC } from "../../../utils";
+import { toTitleCase, formatCRC, formatDateUiCompact, parseUiDateSafe } from "../../../utils";
 import { showToast } from "../../../services/toast/toastService";
 import { useAuth } from "../../../context/AuthContext";
 import type { EmployeeRow } from "../../../types";
@@ -48,13 +48,6 @@ function getDefaultPeriodo() {
     periodo_hasta: `${currentYear}-11-30`,
     anio: currentYear,
   };
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "N/D";
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(parsed);
 }
 
 type CalcularFormValues = {
@@ -191,7 +184,7 @@ export const Aguinaldos = () => {
       return;
     }
 
-    const anio = new Date(`${values.periodo_hasta}T00:00:00`).getFullYear();
+    const anio = parseUiDateSafe(values.periodo_hasta)?.getFullYear() ?? Number(defaults.anio);
 
     try {
       await crearLote({
@@ -383,8 +376,8 @@ export const Aguinaldos = () => {
                             Período
                           </Text>
                           <Text fontWeight="semibold">
-                            {formatDate(simulacionMeta?.periodo_desde)} –{" "}
-                            {formatDate(simulacionMeta?.periodo_hasta)}
+                            {formatDateUiCompact(simulacionMeta?.periodo_desde)} -{" "}
+                            {formatDateUiCompact(simulacionMeta?.periodo_hasta)}
                           </Text>
                         </Box>
                         <Box>
@@ -573,15 +566,15 @@ export const Aguinaldos = () => {
                         </Table.Cell>
                         <Table.Cell>{record.anio}</Table.Cell>
                         <Table.Cell>
-                          {formatDate(record.periodo_desde)} –{" "}
-                          {formatDate(record.periodo_hasta)}
+                          {formatDateUiCompact(record.periodo_desde)} -{" "}
+                          {formatDateUiCompact(record.periodo_hasta)}
                         </Table.Cell>
                         <Table.Cell textAlign="right">
                           <Text fontWeight="semibold" color="green.600">
                             {formatCRC(record.monto_calculado)}
                           </Text>
                         </Table.Cell>
-                        <Table.Cell>{formatDate(record.fecha_pago)}</Table.Cell>
+                        <Table.Cell>{formatDateUiCompact(record.fecha_pago)}</Table.Cell>
                         <Table.Cell>
                           {toTitleCase(record.registrado_por_nombre)}
                         </Table.Cell>
