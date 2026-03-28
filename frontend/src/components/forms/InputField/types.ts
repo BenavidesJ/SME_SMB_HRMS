@@ -17,6 +17,7 @@ export type FieldType =
   | "select"
   | "date"
   | "month"
+  | "year"
   | "time";
 
 /**

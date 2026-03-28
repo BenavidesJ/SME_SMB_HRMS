@@ -12,7 +12,7 @@ import { EmptyStateIndicator } from "../../../components/general";
 import { AppLoader } from "../../../components/layout/loading";
 import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { LuUser, LuUsers } from "react-icons/lu";
-import { useFormContext } from "react-hook-form";
+import { DateRangeField } from "../../../components/forms/InputField/fields";
 
 interface TipoIncapacidad {
   id: number;
@@ -28,7 +28,7 @@ interface CrearIncapacidadPayload {
   numero_boleta: string;
 }
 
-type CrearIncapacidadFormValues = CrearIncapacidadPayload;
+// type CrearIncapacidadFormValues = CrearIncapacidadPayload;
 
 interface DiaIncapacidad {
   id_jornada: number;
@@ -50,51 +50,7 @@ const formatDateLong = (iso?: string | null) => {
   return formatDateUiDefault(iso);
 };
 
-const IncapacidadDateFields = ({ minFechaInicio }: { minFechaInicio: string }) => {
-  const { watch } = useFormContext<CrearIncapacidadFormValues>();
-  const startDate = watch("fecha_inicio");
-  const minFechaFin = startDate || minFechaInicio;
 
-  return (
-    <>
-      <InputField
-        fieldType="date"
-        label="Fecha de Inicio de la Incapacidad"
-        name="fecha_inicio"
-        required
-        min={minFechaInicio}
-        rules={{
-          required: "El campo es obligatorio",
-          validate: (value) => {
-            const selectedDate = String(value ?? "");
-
-            if (!selectedDate) return true;
-
-            return selectedDate >= minFechaInicio || "La fecha de inicio no puede ser anterior a 2 días atrás.";
-          },
-        }}
-      />
-      <InputField
-        fieldType="date"
-        label="Fecha de Finalización de la Incapacidad"
-        name="fecha_fin"
-        required
-        min={minFechaFin}
-        rules={{
-          required: "El campo es obligatorio",
-          validate: (value, formValues) => {
-            const endDate = String(value ?? "");
-            const start = String(formValues?.fecha_inicio ?? "");
-
-            if (!endDate || !start) return true;
-
-            return endDate >= start || "La fecha de finalización no puede ser anterior a la fecha de inicio.";
-          },
-        }}
-      />
-    </>
-  );
-};
 
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
@@ -367,7 +323,20 @@ export const RegistroIncapacidades = () => {
                   }}
                   helperText="Use el número legal de boleta emitido por la entidad correspondiente."
                 />
-                <IncapacidadDateFields minFechaInicio={minFechaInicio} />
+                <DateRangeField
+                  startName="fecha_inicio"
+                  endName="fecha_fin"
+                  label="Período de incapacidad"
+                  required
+                  min={minFechaInicio}
+                  allowSameDay
+                  startRules={{
+                    validate: (value: string) => {
+                      if (!value) return true;
+                      return value >= minFechaInicio || "La fecha de inicio no puede ser anterior a 2 días atrás.";
+                    },
+                  }}
+                />
                 <InputField
                   fieldType="select"
                   label="Tipo de Incapacidad"

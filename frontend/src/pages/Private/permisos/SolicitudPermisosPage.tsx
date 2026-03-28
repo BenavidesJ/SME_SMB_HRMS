@@ -1,6 +1,5 @@
 import { Box, Stack, Wrap } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
-import { useFormContext } from "react-hook-form";
 import { Form, InputField } from "../../../components/forms";
 import { Modal } from "../../../components/general";
 import { Button } from "../../../components/general/button/Button";
@@ -12,7 +11,7 @@ import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
 import type { Contrato, EmployeeRow } from "../../../types";
 import { PERSONAL_REQUEST_COLUMNS } from "../../../utils/requestStatus";
-import { addDaysToDateInput, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
+import { getCostaRicaTodayDate, toTitleCase } from "../../../utils";
 import { PermisoSolicitudCard } from "./components/PermisoSolicitudCard";
 import type {
   CreatePermisoFormValues,
@@ -21,54 +20,14 @@ import type {
   PermisoPayload,
   PermisoTipo,
 } from "./types";
+import { DateRangeField } from "../../../components/forms/InputField/fields";
 
 const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
   { code: "GOCE", label: "Permiso con goce salarial" },
   { code: "SIN_GOCE", label: "Permiso sin goce salarial" },
 ];
 
-const PermisosDateFields = ({ todayInCostaRica }: { todayInCostaRica: string }) => {
-  const { watch } = useFormContext<CreatePermisoFormValues>();
-  const startDate = watch("fecha_inicio");
-  const minEndDate = startDate ? addDaysToDateInput(startDate, 1) : todayInCostaRica;
 
-  return (
-    <>
-      <InputField
-        fieldType="date"
-        label="Fecha de inicio"
-        name="fecha_inicio"
-        required
-        min={todayInCostaRica}
-        rules={{
-          required: "El campo es obligatorio",
-          validate: (value) => {
-            const selectedDate = String(value ?? "");
-            if (!selectedDate) return true;
-            return selectedDate >= todayInCostaRica || "La fecha de inicio no puede ser anterior a hoy.";
-          },
-        }}
-      />
-      <InputField
-        fieldType="date"
-        label="Fecha de finalización"
-        name="fecha_fin"
-        required
-        min={minEndDate}
-        rules={{
-          required: "El campo es obligatorio",
-          validate: (value, formValues) => {
-            const endDate = String(value ?? "");
-            const start = String(formValues?.fecha_inicio ?? "");
-
-            if (!endDate || !start) return true;
-            return endDate > start || "La fecha de finalización debe ser posterior a la fecha de inicio.";
-          },
-        }}
-      />
-    </>
-  );
-};
 
 export const SolicitudPermisosPage = () => {
   const { user } = useAuth();
@@ -247,7 +206,19 @@ export const SolicitudPermisosPage = () => {
                 rules={{ required: "El campo es obligatorio" }}
                 selectRootProps={{ disabled: tipoPermisoOptions.length === 0 }}
               />
-              <PermisosDateFields todayInCostaRica={todayInCostaRica} />
+              <DateRangeField
+                startName="fecha_inicio"
+                endName="fecha_fin"
+                label="Período del permiso"
+                required
+                min={todayInCostaRica}
+                startRules={{
+                  validate: (value: string) => {
+                    if (!value) return true;
+                    return value >= todayInCostaRica || "La fecha de inicio no puede ser anterior a hoy.";
+                  },
+                }}
+              />
               <InputField
                 fieldType="text"
                 label="Observaciones"

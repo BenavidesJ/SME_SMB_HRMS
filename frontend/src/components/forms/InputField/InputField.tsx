@@ -2,13 +2,14 @@ import { forwardRef } from "react";
 import { Badge, Field, type InputProps } from "@chakra-ui/react";
 import { useFormContext } from "react-hook-form";
 import {
-  DateFieldVariant,
-  MonthFieldVariant,
+  DatePickerFieldVariant,
+  MonthPickerFieldVariant,
   NumberFieldVariant,
   PasswordFieldVariant,
   SelectFieldVariant,
   TextFieldVariant,
-  TimeFieldVariant,
+  TimePickerFieldVariant,
+  YearPickerFieldVariant,
 } from "./fields";
 import { getFocusStyles } from "./internal/focusStyles";
 import type { FieldProps } from "./types";
@@ -115,7 +116,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       )}
 
       {fieldType === "date" && (
-        <DateFieldVariant
+        <DatePickerFieldVariant
           name={name}
           required={required}
           rules={rules}
@@ -126,7 +127,18 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       )}
 
       {fieldType === "month" && (
-        <MonthFieldVariant
+        <MonthPickerFieldVariant
+          name={name}
+          required={required}
+          rules={rules}
+          isInvalid={isInvalid}
+          focusStyles={focusStyles}
+          restInputProps={restInputPropsTyped}
+        />
+      )}
+
+      {fieldType === "year" && (
+        <YearPickerFieldVariant
           name={name}
           required={required}
           rules={rules}
@@ -137,7 +149,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       )}
 
       {fieldType === "time" && (
-        <TimeFieldVariant
+        <TimePickerFieldVariant
           name={name}
           required={required}
           rules={rules}

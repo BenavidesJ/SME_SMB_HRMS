@@ -11,6 +11,7 @@ import {
   Stack,
   Text,
   createListCollection,
+  parseDate,
 } from "@chakra-ui/react";
 import { Layout } from "../../../components/layout";
 import { FiArrowDown, FiArrowUp, FiEdit2, FiEye, FiFilePlus, FiTrash2 } from "react-icons/fi";
@@ -19,6 +20,8 @@ import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
+import { MonthPickerBase } from "../../../components/forms/InputField/fields/MonthPickerFieldVariant";
+import { YearPickerBase } from "../../../components/forms/InputField/fields/YearPickerFieldVariant";
 import { Modal } from "../../../components/general";
 import { DataTable } from "../../../components/general/table/DataTable";
 import type { DataTableActionColumn, DataTableColumn } from "../../../components/general/table/types";
@@ -442,19 +445,6 @@ export const Planillas = () => {
     [cycles],
   );
 
-  const filterMonthOptions = useMemo(
-    () => MONTH_LABELS.map((label, index) => ({
-      label,
-      value: String(index + 1).padStart(2, "0"),
-    })),
-    [],
-  );
-
-  const monthFilterCollection = useMemo(
-    () => createListCollection({ items: filterMonthOptions }),
-    [filterMonthOptions],
-  );
-
   const filterYearOptions = useMemo(
     () =>
       Array.from(new Set(payrollPeriods.map((period) => getPeriodoYearValue(period)).filter(Boolean)))
@@ -462,16 +452,19 @@ export const Planillas = () => {
     [payrollPeriods],
   );
 
-  const yearFilterCollection = useMemo(
-    () =>
-      createListCollection({
-        items: filterYearOptions.map((year) => ({
-          label: year,
-          value: year,
-        })),
-      }),
-    [filterYearOptions],
-  );
+  const yearFilterMin = useMemo(() => {
+    const minYear = filterYearOptions.length
+      ? filterYearOptions[filterYearOptions.length - 1]
+      : String(new Date().getFullYear());
+    try { return parseDate(`${minYear}-01-01`); } catch { return undefined; }
+  }, [filterYearOptions]);
+
+  const yearFilterMax = useMemo(() => {
+    const maxYear = filterYearOptions.length
+      ? filterYearOptions[0]
+      : String(new Date().getFullYear());
+    try { return parseDate(`${maxYear}-12-31`); } catch { return undefined; }
+  }, [filterYearOptions]);
 
   const quincenaFilterCollection = useMemo(
     () =>
@@ -947,61 +940,24 @@ export const Planillas = () => {
         </Dialog.Root>
 
         <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
-          <Select.Root
-            collection={monthFilterCollection}
-            value={monthFilter ? [monthFilter] : []}
-            onValueChange={(event) => setMonthFilter(event.value?.[0] ?? "")}
-            size="sm"
-          >
-            <Select.HiddenSelect />
-            <Select.Label>Mes</Select.Label>
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Todos" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.ClearTrigger />
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Select.Positioner>
-              <Select.Content>
-                {monthFilterCollection.items.map((item) => (
-                  <Select.Item key={item.value} item={item}>
-                    {item.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Positioner>
-          </Select.Root>
+          <MonthPickerBase
+            monthOnly
+            value={monthFilter}
+            onChange={setMonthFilter}
+            placeholder="Todos"
+            label="Mes"
+            clearable
+          />
 
-          <Select.Root
-            collection={yearFilterCollection}
-            value={yearFilter ? [yearFilter] : []}
-            onValueChange={(event) => setYearFilter(event.value?.[0] ?? "")}
-            size="sm"
-          >
-            <Select.HiddenSelect />
-            <Select.Label>Año</Select.Label>
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Todos" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.ClearTrigger />
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Select.Positioner>
-              <Select.Content>
-                {yearFilterCollection.items.map((item) => (
-                  <Select.Item key={item.value} item={item}>
-                    {item.label}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Positioner>
-          </Select.Root>
+          <YearPickerBase
+            value={yearFilter}
+            onChange={setYearFilter}
+            placeholder="Todos"
+            label="Año"
+            clearable
+            min={yearFilterMin}
+            max={yearFilterMax}
+          />
 
           <Select.Root
             collection={quincenaFilterCollection}
