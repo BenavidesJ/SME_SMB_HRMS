@@ -53,7 +53,7 @@ const ForgotPasswordPage = () => {
               <Card.Description mb="4" fontSize="lg">
                 Ingresa tus datos para recuperar tu contraseña.
               </Card.Description>
-              <Form onSubmit={handleResetPassword}>
+              <Form onSubmit={handleResetPassword} formOptions={{ mode: "onChange" }}>
                 <InputField
                   fieldType="text"
                   label="Username"

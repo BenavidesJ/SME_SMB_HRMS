@@ -54,7 +54,7 @@ const LoginPage = () => {
               <Card.Description mb="4" fontSize="lg">
                 Ingresa tus datos para ingresar al sistema.
               </Card.Description>
-              <Form onSubmit={handleLogin}>
+              <Form onSubmit={handleLogin} formOptions={{ mode: "onChange" }}>
                 <InputField
                   fieldType="text"
                   label="Username"
