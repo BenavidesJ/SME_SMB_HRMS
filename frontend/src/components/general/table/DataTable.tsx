@@ -68,6 +68,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   const hasActionColumn = Boolean(actionColumn);
   const actionColumnIsSticky = Boolean(actionColumn?.sticky ?? true);
+  const actionColumnTextAlign = actionColumn?.textAlign ?? "end";
   const showStickyCss = (stickyHeader && enableStickyColumns) || (hasActionColumn && actionColumnIsSticky);
 
   const totalColSpan =
@@ -182,7 +183,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   }
                   : {})}
                 w={actionColumn.w ?? "140px"}
-                textAlign="end"
+                textAlign={actionColumnTextAlign}
               >
                 {actionColumn.cell(row)}
               </Table.Cell>
@@ -256,7 +257,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 }
                 : {})}
               w={actionColumn.w ?? "140px"}
-              textAlign="end"
+              textAlign={actionColumnTextAlign}
             >
               {actionColumn.header ?? "Acciones"}
             </Table.ColumnHeader>

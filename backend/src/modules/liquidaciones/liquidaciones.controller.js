@@ -17,7 +17,14 @@ const NOT_FOUND = HTTP_CODES.ERROR.CLIENT.NOT_FOUND;
  */
 export async function simularLiquidacionController(req, res, next) {
   try {
-    const { idColaborador, causa, fechaTerminacion, realizo_preaviso, salarioDiario } =
+    const {
+      idColaborador,
+      causa,
+      causaId,
+      fechaTerminacion,
+      realizo_preaviso,
+      salarioDiario,
+    } =
       req.body;
 
     if (!idColaborador) {
@@ -32,6 +39,7 @@ export async function simularLiquidacionController(req, res, next) {
       idColaborador,
       {
         causa,
+        causaId,
         fechaTerminacion,
         realizo_preaviso,
         salarioDiario,

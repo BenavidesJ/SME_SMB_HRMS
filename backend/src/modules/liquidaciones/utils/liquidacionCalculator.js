@@ -1,11 +1,67 @@
 import { Op, fn, col, literal } from "sequelize";
+import dayjs from "dayjs";
 import {
   Planilla,
   PeriodoPlanilla,
-  Colaborador,
-  Contrato,
+  Estado,
   SaldoVacaciones,
 } from "../../../models/index.js";
+
+function normalizarTexto(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function resolverTipoCausa(causa) {
+  if (causa && typeof causa === "object" && causa.tipo) {
+    return String(causa.tipo);
+  }
+
+  const causaNormalizada = normalizarTexto(
+    typeof causa === "object" ? causa.nombre : causa
+  );
+
+  if (causaNormalizada.includes("SIN RESPONSABILIDAD")) {
+    return "DESPIDO_SIN_RESPONSABILIDAD";
+  }
+  if (causaNormalizada.includes("CON RESPONSABILIDAD")) {
+    return "DESPIDO_CON_RESPONSABILIDAD";
+  }
+  if (causaNormalizada.includes("RENUNCIA")) {
+    return "RENUNCIA";
+  }
+
+  return "OTRA";
+}
+
+function calcularDiasPendientesDesdeUltimoPago(fechaUltimoPago, fechaTerminacion) {
+  if (!fechaUltimoPago || !fechaTerminacion) return 0;
+
+  const fechaPago = dayjs(fechaUltimoPago).startOf("day");
+  const fechaTermino = dayjs(fechaTerminacion).startOf("day");
+
+  if (!fechaPago.isValid() || !fechaTermino.isValid()) return 0;
+
+  const inicioPendiente = fechaPago.add(1, "day");
+  if (fechaTermino.isBefore(inicioPendiente)) return 0;
+
+  // Conteo inclusivo: desde el día posterior al último pago hasta la fecha de terminación.
+  return fechaTermino.diff(inicioPendiente, "day") + 1;
+}
+
+function calcularDiasGanadosVacaciones(fechaInicioContrato, fechaCorte) {
+  const inicio = dayjs(fechaInicioContrato).startOf("day");
+  const corte = dayjs(fechaCorte).startOf("day");
+
+  if (!inicio.isValid() || !corte.isValid() || corte.isBefore(inicio)) {
+    return 0;
+  }
+
+  return Math.max(0, corte.diff(inicio, "month"));
+}
 
 /**
  * Calcula el salario diario basado en el salario mensual
@@ -161,6 +217,104 @@ export async function obtenerPromedioBases(
 }
 
 /**
+ * Obtiene la fecha hasta la cual ya existe planilla aprobada para el colaborador
+ * @param {number} idColaborador
+ * @param {import("sequelize").Transaction} [transaction]
+ * @returns {Promise<{fechaUltimoPago: string | null, detalles: object}>}
+ */
+export async function obtenerUltimaFechaPagada(idColaborador, transaction) {
+  const estadoAprobado = await Estado.findOne({
+    where: { estado: "APROBADO" },
+    attributes: ["id_estado"],
+    ...(transaction ? { transaction } : {}),
+  });
+
+  if (!estadoAprobado) {
+    return {
+      fechaUltimoPago: null,
+      detalles: { razon: 'No existe estado "APROBADO" en catálogo' },
+    };
+  }
+
+  const ultimaPlanilla = await Planilla.findOne({
+    where: { id_colaborador: idColaborador },
+    attributes: ["id_detalle"],
+    include: [
+      {
+        model: PeriodoPlanilla,
+        as: "periodo",
+        attributes: ["id_periodo", "fecha_fin", "fecha_pago"],
+        required: true,
+        where: { estado: estadoAprobado.id_estado },
+      },
+    ],
+    order: [
+      [{ model: PeriodoPlanilla, as: "periodo" }, "fecha_fin", "DESC"],
+      ["id_detalle", "DESC"],
+    ],
+    ...(transaction ? { transaction } : {}),
+  });
+
+  if (!ultimaPlanilla?.periodo?.fecha_fin) {
+    return {
+      fechaUltimoPago: null,
+      detalles: { razon: "No hay planillas aprobadas para el colaborador" },
+    };
+  }
+
+  return {
+    fechaUltimoPago: String(ultimaPlanilla.periodo.fecha_fin),
+    detalles: {
+      idPeriodo: Number(ultimaPlanilla.periodo.id_periodo),
+      fechaPeriodoFin: String(ultimaPlanilla.periodo.fecha_fin),
+      fechaPago: String(ultimaPlanilla.periodo.fecha_pago),
+    },
+  };
+}
+
+/**
+ * Calcula los días de salario pendiente según última planilla aprobada
+ * @param {number} idColaborador
+ * @param {string} fechaTerminacion - YYYY-MM-DD
+ * @param {import("sequelize").Transaction} [transaction]
+ * @returns {Promise<{diasPendientes: number, fechaUltimoPago: string|null, detalles: object}>}
+ */
+export async function obtenerDiasPendientesSalario(
+  idColaborador,
+  fechaTerminacion,
+  transaction
+) {
+  const { fechaUltimoPago, detalles } = await obtenerUltimaFechaPagada(
+    idColaborador,
+    transaction
+  );
+
+  if (!fechaUltimoPago) {
+    return {
+      diasPendientes: 0,
+      fechaUltimoPago: null,
+      detalles,
+    };
+  }
+
+  const diasPendientes = calcularDiasPendientesDesdeUltimoPago(
+    fechaUltimoPago,
+    fechaTerminacion
+  );
+
+  return {
+    diasPendientes,
+    fechaUltimoPago,
+    detalles: {
+      ...detalles,
+      fechaTerminacion,
+      formulaDias:
+        "Días entre (último período pagado + 1 día) y fecha de terminación, inclusivo",
+    },
+  };
+}
+
+/**
  * Calcula el aguinaldo proporcional según la causa
  * Renuncia: Incluye aguinaldo desde 1 dic del año anterior hasta fecha de término
  * Despido con responsabilidad: Igual a renuncia
@@ -178,8 +332,10 @@ export async function calcularAguinaldoProporcional(
   causa,
   transaction
 ) {
+  const tipoCausa = resolverTipoCausa(causa);
+
   // Despido sin responsabilidad no paga aguinaldo
-  if (causa === "Despido sin responsabilidad") {
+  if (tipoCausa === "DESPIDO_SIN_RESPONSABILIDAD") {
     return {
       montoAguinaldo: 0,
       diasCalculados: 0,
@@ -230,14 +386,14 @@ export async function calcularAguinaldoProporcional(
  */
 export async function calcularVacacionesProporcionales(
   idColaborador,
-  transaction
+  transaction,
+  fechaCorte = null,
+  fechaInicioContrato = null
 ) {
-  const saldoVac = await SaldoVacaciones.findOne(
-    {
-      where: { id_colaborador: idColaborador },
-    },
-    transaction ? { transaction } : {}
-  );
+  const saldoVac = await SaldoVacaciones.findOne({
+    where: { id_colaborador: idColaborador },
+    ...(transaction ? { transaction } : {}),
+  });
 
   if (!saldoVac) {
     return {
@@ -247,7 +403,15 @@ export async function calcularVacacionesProporcionales(
     };
   }
 
-  const diasGanados = Number(saldoVac.dias_ganados) || 0;
+  const diasGanadosRegistrados = Number(saldoVac.dias_ganados) || 0;
+  const diasGanadosRecalculados =
+    fechaInicioContrato && fechaCorte
+      ? calcularDiasGanadosVacaciones(fechaInicioContrato, fechaCorte)
+      : null;
+  const diasGanados =
+    diasGanadosRecalculados === null
+      ? diasGanadosRegistrados
+      : Math.max(diasGanadosRegistrados, diasGanadosRecalculados);
   const diasTomados = Number(saldoVac.dias_tomados) || 0;
   const diasPendientes = Math.max(0, diasGanados - diasTomados);
 
@@ -265,7 +429,13 @@ export async function calcularVacacionesProporcionales(
     montoVacaciones,
     detalles: {
       diasGanados,
+      diasGanadosRegistrados,
+      diasGanadosRecalculados,
       diasTomados,
+      advertenciaSaldoNegativo:
+        diasTomados > diasGanados
+          ? "El saldo histórico refleja más días tomados que ganados"
+          : null,
       promedioDiario,
       formula: "Días pendientes × Salario diario promedio",
     },
@@ -281,8 +451,10 @@ export async function calcularVacacionesProporcionales(
  * @returns {{diasCesantia: number, montoCesantia: number, formula: string}}
  */
 export function calcularCesantia(diasAntiguedad, salarioDiario, causa) {
+  const tipoCausa = resolverTipoCausa(causa);
+
   // Solo se paga cesantía si es despido con responsabilidad
-  if (causa !== "Despido con responsabilidad") {
+  if (tipoCausa !== "DESPIDO_CON_RESPONSABILIDAD") {
     return {
       diasCesantia: 0,
       montoCesantia: 0,
@@ -343,6 +515,8 @@ export function calcularPreaviso(
   realizoPreaviso,
   causa
 ) {
+  const tipoCausa = resolverTipoCausa(causa);
+
   // Si ya realizó preaviso, no se paga indemnización
   if (realizoPreaviso) {
     return {
@@ -354,7 +528,7 @@ export function calcularPreaviso(
   }
 
   // Solo aplica para despido con responsabilidad
-  if (causa !== "Despido con responsabilidad") {
+  if (tipoCausa !== "DESPIDO_CON_RESPONSABILIDAD") {
     return {
       diasPreaviso: 0,
       montoPreaviso: 0,

@@ -8,15 +8,50 @@ import {
   calcularPreaviso,
   calcularSalarioPendiente,
   obtenerPromedioBases,
+  obtenerDiasPendientesSalario,
   validarDatosLiquidacion,
 } from "../utils/liquidacionCalculator.js";
-import { Colaborador, Contrato } from "../../../models/index.js";
+import { fn, col, where } from "sequelize";
+import { Colaborador, Contrato, CausaLiquidacion } from "../../../models/index.js";
+
+function normalizarTexto(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function clasificarTipoCausa(causaSeleccionada, catalogo) {
+  const idSeleccionado = Number(causaSeleccionada.id_causa_liquidacion);
+
+  const idsConResponsabilidad = new Set(
+    catalogo
+      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("CON RESPONSABILIDAD"))
+      .map((row) => Number(row.id_causa_liquidacion))
+  );
+  const idsSinResponsabilidad = new Set(
+    catalogo
+      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("SIN RESPONSABILIDAD"))
+      .map((row) => Number(row.id_causa_liquidacion))
+  );
+  const idsRenuncia = new Set(
+    catalogo
+      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("RENUNCIA"))
+      .map((row) => Number(row.id_causa_liquidacion))
+  );
+
+  if (idsSinResponsabilidad.has(idSeleccionado)) return "DESPIDO_SIN_RESPONSABILIDAD";
+  if (idsConResponsabilidad.has(idSeleccionado)) return "DESPIDO_CON_RESPONSABILIDAD";
+  if (idsRenuncia.has(idSeleccionado)) return "RENUNCIA";
+  return "OTRA";
+}
 
 /**
  * Simula el cálculo de liquidación sin guardar en BD
  * Retorna desglose completo para que el usuario confirme o ajuste
  * @param {number} idColaborador
- * @param {object} datosEntrada - {causa, fechaTerminacion, realizo_preaviso, salarioDiario (opcional)}
+ * @param {object} datosEntrada - {causa o causaId, fechaTerminacion, realizo_preaviso, salarioDiario (opcional)}
  * @param {import("sequelize").Transaction} [transaction]
  * @returns {Promise<object>}
  */
@@ -37,8 +72,8 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
     {
       where: { id_colaborador: idColaborador },
       order: [["fecha_inicio", "DESC"]],
+      ...(transaction ? { transaction } : {}),
     },
-    transaction ? { transaction } : {}
   );
 
   if (!contrato) {
@@ -51,15 +86,50 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
 
   const {
     causa,
+    causaId,
     fechaTerminacion,
     realizo_preaviso = false,
     salarioDiario: salarioDiarioInput = null,
   } = datosEntrada;
 
+  const causaCatalogo = await CausaLiquidacion.findAll({
+    attributes: ["id_causa_liquidacion", "causa_liquidacion"],
+    ...(transaction ? { transaction } : {}),
+  });
+
+  let causaSeleccionada = null;
+  if (causaId) {
+    causaSeleccionada = causaCatalogo.find(
+      (row) => Number(row.id_causa_liquidacion) === Number(causaId)
+    );
+  }
+
+  if (!causaSeleccionada && causa) {
+    causaSeleccionada = await CausaLiquidacion.findOne({
+      where: where(
+        fn("LOWER", col("causa_liquidacion")),
+        String(causa).trim().toLowerCase()
+      ),
+      ...(transaction ? { transaction } : {}),
+    });
+  }
+
+  if (!causaSeleccionada) {
+    const error = new Error("Causa de liquidación inválida");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const causaRegla = {
+    id: Number(causaSeleccionada.id_causa_liquidacion),
+    nombre: String(causaSeleccionada.causa_liquidacion),
+    tipo: clasificarTipoCausa(causaSeleccionada, causaCatalogo),
+  };
+
   // Validaciones iniciales
   const validacion = validarDatosLiquidacion({
     idColaborador,
-    causa,
+    causa: causaRegla.nombre,
     fechaTerminacion,
     fechaInicio: contrato.fecha_inicio,
     salarioDiario: salarioDiarioInput,
@@ -97,26 +167,36 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
   const aguinaldo = await calcularAguinaldoProporcional(
     idColaborador,
     fechaTerminacion,
-    causa,
+    causaRegla,
     transaction
   );
 
   const vacaciones = await calcularVacacionesProporcionales(
     idColaborador,
-    transaction
+    transaction,
+    fechaTerminacion,
+    dayjs(contrato.fecha_inicio).format("YYYY-MM-DD")
   );
 
-  const cesantia = calcularCesantia(diasTotales, salarioDiario, causa);
+  const cesantia = calcularCesantia(diasTotales, salarioDiario, causaRegla);
 
   const preaviso = calcularPreaviso(
     diasTotales,
     salarioDiario,
     realizo_preaviso,
-    causa
+    causaRegla
   );
 
-  // Salarios pendientes (días no pagados al final)
-  const salarioPendiente = calcularSalarioPendiente(0, salarioDiario);
+  // Salarios pendientes: días posteriores al último período de planilla aprobado.
+  const infoSalarioPendiente = await obtenerDiasPendientesSalario(
+    idColaborador,
+    fechaTerminacion,
+    transaction
+  );
+  const salarioPendiente = calcularSalarioPendiente(
+    infoSalarioPendiente.diasPendientes,
+    salarioDiario
+  );
 
   // Totales
   const totalBruto =
@@ -133,7 +213,8 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
       identificacion: colaborador.identificacion,
       fechaInicio: dayjs(contrato.fecha_inicio).format("YYYY-MM-DD"),
     },
-    causa,
+    causa: causaRegla.nombre,
+    causaId: causaRegla.id,
     fechaTerminacion,
     realizoPreaviso: realizo_preaviso,
     antiguedad: {
@@ -170,6 +251,8 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
       salarioPendiente: {
         valor: salarioPendiente.montoSalarioPendiente,
         diasPendientes: salarioPendiente.diasPendientes,
+        fechaUltimoPago: infoSalarioPendiente.fechaUltimoPago,
+        detalles: infoSalarioPendiente.detalles,
       },
     },
     totales: {

@@ -54,6 +54,8 @@ export type DataTableActionColumn<T> = {
   cell: (row: T) => React.ReactNode;
   /** Fixed width for the column (defaults to "140px") */
   w?: Table.ColumnHeaderProps["w"];
+  /** Optional header/cell align for action column (defaults to "end") */
+  textAlign?: Table.CellProps["textAlign"];
   /** Whether the action column should stay sticky on the right side */
   sticky?: boolean;
 };

@@ -2,14 +2,16 @@ import { jest, describe, it, expect, afterEach } from "@jest/globals";
 
 // Mocks must be set up BEFORE dynamic import
 const mockPlanillaFindAll = jest.fn();
+const mockPlanillaFindOne = jest.fn();
 const mockSaldoVacacionesFindOne = jest.fn();
+const mockEstadoFindOne = jest.fn();
 
 jest.unstable_mockModule("../../../models/index.js", () => ({
-  Planilla: { findAll: mockPlanillaFindAll },
+  Planilla: { findAll: mockPlanillaFindAll, findOne: mockPlanillaFindOne },
   PeriodoPlanilla: { name: "periodo_planilla" },
   SaldoVacaciones: { findOne: mockSaldoVacacionesFindOne },
+  Estado: { findOne: mockEstadoFindOne },
   Colaborador: { name: "colaborador" },
-  Contrato: { name: "contrato" },
 }));
 
 // Dynamic import AFTER mocks are established

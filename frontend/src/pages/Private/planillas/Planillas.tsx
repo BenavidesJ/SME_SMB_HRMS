@@ -1,24 +1,27 @@
 import {
   Badge,
   Button,
-  Card,
   CloseButton,
   Dialog,
   EmptyState,
   Portal,
+  Select,
   SimpleGrid,
   Spinner,
   Stack,
   Text,
+  createListCollection,
 } from "@chakra-ui/react";
 import { Layout } from "../../../components/layout";
-import { FiEdit2, FiFilePlus, FiTrash2 } from "react-icons/fi";
+import { FiArrowDown, FiArrowUp, FiEdit2, FiEye, FiFilePlus, FiTrash2 } from "react-icons/fi";
 import { PiMoney } from "react-icons/pi";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
 import { Modal } from "../../../components/general";
+import { DataTable } from "../../../components/general/table/DataTable";
+import type { DataTableActionColumn, DataTableColumn } from "../../../components/general/table/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { useNavigate } from "react-router";
@@ -65,6 +68,25 @@ type PersistPeriodoPayload = {
   fecha_pago: string;
   id_ciclo_pago: number;
 };
+
+type SortDir = "asc" | "desc";
+type SortField = "fecha_inicio" | "fecha_fin" | "fecha_pago";
+type QuincenaFilter = "" | "PRIMERA" | "SEGUNDA";
+
+const MONTH_LABELS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+] as const;
 
 function formatDateOnly(year: number, monthIndex: number, day: number) {
   const month = String(monthIndex + 1).padStart(2, "0");
@@ -139,15 +161,41 @@ function getPeriodoQuincenaLabel(period: PeriodoPlanilla) {
   return startDay <= 15 ? "Primera" : "Segunda";
 }
 
-function getPeriodoYear(period: PeriodoPlanilla) {
+function getPeriodoMonthYearLabel(period: PeriodoPlanilla) {
   const referenceDate = period.fecha_pago || period.fecha_fin || period.fecha_inicio;
-  return referenceDate?.slice(0, 4) ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(referenceDate)) return "Mes sin definir";
+
+  const monthIndex = Number(referenceDate.slice(5, 7)) - 1;
+  const year = referenceDate.slice(0, 4);
+
+  if (!Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return `Mes sin definir ${year}`;
+  }
+
+  return `${MONTH_LABELS[monthIndex]} ${year}`;
 }
 
-function toCapitalized(value: string) {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (!normalized) return "Sin definir";
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+function getPeriodoDisplayLabel(period: PeriodoPlanilla) {
+  const quincenaLabel = getPeriodoQuincenaLabel(period) === "Primera" ? "1" : "2";
+  return `${quincenaLabel} Quincena ${getPeriodoMonthYearLabel(period)}`;
+}
+
+function getPeriodoReferenceDate(period: PeriodoPlanilla) {
+  return period.fecha_pago || period.fecha_fin || period.fecha_inicio;
+}
+
+function getPeriodoMonthValue(period: PeriodoPlanilla) {
+  const referenceDate = getPeriodoReferenceDate(period);
+  return /^\d{4}-\d{2}-\d{2}$/.test(referenceDate) ? referenceDate.slice(5, 7) : "";
+}
+
+function getPeriodoYearValue(period: PeriodoPlanilla) {
+  const referenceDate = getPeriodoReferenceDate(period);
+  return /^\d{4}-\d{2}-\d{2}$/.test(referenceDate) ? referenceDate.slice(0, 4) : "";
+}
+
+function getPeriodoQuincenaValue(period: PeriodoPlanilla): QuincenaFilter {
+  return getPeriodoQuincenaLabel(period) === "Primera" ? "PRIMERA" : "SEGUNDA";
 }
 
 function getEstadoBadgeColor(estado: string | null | undefined) {
@@ -184,6 +232,12 @@ function hasFirstHalfPeriodForMonth({
     (period) =>
       period.id_ciclo_pago === quincenalCycleId && isSamePeriodRange(period, firstHalfDates),
   );
+}
+
+function toDateSortValue(value: string) {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  const parsed = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 }
 
 function CreatePeriodFields({ quincenalCycleId }: { quincenalCycleId: number | null }) {
@@ -365,7 +419,16 @@ export const Planillas = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<PeriodoPlanilla | null>(null);
   const [periodToDelete, setPeriodToDelete] = useState<PeriodoPlanilla | null>(null);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({
+    field: "fecha_inicio",
+    dir: "desc",
+  });
+  const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [quincenaFilter, setQuincenaFilter] = useState<QuincenaFilter>("");
   const navigate = useNavigate();
+  const pageSize = 10;
 
   const dateFormatter = useMemo(
     () =>
@@ -393,13 +456,47 @@ export const Planillas = () => {
     [cycles],
   );
 
-  const cycleMap = useMemo(() => {
-    const map = new Map<number, string>();
-    cycles.forEach((cycle) => {
-      map.set(cycle.id, cycle.ciclo_pago);
-    });
-    return map;
-  }, [cycles]);
+  const filterMonthOptions = useMemo(
+    () => MONTH_LABELS.map((label, index) => ({
+      label,
+      value: String(index + 1).padStart(2, "0"),
+    })),
+    [],
+  );
+
+  const monthFilterCollection = useMemo(
+    () => createListCollection({ items: filterMonthOptions }),
+    [filterMonthOptions],
+  );
+
+  const filterYearOptions = useMemo(
+    () =>
+      Array.from(new Set(payrollPeriods.map((period) => getPeriodoYearValue(period)).filter(Boolean)))
+        .sort((a, b) => Number(b) - Number(a)),
+    [payrollPeriods],
+  );
+
+  const yearFilterCollection = useMemo(
+    () =>
+      createListCollection({
+        items: filterYearOptions.map((year) => ({
+          label: year,
+          value: year,
+        })),
+      }),
+    [filterYearOptions],
+  );
+
+  const quincenaFilterCollection = useMemo(
+    () =>
+      createListCollection({
+        items: [
+          { label: "Primera quincena", value: "PRIMERA" },
+          { label: "Segunda quincena", value: "SEGUNDA" },
+        ],
+      }),
+    [],
+  );
 
   const quincenalCycle = useMemo(
     () =>
@@ -555,6 +652,167 @@ export const Planillas = () => {
 
   const isSaving = isCreating || isUpdating;
 
+  const handleSortChange = useCallback((field: SortField) => {
+    setPage(1);
+    setSort((currentSort) => {
+      if (currentSort.field === field) {
+        return {
+          field,
+          dir: currentSort.dir === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        field,
+        dir: "desc",
+      };
+    });
+  }, []);
+
+  const buildSortHeader = useCallback(
+    (label: string, field: SortField) => {
+      const isActive = sort.field === field;
+
+      return (
+        <Button
+          variant="ghost"
+          size="xs"
+          px="0"
+          justifyContent="flex-start"
+          onClick={() => handleSortChange(field)}
+        >
+          {label}
+          {isActive ? (sort.dir === "asc" ? <FiArrowUp /> : <FiArrowDown />) : null}
+        </Button>
+      );
+    },
+    [handleSortChange, sort],
+  );
+
+  const filteredPayrollPeriods = useMemo(
+    () =>
+      payrollPeriods.filter((period) => {
+        if (monthFilter && getPeriodoMonthValue(period) !== monthFilter) return false;
+        if (yearFilter && getPeriodoYearValue(period) !== yearFilter) return false;
+        if (quincenaFilter && getPeriodoQuincenaValue(period) !== quincenaFilter) return false;
+        return true;
+      }),
+    [monthFilter, payrollPeriods, quincenaFilter, yearFilter],
+  );
+
+  const sortedPayrollPeriods = useMemo(() => {
+    const direction = sort.dir === "asc" ? 1 : -1;
+
+    const getSortValue = (period: PeriodoPlanilla) => {
+      if (sort.field === "fecha_fin") return toDateSortValue(period.fecha_fin);
+      if (sort.field === "fecha_pago") return toDateSortValue(period.fecha_pago);
+      return toDateSortValue(period.fecha_inicio);
+    };
+
+    return [...filteredPayrollPeriods].sort((left, right) => {
+      const leftValue = getSortValue(left);
+      const rightValue = getSortValue(right);
+
+      if (leftValue === rightValue) {
+        return right.id - left.id;
+      }
+
+      return (leftValue - rightValue) * direction;
+    });
+  }, [filteredPayrollPeriods, sort]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [monthFilter, yearFilter, quincenaFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedPayrollPeriods.length / pageSize));
+
+  useEffect(() => {
+    setPage((currentPage) => (currentPage > totalPages ? totalPages : currentPage));
+  }, [totalPages]);
+
+  const paginatedPayrollPeriods = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedPayrollPeriods.slice(start, start + pageSize);
+  }, [sortedPayrollPeriods, page]);
+
+  const columns = useMemo<DataTableColumn<PeriodoPlanilla>[]>(
+    () => [
+      {
+        id: "periodo",
+        header: "Periodo",
+        textAlign: "left",
+        cell: (period) => getPeriodoDisplayLabel(period),
+      },
+      {
+        id: "fecha_inicio",
+        header: buildSortHeader("Fecha inicio", "fecha_inicio"),
+        textAlign: "left",
+        cell: (period) => renderDate(period.fecha_inicio),
+      },
+      {
+        id: "fecha_fin",
+        header: buildSortHeader("Fecha fin", "fecha_fin"),
+        textAlign: "left",
+        cell: (period) => renderDate(period.fecha_fin),
+      },
+      {
+        id: "fecha_pago",
+        header: buildSortHeader("Fecha pago", "fecha_pago"),
+        textAlign: "left",
+        cell: (period) => renderDate(period.fecha_pago),
+      },
+      {
+        id: "estado",
+        header: "Estado",
+        w: "100px",
+        textAlign: "left",
+        cell: (period) => (
+          <Badge colorPalette={getEstadoBadgeColor(period.estado)}>
+            {period.estado}
+          </Badge>
+        ),
+      },
+    ],
+    [buildSortHeader, renderDate],
+  );
+
+  const actionColumn = useMemo<DataTableActionColumn<PeriodoPlanilla>>(
+    () => ({
+      header: "Acciones",
+      w: "auto",
+      textAlign: "left",
+      sticky: false,
+      cell: (period) => (
+        <Stack direction="row" justifyContent="flex-start" gap="2" flexWrap="wrap">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => navigate(`/planillas/periodo_planilla/${period.id}`)}
+          >
+            <FiEye /> Ver
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => handleEditPeriod(period)}
+          >
+            <FiEdit2 /> Editar
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            colorPalette="red"
+            onClick={() => setPeriodToDelete(period)}
+          >
+            <FiTrash2 /> Eliminar
+          </Button>
+        </Stack>
+      ),
+    }),
+    [navigate],
+  );
+
   return (
     <Layout pageTitle="Generación y gestión de planillas">
       <Stack gap="6">
@@ -702,6 +960,92 @@ export const Planillas = () => {
           </Portal>
         </Dialog.Root>
 
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+          <Select.Root
+            collection={monthFilterCollection}
+            value={monthFilter ? [monthFilter] : []}
+            onValueChange={(event) => setMonthFilter(event.value?.[0] ?? "")}
+            size="sm"
+          >
+            <Select.HiddenSelect />
+            <Select.Label>Mes</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Todos" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.ClearTrigger />
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Select.Positioner>
+              <Select.Content>
+                {monthFilterCollection.items.map((item) => (
+                  <Select.Item key={item.value} item={item}>
+                    {item.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+
+          <Select.Root
+            collection={yearFilterCollection}
+            value={yearFilter ? [yearFilter] : []}
+            onValueChange={(event) => setYearFilter(event.value?.[0] ?? "")}
+            size="sm"
+          >
+            <Select.HiddenSelect />
+            <Select.Label>Año</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Todos" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.ClearTrigger />
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Select.Positioner>
+              <Select.Content>
+                {yearFilterCollection.items.map((item) => (
+                  <Select.Item key={item.value} item={item}>
+                    {item.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+
+          <Select.Root
+            collection={quincenaFilterCollection}
+            value={quincenaFilter ? [quincenaFilter] : []}
+            onValueChange={(event) => setQuincenaFilter((event.value?.[0] as QuincenaFilter) ?? "")}
+            size="sm"
+          >
+            <Select.HiddenSelect />
+            <Select.Label>Quincena</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Todas" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.ClearTrigger />
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Select.Positioner>
+              <Select.Content>
+                {quincenaFilterCollection.items.map((item) => (
+                  <Select.Item key={item.value} item={item}>
+                    {item.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+        </SimpleGrid>
+
         {isTableLoading ? (
           <Spinner alignSelf="center" size="lg" />
         ) : payrollPeriods.length === 0 ? (
@@ -728,81 +1072,20 @@ export const Planillas = () => {
             </EmptyState.Content>
           </EmptyState.Root>
         ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 2, "2xl": 3 }} gap="6">
-            {payrollPeriods.map((period) => (
-              <Card.Root
-                key={period.id}
-                cursor="pointer"
-                transition="transform 150ms ease"
-                minW="0"
-                minH="100%"
-                _hover={{ transform: "scale(1.01)" }}
-                onClick={() => navigate(`/planillas/periodo_planilla/${period.id}`)}
-              >
-                <Card.Header>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap="3">
-                    <Card.Title>
-                      {`Periodo Planilla ${getPeriodoQuincenaLabel(period)} Quincena ${getPeriodoYear(period)}`}
-                    </Card.Title>
-                    <Badge colorPalette={getEstadoBadgeColor(period.estado)} flexShrink={0}>
-                      {period.estado}
-                    </Badge>
-                  </Stack>
-                </Card.Header>
-                <Card.Body>
-                  <Stack gap="3">
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Rango de fechas
-                      </Text>
-                      <Text fontWeight="medium">
-                        {`${renderDate(period.fecha_inicio)} al ${renderDate(period.fecha_fin)}`}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Fecha de pago
-                      </Text>
-                      <Text fontWeight="medium">{renderDate(period.fecha_pago)}</Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Tipo
-                      </Text>
-                      <Text fontWeight="medium">
-                        {toCapitalized(cycleMap.get(period.id_ciclo_pago) ?? String(period.id_ciclo_pago))}
-                      </Text>
-                    </Stack>
-                  </Stack>
-                </Card.Body>
-                <Card.Footer justifyContent="center" alignItems="center" gap="4" flexWrap="wrap">
-                  <Stack direction="row" gap="2" justifyContent="center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleEditPeriod(period);
-                      }}
-                    >
-                      <FiEdit2 /> Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      colorPalette="red"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setPeriodToDelete(period);
-                      }}
-                    >
-                      <FiTrash2 /> Eliminar
-                    </Button>
-                  </Stack>
-                </Card.Footer>
-              </Card.Root>
-            ))}
-          </SimpleGrid>
+          <DataTable<PeriodoPlanilla>
+            data={paginatedPayrollPeriods}
+            columns={columns}
+            actionColumn={actionColumn}
+            isDataLoading={isTableLoading}
+            size="md"
+            pagination={{
+              enabled: true,
+              page,
+              pageSize,
+              totalCount: sortedPayrollPeriods.length,
+              onPageChange: setPage,
+            }}
+          />
         )}
       </Stack>
     </Layout>

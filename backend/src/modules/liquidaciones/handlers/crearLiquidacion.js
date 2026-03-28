@@ -3,6 +3,7 @@ import {
   SaldoVacaciones,
   CausaLiquidacion,
 } from "../../../models/index.js";
+import { fn, col, where } from "sequelize";
 import { runInTransaction } from "../../mantenimientos_consultas/shared/transaction.js";
 
 /**
@@ -20,14 +21,19 @@ export async function crearLiquidacion(
   transaction
 ) {
   return runInTransaction(async (tx) => {
-    const { causa, fechaTerminacion, componentes, totales, realizoPreaviso } =
+    const { causa, causaId, fechaTerminacion, componentes, totales, realizoPreaviso } =
       datosLiquidacion;
 
     // Validar que la causa existe
-    const causaLiq = await CausaLiquidacion.findOne(
-      { where: { causa_liquidacion: causa } },
-      { transaction: tx }
-    );
+    const causaLiq = causaId
+      ? await CausaLiquidacion.findByPk(causaId, { transaction: tx })
+      : await CausaLiquidacion.findOne({
+          where: where(
+            fn("LOWER", col("causa_liquidacion")),
+            String(causa ?? "").trim().toLowerCase()
+          ),
+          transaction: tx,
+        });
 
     if (!causaLiq) {
       const error = new Error(`Causa de liquidación inválida: ${causa}`);
@@ -36,15 +42,13 @@ export async function crearLiquidacion(
     }
 
     // Validar que no existe liquidación duplicada para el mismo colaborador y fecha
-    const existente = await Liquidacion.findOne(
-      {
-        where: {
-          id_colaborador: idColaborador,
-          fecha_terminacion: fechaTerminacion,
-        },
+    const existente = await Liquidacion.findOne({
+      where: {
+        id_colaborador: idColaborador,
+        fecha_terminacion: fechaTerminacion,
       },
-      { transaction: tx }
-    );
+      transaction: tx,
+    });
 
     if (existente) {
       const error = new Error(
@@ -56,10 +60,10 @@ export async function crearLiquidacion(
 
     // Obtener o crear saldo de vacaciones
     let saldoVacacionesId = null;
-    const saldoVacaciones = await SaldoVacaciones.findOne(
-      { where: { id_colaborador: idColaborador } },
-      { transaction: tx }
-    );
+    const saldoVacaciones = await SaldoVacaciones.findOne({
+      where: { id_colaborador: idColaborador },
+      transaction: tx,
+    });
 
     if (saldoVacaciones) {
       saldoVacacionesId = saldoVacaciones.id_saldo_vac;
