@@ -91,7 +91,6 @@ export const obtenerMarcasAsistenciaPorRango = async ({
       id_marca: m.id_marca,
       tipo_marca: m.tipoMarca?.nombre ?? null,
       timestamp: m.timestamp,
-      observaciones: "N/A",
     }));
 
     const marcasAgrupadas = agruparMarcasPorDia(datosMarcas);

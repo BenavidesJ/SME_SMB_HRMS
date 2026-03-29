@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 
 /**
  * Agrupa marcas por día (YYYY-MM-DD)
- * @param {Array<{id_marca:number, tipo_marca:string|null, timestamp:Date|string, observaciones:any}>} marcas
+ * @param {Array<{id_marca:number, tipo_marca:string|null, timestamp:Date|string}>} marcas
  */
 export const agruparMarcasPorDia = (marcas) => {
   const map = new Map();

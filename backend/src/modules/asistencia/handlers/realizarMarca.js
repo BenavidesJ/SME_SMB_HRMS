@@ -264,7 +264,6 @@ export const registrarMarcaAsistencia = async ({
             ? tipoEntradaDb.id_tipo_marca
             : tipoSalidaDb.id_tipo_marca,
         timestamp: timestampDate,
-        observaciones: "N/A",
       },
       { transaction: tx }
     );

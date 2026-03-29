@@ -162,14 +162,14 @@ describe("asistencia.controller", () => {
 		expect(next).not.toHaveBeenCalled();
 	});
 
-	test("patchMarcaAsistencia permite actualización por observaciones", async () => {
+	test("patchMarcaAsistencia permite actualización por nuevo_timestamp", async () => {
 		actualizarMarcaAsistencia.mockResolvedValue({ ok: true });
 		const { req, res, next } = createHttpMocks({
 			body: {
 				identificacion: "123",
 				tipo_marca: "ENTRADA",
 				timestamp: "2026-03-01T08:00:00",
-				observaciones: "Corrección manual",
+				nuevo_timestamp: "2026-03-01T08:05:00",
 			},
 		});
 
@@ -179,14 +179,13 @@ describe("asistencia.controller", () => {
 			identificacion: "123",
 			tipo_marca: "ENTRADA",
 			timestamp: "2026-03-01T08:00:00",
-			nuevo_timestamp: undefined,
-			observaciones: "Corrección manual",
+			nuevo_timestamp: "2026-03-01T08:05:00",
 		});
 		expect(res.status).toHaveBeenCalledWith(HTTP_CODES.SUCCESS.OK);
 		expect(next).not.toHaveBeenCalled();
 	});
 
-	test("patchMarcaAsistencia valida que exista timestamp u observaciones", async () => {
+	test("patchMarcaAsistencia valida que exista nuevo_timestamp", async () => {
 		const { req, res, next } = createHttpMocks({
 			body: { identificacion: "123", tipo_marca: "ENTRADA", timestamp: "2026-03-01T08:00:00" },
 		});
@@ -195,7 +194,7 @@ describe("asistencia.controller", () => {
 
 		expect(next).toHaveBeenCalledWith(
 			expect.objectContaining({
-				message: "Debes proporcionar un nuevo timestamp u observaciones para actualizar",
+				message: "Debes proporcionar un nuevo timestamp para actualizar",
 			})
 		);
 	});

@@ -1,4 +1,6 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import {
   sequelize,
   Colaborador,
@@ -6,6 +8,11 @@ import {
   MarcaAsistencia,
   JornadaDiaria,
 } from "../../../models/index.js";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const COSTA_RICA_TZ = "America/Costa_Rica";
 
 /**
  * Actualiza la marca de asistencia para un colaborador en un día específico
@@ -22,7 +29,6 @@ export const actualizarMarcaAsistencia = async ({
   tipo_marca,
   timestamp,
   nuevo_timestamp,
-  observaciones,
 }) => {
   const tx = await sequelize.transaction();
 
@@ -49,38 +55,34 @@ export const actualizarMarcaAsistencia = async ({
       throw new Error("tipo_marca debe ser ENTRADA o SALIDA");
     }
 
-    const marcaOriginalTs = dayjs(timestamp);
+    const marcaOriginalTs = dayjs.utc(timestamp);
     if (!marcaOriginalTs.isValid()) {
       throw new Error("El timestamp original no es válido");
     }
-    const fechaOriginal = marcaOriginalTs.format("YYYY-MM-DD");
+    const fechaOriginal = marcaOriginalTs.tz(COSTA_RICA_TZ).format("YYYY-MM-DD");
 
     const hasNuevoTimestamp = Boolean(
       nuevo_timestamp && String(nuevo_timestamp).trim() !== ""
     );
-    const hasObservaciones = observaciones !== undefined;
 
-    if (!hasNuevoTimestamp && !hasObservaciones) {
-      throw new Error(
-        "Debes proporcionar un nuevo timestamp u observaciones para actualizar"
-      );
+    if (!hasNuevoTimestamp) {
+      throw new Error("Debes proporcionar un nuevo timestamp para actualizar");
     }
 
     let marcaNuevaTs = marcaOriginalTs;
     if (hasNuevoTimestamp) {
-      const parsedNuevo = dayjs(nuevo_timestamp);
+      const parsedNuevo = dayjs.utc(nuevo_timestamp);
       if (!parsedNuevo.isValid()) {
         throw new Error("El nuevo timestamp no es válido");
       }
-      const fechaNueva = parsedNuevo.format("YYYY-MM-DD");
+      const fechaNueva = parsedNuevo.tz(COSTA_RICA_TZ).format("YYYY-MM-DD");
       if (fechaOriginal !== fechaNueva) {
         throw new Error("La corrección debe mantenerse dentro del mismo día");
       }
       marcaNuevaTs = parsedNuevo;
     }
 
-    const observacionesTxt =
-      observaciones === undefined ? undefined : String(observaciones ?? "").trim();
+    const fechaJornada = marcaNuevaTs.tz(COSTA_RICA_TZ).format("YYYY-MM-DD");
 
     const colaborador = await Colaborador.findOne({
       where: { identificacion: identNum },
@@ -121,8 +123,8 @@ export const actualizarMarcaAsistencia = async ({
 
     const tipoBuscado = tipoTxt === "ENTRADA" ? tipoEntradaDb : tipoSalidaDb;
 
-    const startOfDay = marcaOriginalTs.startOf("day").toDate();
-    const endOfDay = marcaOriginalTs.endOf("day").toDate();
+    const startOfDay = marcaOriginalTs.tz(COSTA_RICA_TZ).startOf("day").utc().toDate();
+    const endOfDay = marcaOriginalTs.tz(COSTA_RICA_TZ).endOf("day").utc().toDate();
 
     const marca = await MarcaAsistencia.findOne({
       where: {
@@ -144,8 +146,7 @@ export const actualizarMarcaAsistencia = async ({
 
     await marca.update(
       {
-        ...(hasNuevoTimestamp ? { timestamp: marcaNuevaTs.toDate() } : {}),
-        ...(observacionesTxt !== undefined ? { observaciones: observacionesTxt || null } : {}),
+        timestamp: marcaNuevaTs.toDate(),
       },
       { transaction: tx },
     );
@@ -193,7 +194,7 @@ export const actualizarMarcaAsistencia = async ({
     const jornadaExistente = await JornadaDiaria.findOne({
       where: {
         id_colaborador: colaborador.id_colaborador,
-        fecha: marcaNuevaTs.format("YYYY-MM-DD"),
+        fecha: fechaJornada,
       },
       transaction: tx,
     });
@@ -209,7 +210,7 @@ export const actualizarMarcaAsistencia = async ({
       await JornadaDiaria.create(
         {
           id_colaborador: colaborador.id_colaborador,
-          fecha: marcaNuevaTs.format("YYYY-MM-DD"),
+          fecha: fechaJornada,
           horas_ordinarias: horasOrdinarias,
           horas_extra: 0.0,
           horas_nocturnas: 0.0,
@@ -222,15 +223,14 @@ export const actualizarMarcaAsistencia = async ({
 
     return {
       colaborador,
-      fecha: marcaNuevaTs.format("YYYY-MM-DD"),
+      fecha: fechaJornada,
       tipo_marca: tipoTxt,
       marca_actualizada: {
         id_marca: marca.id_marca,
         timestamp: marcaNuevaTs.toDate(),
-        observaciones: marca.observaciones ?? null,
       },
       jornada: {
-        fecha: marcaNuevaTs.format("YYYY-MM-DD"),
+        fecha: fechaJornada,
         horas_ordinarias: horasOrdinarias,
         entrada: entrada?.timestamp ?? null,
         salida: salida?.timestamp ?? null,

@@ -110,7 +110,7 @@ export const obtenerMarcasPorRango = async (req, res, next) => {
  */
 export const patchMarcaAsistencia = async (req, res, next) => {
   try {
-    const { identificacion, tipo_marca, timestamp, nuevo_timestamp, observaciones } = req.body ?? {};
+    const { identificacion, tipo_marca, timestamp, nuevo_timestamp } = req.body ?? {};
 
     if (!identificacion || String(identificacion).trim() === "") {
       throw new Error("La identificación es obligatoria");
@@ -127,10 +127,9 @@ export const patchMarcaAsistencia = async (req, res, next) => {
     const hasNuevoTimestamp = Boolean(
       nuevo_timestamp && String(nuevo_timestamp).trim() !== ""
     );
-    const hasObservaciones = Object.prototype.hasOwnProperty.call(req.body ?? {}, "observaciones");
 
-    if (!hasNuevoTimestamp && !hasObservaciones) {
-      throw new Error("Debes proporcionar un nuevo timestamp u observaciones para actualizar");
+    if (!hasNuevoTimestamp) {
+      throw new Error("Debes proporcionar un nuevo timestamp para actualizar");
     }
 
     const data = await actualizarMarcaAsistencia({
@@ -138,7 +137,6 @@ export const patchMarcaAsistencia = async (req, res, next) => {
       tipo_marca,
       timestamp,
       nuevo_timestamp,
-      observaciones,
     });
 
     return res.status(HTTP_CODES.SUCCESS.OK).json({

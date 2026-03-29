@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { Layout } from "../../../components/layout";
-import { Button as ChakraButton } from "@chakra-ui/react";
+import { Button as ChakraButton, HStack } from "@chakra-ui/react";
 import type { EmployeeRow } from "../../../types";
 import type { DataTableColumn } from "../../../components/general/table/types";
 import { DataTable } from "../../../components/general/table/DataTable";
 import { useNavigate } from "react-router";
+import { FiEye } from "react-icons/fi";
 
 export const GestionarAsistencias = () => {
   const nav = useNavigate();
   const [page, setPage] = useState(1);
-  const [selection, setSelection] = useState<string[]>([]);
   const { data: employees = [], isLoading: employeesLoading } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const pageSize = 10;
   const pagedEmployees = useMemo(() => {
@@ -42,32 +42,28 @@ export const GestionarAsistencias = () => {
       },
     ];
   }, []);
+
   return (
-    <Layout pageTitle='Gestión de Marcas de Asistencia de los Empleados'>
+    <Layout pageTitle="Gestión de Marcas de Asistencia de los Empleados">
       <DataTable<EmployeeRow>
         data={employeesLoading ? [] : pagedEmployees}
         columns={columns}
         isDataLoading={employeesLoading}
         size="md"
-        selection={{
-          enabled: true,
-          selectedKeys: selection,
-          onChange: setSelection,
-          getRowKey: (r) => String(r.identificacion),
-        }}
-        actionBar={{
-          enabled: true,
-          renderActions: () => (
-            <>
+        actionColumn={{
+          header: "Acciones",
+          w: "200px",
+          cell: (row) => (
+            <HStack gap="2" justifyContent="flex-end" wrap="wrap">
               <ChakraButton
-                variant="solid"
-                colorPalette="green"
+                variant="subtle"
+                colorPalette="blue"
                 size="sm"
-                onClick={() => nav(`colaborador/${selection}`)}
+                onClick={() => nav(`/asistencia/gestion/colaborador/${row.identificacion}`)}
               >
-                Ver marcas
+                <FiEye /> Ver marcas
               </ChakraButton>
-            </>
+            </HStack>
           ),
         }}
         pagination={{
@@ -79,5 +75,5 @@ export const GestionarAsistencias = () => {
         }}
       />
     </Layout>
-  )
-}
+  );
+};

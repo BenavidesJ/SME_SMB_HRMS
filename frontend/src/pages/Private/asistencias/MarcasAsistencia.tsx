@@ -454,7 +454,7 @@ const FormContent = ({
           </ChakraButton>
         </HStack>
 
-        <Badge variant="surface" colorPalette="blue" size="lg">
+        <Badge variant="surface" colorPalette="green" size="lg">
           {label}
         </Badge>
       </VStack>

@@ -28,13 +28,9 @@ const setupHappyPath = () => {
 	const marca = {
 		id_marca: 10,
 		timestamp: new Date("2026-03-01T08:00:00"),
-		observaciones: "Inicial",
 		update: jest.fn(async (payload) => {
 			if (Object.prototype.hasOwnProperty.call(payload, "timestamp")) {
 				marca.timestamp = payload.timestamp;
-			}
-			if (Object.prototype.hasOwnProperty.call(payload, "observaciones")) {
-				marca.observaciones = payload.observaciones;
 			}
 		}),
 		reload: jest.fn().mockResolvedValue(undefined),
@@ -86,10 +82,10 @@ describe("actualizarMarcaAsistencia", () => {
 		).rejects.toThrow("El timestamp original no es válido");
 	});
 
-	test("requiere nuevo_timestamp u observaciones", async () => {
+	test("requiere nuevo_timestamp", async () => {
 		await expect(
 			actualizarMarcaAsistencia({ identificacion: "123", tipo_marca: "ENTRADA", timestamp: "2026-03-01T08:00:00" })
-		).rejects.toThrow("Debes proporcionar un nuevo timestamp u observaciones para actualizar");
+		).rejects.toThrow("Debes proporcionar un nuevo timestamp para actualizar");
 	});
 
 	test("valida nuevo_timestamp", async () => {
@@ -176,32 +172,12 @@ describe("actualizarMarcaAsistencia", () => {
 			tipo_marca: "ENTRADA",
 			timestamp: "2026-03-01T08:00:00",
 			nuevo_timestamp: "2026-03-01T08:05:00",
-			observaciones: "Ajuste manual",
 		});
 
 		expect(marca.update).toHaveBeenCalled();
 		expect(JornadaDiaria.create).toHaveBeenCalledTimes(1);
 		expect(result.jornada.horas_ordinarias).toBe(9);
-		expect(result.marca_actualizada.observaciones).toBe("Ajuste manual");
 		expect(transaction.commit).toHaveBeenCalledTimes(1);
-	});
-
-	test("permite actualización solo de observaciones", async () => {
-		const { marca } = setupHappyPath();
-		MarcaAsistencia.findAll.mockResolvedValue([
-			{ tipoMarca: { nombre: "ENTRADA" }, timestamp: new Date("2026-03-01T08:00:00") },
-		]);
-
-		const result = await actualizarMarcaAsistencia({
-			identificacion: "123456789",
-			tipo_marca: "ENTRADA",
-			timestamp: "2026-03-01T08:00:00",
-			observaciones: "",
-		});
-
-		expect(marca.update).toHaveBeenCalledWith({ observaciones: null }, { transaction });
-		expect(JornadaDiaria.create).not.toHaveBeenCalled();
-		expect(result.jornada.horas_ordinarias).toBe(0);
 	});
 
 	test("actualiza jornada existente", async () => {
@@ -230,7 +206,7 @@ describe("actualizarMarcaAsistencia", () => {
 			identificacion: "123456789",
 			tipo_marca: "ENTRADA",
 			timestamp: "2026-03-01T08:00:00",
-			observaciones: "sin tipo",
+			nuevo_timestamp: "2026-03-01T08:05:00",
 		});
 
 		expect(result.jornada.entrada).toBeNull();
