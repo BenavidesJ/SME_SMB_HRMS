@@ -13,9 +13,9 @@ import type { DataTableColumn } from "../../../components/general/table/types";
 import { useWeekPager } from "../../../hooks/useWeekPager";
 import { Form } from "../../../components/forms/Form/Form";
 import { InputField } from "../../../components/forms/InputField/InputField";
+import { AppLoader } from "../../../components/layout/loading";
 import { useAuth } from "../../../context/AuthContext";
-import { useWatch } from "react-hook-form";
-import { formatDateTimeUi, formatDateUiDefault, onlyDigitsMax } from "../../../utils";
+import { formatDateTimeUi, formatDateUiDefault, getCostaRicaTodayDate, onlyDigitsMax } from "../../../utils";
 
 const IDENTIFICATION_MAX_DIGITS = 12;
 
@@ -105,7 +105,6 @@ export const MarcasAsistencia = () => {
   );
 
   const [clockText, setClockText] = useState(() => formatClockText(dayjs()));
-  const [tipoEnProceso, setTipoEnProceso] = useState<"ENTRADA" | "SALIDA" | null>(null);
 
   useEffect(() => {
     const tick = () => setClockText(formatClockText(dayjs()));
@@ -128,10 +127,48 @@ export const MarcasAsistencia = () => {
       initialData: null,
     });
 
-  const { mutate: registrarMarca } = useApiMutation<RegistrarMarcaPayload, RegistrarMarcaResponse>({
+  const { mutate: registrarMarca, isLoading: registrarMarcaLoading } = useApiMutation<RegistrarMarcaPayload, RegistrarMarcaResponse>({
     url: "/asistencia/marca",
     method: "POST",
   });
+
+  const hoyCR = getCostaRicaTodayDate();
+
+  const estadoMarcasHoy = useMemo<"SIN_MARCAS" | "SOLO_ENTRADA" | "COMPLETO">(() => {
+    const marcas = Array.isArray(marcasData?.marcas) ? marcasData.marcas : [];
+    const marcasHoy = marcas.find((diaItem) => String(diaItem.dia) === hoyCR);
+
+    if (!marcasHoy || !Array.isArray(marcasHoy.asistencia) || marcasHoy.asistencia.length === 0) {
+      return "SIN_MARCAS";
+    }
+
+    const entradaCount = marcasHoy.asistencia.filter((r) => getTipo(r) === "ENTRADA").length;
+    const salidaCount = marcasHoy.asistencia.filter((r) => getTipo(r) === "SALIDA").length;
+
+    if (entradaCount >= 1 && salidaCount === 0) {
+      return "SOLO_ENTRADA";
+    }
+
+    return "COMPLETO";
+  }, [marcasData, hoyCR]);
+
+  const semanaIncluyeHoy = useMemo(() => hoyCR >= desde && hoyCR <= hasta, [hoyCR, desde, hasta]);
+
+  const entradaHabilitada = useMemo(() => {
+    if (!loggedId) return false;
+    if (!semanaIncluyeHoy) return false;
+    if (marcasLoading) return false;
+    if (registrarMarcaLoading) return false;
+    return estadoMarcasHoy === "SIN_MARCAS";
+  }, [loggedId, semanaIncluyeHoy, marcasLoading, registrarMarcaLoading, estadoMarcasHoy]);
+
+  const salidaHabilitada = useMemo(() => {
+    if (!loggedId) return false;
+    if (!semanaIncluyeHoy) return false;
+    if (marcasLoading) return false;
+    if (registrarMarcaLoading) return false;
+    return estadoMarcasHoy === "SOLO_ENTRADA";
+  }, [loggedId, semanaIncluyeHoy, marcasLoading, registrarMarcaLoading, estadoMarcasHoy]);
 
   const nombreColaborador = useMemo(() => {
     const colab = marcasData?.colaborador;
@@ -215,31 +252,26 @@ export const MarcasAsistencia = () => {
       );
       if (!identificacionDestino) return;
 
-      setTipoEnProceso(tipo);
-      try {
-        const response = await registrarMarca({
-          identificacion: identificacionDestino,
-          tipo_marca: tipo,
-          timestamp: new Date().toISOString(),
-        });
+      const response = await registrarMarca({
+        identificacion: identificacionDestino,
+        tipo_marca: tipo,
+        timestamp: new Date().toISOString(),
+      });
 
-        // Mantengo tu intención original:
-        // - Entrada: refetch (para recalcular y traer el día completo)
-        // - Salida: si hay data, patch local; si no, refetch
-        if (tipo === "ENTRADA") {
-          if (marcasUrl) await refetchMarcas();
-          return;
-        }
+      // Mantengo tu intención original:
+      // - Entrada: refetch (para recalcular y traer el día completo)
+      // - Salida: si hay data, patch local; si no, refetch
+      if (tipo === "ENTRADA") {
+        if (marcasUrl) await refetchMarcas();
+        return;
+      }
 
-        if (!response) return;
+      if (!response) return;
 
-        if (!marcasData) {
-          if (marcasUrl) await refetchMarcas();
-        } else {
-          updateMarcasConSalida(response);
-        }
-      } finally {
-        setTipoEnProceso(null);
+      if (!marcasData) {
+        if (marcasUrl) await refetchMarcas();
+      } else {
+        updateMarcasConSalida(response);
       }
     },
     [loggedId, registrarMarca, marcasUrl, refetchMarcas, marcasData, updateMarcasConSalida],
@@ -294,13 +326,15 @@ export const MarcasAsistencia = () => {
           goPrevWeek={goPrevWeek}
           goNextWeek={goNextWeek}
           goToday={goToday}
-          tipoEnProceso={tipoEnProceso}
           loggedId={loggedId}
+          entradaHabilitada={entradaHabilitada}
+          salidaHabilitada={salidaHabilitada}
           onRegistrarMarca={handleRegistrarMarca}
         />
       </Form>
 
       <DataTable<MarcaDiaRow> data={marcasLoading ? [] : rows} columns={columns} isDataLoading={marcasLoading} size="md" />
+      {registrarMarcaLoading && <AppLoader label="Registrando marca..." />}
     </Layout>
   );
 };
@@ -312,8 +346,9 @@ type FormContentProps = {
   goPrevWeek: () => void;
   goNextWeek: () => void;
   goToday: () => void;
-  tipoEnProceso: "ENTRADA" | "SALIDA" | null;
   loggedId: string;
+  entradaHabilitada: boolean;
+  salidaHabilitada: boolean;
   onRegistrarMarca: (tipo: "ENTRADA" | "SALIDA", identificacionIngresada: string) => void;
 };
 
@@ -324,14 +359,12 @@ const FormContent = ({
   goPrevWeek,
   goNextWeek,
   goToday,
-  tipoEnProceso,
   loggedId,
+  entradaHabilitada,
+  salidaHabilitada,
   onRegistrarMarca,
 }: FormContentProps) => {
-  const identificacionForm = useWatch({ name: "identificacion" }) as string;
-  const identificacionIngresada = String(identificacionForm ?? "").trim();
-
-  const identificacionValida = Boolean(identificacionIngresada.length) && identificacionIngresada === loggedId;
+  const identificacionIngresada = loggedId;
 
   return (
     <VStack align="stretch" mt="6">
@@ -351,6 +384,7 @@ const FormContent = ({
             size="sm"
             required
             numericOnly
+            readOnly
             maxDigits={IDENTIFICATION_MAX_DIGITS}
             rules={{
               required: "El campo es obligatorio",
@@ -369,8 +403,7 @@ const FormContent = ({
             colorPalette="blue"
             size="sm"
             onClick={() => onRegistrarMarca("ENTRADA", identificacionIngresada)}
-            disabled={!identificacionValida || Boolean(tipoEnProceso)}
-            loading={tipoEnProceso === "ENTRADA"}
+            disabled={!entradaHabilitada}
           >
             Entrada
           </ChakraButton>
@@ -381,8 +414,7 @@ const FormContent = ({
             _hover={{ backgroundColor: "brand.green.75" }}
             size="sm"
             onClick={() => onRegistrarMarca("SALIDA", identificacionIngresada)}
-            disabled={!identificacionValida || Boolean(tipoEnProceso)}
-            loading={tipoEnProceso === "SALIDA"}
+            disabled={!salidaHabilitada}
           >
             Salida
           </ChakraButton>

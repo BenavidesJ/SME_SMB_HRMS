@@ -17,6 +17,7 @@ import {
   validateHorasContraJornada,
 } from "../helpers/shared.js";
 import { requirePositiveInt, ensurePatchHasAllowedFields } from "../../../shared/validators.js";
+import { Op } from "sequelize";
 
 const ALLOWED_FIELDS = new Set([
   "puesto",
@@ -150,19 +151,52 @@ export const updateContractForColaborador = ({ colaboradorId, contratoId, patch 
     });
 
     if (horario) {
-      await models.HorarioLaboral.create(
-        {
-          id_contrato: contractId,
-          hora_inicio: horario.horaInicio,
-          hora_fin: horario.horaFin,
-          dias_laborales: horario.diasLaborales,
-          dias_libres: horario.diasLibres,
-          estado: next.estado,
-          fecha_actualizacion: horario.fechaActualizacion,
-          id_tipo_jornada: next.id_tipo_jornada,
-        },
-        { transaction }
-      );
+      const horariosExistentes = await models.HorarioLaboral.findAll({
+        where: { id_contrato: contractId },
+        order: [["fecha_actualizacion", "DESC"], ["id_horario", "DESC"]],
+        transaction,
+      });
+
+      const [horarioCanonico, ...horariosDuplicados] = horariosExistentes;
+
+      const horarioPayload = {
+        hora_inicio: horario.horaInicio,
+        hora_fin: horario.horaFin,
+        dias_laborales: horario.diasLaborales,
+        dias_libres: horario.diasLibres,
+        estado: next.estado,
+        fecha_actualizacion: horario.fechaActualizacion,
+        id_tipo_jornada: next.id_tipo_jornada,
+      };
+
+      if (horarioCanonico) {
+        await horarioCanonico.update(horarioPayload, { transaction });
+
+        if (horariosDuplicados.length > 0) {
+          const duplicateIds = horariosDuplicados
+            .map((item) => item.id_horario)
+            .filter((id) => Number.isInteger(id));
+
+          if (duplicateIds.length > 0) {
+            await models.HorarioLaboral.destroy({
+              where: {
+                id_horario: {
+                  [Op.in]: duplicateIds,
+                },
+              },
+              transaction,
+            });
+          }
+        }
+      } else {
+        await models.HorarioLaboral.create(
+          {
+            id_contrato: contractId,
+            ...horarioPayload,
+          },
+          { transaction }
+        );
+      }
     }
 
     const warnings = buildWarnings(puesto, next.salario_base);
