@@ -38,7 +38,7 @@ async function resolveActorFromToken(tokenId) {
 export const crearSolicitudHorasExtra = async (req, res, next) => {
   try {
     const actor = await resolveActorFromToken(req.user?.id);
-    const { id_colaborador, fecha_trabajo, horas_solicitadas, id_tipo_hx } = req.body ?? {};
+    const { id_colaborador, fecha_trabajo, horas_solicitadas } = req.body ?? {};
 
     if (id_colaborador === undefined || id_colaborador === null) {
       throw new Error("id_colaborador es obligatorio");
@@ -50,10 +50,6 @@ export const crearSolicitudHorasExtra = async (req, res, next) => {
 
     if (horas_solicitadas === undefined || horas_solicitadas === null) {
       throw new Error("horas_solicitadas es obligatorio");
-    }
-
-    if (id_tipo_hx === undefined || id_tipo_hx === null) {
-      throw new Error("id_tipo_hx es obligatorio");
     }
 
     const requestedColaboradorId = Number(id_colaborador);
@@ -69,7 +65,6 @@ export const crearSolicitudHorasExtra = async (req, res, next) => {
       id_colaborador: actor.id_colaborador,
       fecha_trabajo,
       horas_solicitadas,
-      id_tipo_hx,
     });
 
     return res.status(HTTP_CODES.SUCCESS.CREATED).json({

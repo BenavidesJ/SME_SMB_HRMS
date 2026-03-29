@@ -4,7 +4,11 @@ import {
   TipoHoraExtra,
   Estado,
   Colaborador,
+  Feriado,
+  Contrato,
+  HorarioLaboral,
 } from "../../../../models/index.js";
+import { getDayInitial } from "../../../asistencia/handlers/helpers/obtenerInicialDia.js";
 
 const AGRUPAMIENTOS_PERMITIDOS = ["fecha_solicitud", "estado", "id_colaborador"];
 const PRIORIDAD_ESTADOS = { PENDIENTE: 0, APROBADO: 1, RECHAZADO: 2, CANCELADO: 3 };
@@ -110,17 +114,90 @@ export const obtenerSolicitudesHoraExtra = async ({ agrupamiento, estado, id_col
     };
   });
 
+  // ── Enriquecimiento con tipo_dia (batch, sin N+1) ────────────────────────
+  const uniqueFechas = [...new Set(items.map((it) => String(it.fecha_trabajo)))];
+  const uniqueColabIds = [...new Set(items.map((it) => Number(it.colaborador?.id)).filter(Boolean))];
+
+  const feriadoMap = new Map();
+  if (uniqueFechas.length > 0) {
+    const feriados = await Feriado.findAll({
+      where: { fecha: { [Op.in]: uniqueFechas } },
+      attributes: ["fecha", "nombre"],
+    });
+    for (const f of feriados) {
+      feriadoMap.set(String(f.fecha), String(f.nombre));
+    }
+  }
+
+  const horarioMap = new Map();
+  if (uniqueColabIds.length > 0) {
+    const estadoActivoRec = await Estado.findOne({
+      where: { estado: "ACTIVO" },
+      attributes: ["id_estado"],
+    });
+
+    if (estadoActivoRec) {
+      const contratos = await Contrato.findAll({
+        where: {
+          id_colaborador: { [Op.in]: uniqueColabIds },
+          estado: estadoActivoRec.id_estado,
+        },
+        attributes: ["id_contrato", "id_colaborador"],
+        include: [
+          {
+            model: HorarioLaboral,
+            as: "horarios",
+            where: { estado: estadoActivoRec.id_estado },
+            attributes: ["hora_inicio", "dias_libres"],
+            required: false,
+          },
+        ],
+      });
+
+      for (const c of contratos) {
+        const horario = Array.isArray(c.horarios) ? c.horarios[0] ?? null : null;
+        horarioMap.set(Number(c.id_colaborador), {
+          hora_inicio: horario?.hora_inicio ?? null,
+          dias_libres: horario?.dias_libres ?? "",
+        });
+      }
+    }
+  }
+
+  const itemsEnriquecidos = items.map((it) => {
+    const fechaStr = String(it.fecha_trabajo);
+    const colabId = Number(it.colaborador?.id);
+
+    let tipo_dia = "LABORAL";
+    let nombre_feriado = null;
+
+    if (feriadoMap.has(fechaStr)) {
+      tipo_dia = "FERIADO";
+      nombre_feriado = feriadoMap.get(fechaStr);
+    } else {
+      const horarioInfo = horarioMap.get(colabId);
+      if (horarioInfo) {
+        const dayInit = getDayInitial(new Date(fechaStr + "T12:00:00"));
+        if (String(horarioInfo.dias_libres).includes(dayInit)) {
+          tipo_dia = "DESCANSO";
+        }
+      }
+    }
+
+    return { ...it, tipo_dia, nombre_feriado };
+  });
+
   if (agr === "fecha_solicitud") {
     return {
       agrupamiento: "fecha_solicitud",
-      total: items.length,
-      items,
+      total: itemsEnriquecidos.length,
+      items: itemsEnriquecidos,
     };
   }
 
   const gruposPorClave = new Map();
 
-  for (const item of items) {
+  for (const item of itemsEnriquecidos) {
     let clave;
     let etiqueta;
 

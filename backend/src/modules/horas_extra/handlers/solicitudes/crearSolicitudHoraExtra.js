@@ -7,6 +7,8 @@ import {
   TipoJornada,
   Estado,
   Colaborador,
+  Feriado,
+  HorarioLaboral,
 } from "../../../../models/index.js";
 import { sendEmail } from "../../../../services/mail.js";
 import { plantillaSolicitudHorasExtra } from "../../../../common/plantillasEmail/emailTemplate.js";
@@ -15,7 +17,6 @@ export const crearSolicitudHoraExtra = async ({
   id_colaborador,
   fecha_trabajo,
   horas_solicitadas,
-  id_tipo_hx,
 }) => {
   const tx = await sequelize.transaction();
 
@@ -39,19 +40,14 @@ export const crearSolicitudHoraExtra = async ({
       throw new Error("horas_solicitadas debe ser un número mayor a 0");
     }
 
-    const idTipoHx = Number(String(id_tipo_hx).trim());
-    if (!Number.isFinite(idTipoHx)) {
-      throw new Error("id_tipo_hx debe ser numérico");
-    }
-
-    const tipoHx = await TipoHoraExtra.findByPk(idTipoHx, {
+    // ── Catálogo de tipos de hora extra ─────────────────────────────────
+    const todosTipoHx = await TipoHoraExtra.findAll({
       attributes: ["id_tipo_hx", "nombre", "multiplicador"],
       transaction: tx,
     });
 
-    if (!tipoHx) {
-      throw new Error(`No existe tipo de hora extra con id ${idTipoHx}`);
-    }
+    const buscarTipoPorNombre = (nombre) =>
+      todosTipoHx.find((t) => String(t.nombre).toUpperCase() === String(nombre).toUpperCase());
 
     const estadoActivo = await Estado.findOne({
       where: { estado: "ACTIVO" },
@@ -88,6 +84,38 @@ export const crearSolicitudHoraExtra = async ({
     if (!aprobador) {
       throw new Error(`No existe colaborador aprobador con id ${idAprobador}`);
     }
+
+    // ── Auto-detección del tipo de hora extra ────────────────────────────
+    const feriadoEnFecha = await Feriado.findOne({
+      where: { fecha: fechaTxt },
+      attributes: ["id_feriado", "nombre"],
+      transaction: tx,
+    });
+
+    let tipoDetectadoNombre = "DIURNAS";
+    if (feriadoEnFecha) {
+      tipoDetectadoNombre = "FERIADO";
+    } else {
+      const horarioActivo = await HorarioLaboral.findOne({
+        where: { id_contrato: contratoActivo.id_contrato, estado: ESTADO_ACTIVO_ID },
+        attributes: ["id_horario", "hora_inicio"],
+        transaction: tx,
+      });
+
+      if (horarioActivo?.hora_inicio) {
+        const horaInicio = parseInt(String(horarioActivo.hora_inicio).split(":")[0], 10);
+        if (!isNaN(horaInicio) && (horaInicio >= 22 || horaInicio < 6)) {
+          tipoDetectadoNombre = "NOCTURNAS";
+        }
+      }
+    }
+
+    const tipoHx = buscarTipoPorNombre(tipoDetectadoNombre);
+    if (!tipoHx) {
+      throw new Error(`No existe el tipo de hora extra "${tipoDetectadoNombre}" en el catálogo tipo_hora_extra`);
+    }
+
+    const idTipoHx = tipoHx.id_tipo_hx;
 
     const tipoJornada = await TipoJornada.findByPk(contratoActivo.id_tipo_jornada, {
       attributes: ["id_tipo_jornada", "tipo", "max_horas_diarias", "max_horas_semanales"],

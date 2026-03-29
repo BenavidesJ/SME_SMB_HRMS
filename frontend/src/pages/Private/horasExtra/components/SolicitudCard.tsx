@@ -1,27 +1,25 @@
 /* eslint-disable no-unused-vars */
 import {
   Badge,
-  Button,
   Card,
-  CloseButton,
-  Dialog,
   Grid,
   GridItem,
   HStack,
-  Portal,
   Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
+import { Button } from "../../../../components/general/button/Button";
 
 import type { SolicitudHoraExtra } from "../../../../types/Overtime";
-import { LuCheck, LuX } from "react-icons/lu";
+import { LuEye } from "react-icons/lu";
 import { formatDateTimeUi, formatDateUiDefault } from "../../../../utils";
 
 interface SolicitudCardProps {
   item: SolicitudHoraExtra;
   onApprove?: (id: number) => void;
   onDecline?: (id: number) => void;
+  onViewDetail?: (item: SolicitudHoraExtra) => void;
   isSubmitting?: boolean;
   canManageActions?: boolean;
   view?: "personal" | "management";
@@ -49,8 +47,9 @@ const formatFecha = (iso: string) => {
 
 export const SolicitudCard = ({
   item,
-  onApprove,
-  onDecline,
+  onApprove: _onApprove,
+  onDecline: _onDecline,
+  onViewDetail,
   isSubmitting = false,
   canManageActions = false,
   view = "management",
@@ -186,92 +185,17 @@ export const SolicitudCard = ({
         </Grid>
       </Card.Body>
 
-      {estado === "PENDIENTE" && canManageActions && (
+      {onViewDetail && (
         <Card.Footer pt={3} px={0}>
           <HStack w="full" justify="end">
-            <Dialog.Root size="sm">
-              <Dialog.Trigger asChild>
-                <Button variant="subtle" colorPalette="red">
-                  <LuX />
-                  Rechazar
-                </Button>
-              </Dialog.Trigger>
-
-              <Portal>
-                <Dialog.Backdrop />
-                <Dialog.Positioner>
-                  <Dialog.Content>
-                    <Dialog.Header>
-                      <Dialog.Title>Confirmar rechazo</Dialog.Title>
-                    </Dialog.Header>
-
-                    <Dialog.Body>
-                      <Text>
-                        ¿Estás seguro de rechazar esta solicitud de horas extra?
-                      </Text>
-                    </Dialog.Body>
-
-                    <Dialog.Footer>
-                      <Dialog.ActionTrigger asChild>
-                        <Button variant="outline">Cancelar</Button>
-                      </Dialog.ActionTrigger>
-
-                      <Dialog.ActionTrigger asChild>
-                        <Button colorPalette="red" onClick={() => onDecline?.(item.id_solicitud_hx)}>
-                          Rechazar
-                        </Button>
-                      </Dialog.ActionTrigger>
-                    </Dialog.Footer>
-
-                    <Dialog.CloseTrigger asChild>
-                      <CloseButton size="sm" />
-                    </Dialog.CloseTrigger>
-                  </Dialog.Content>
-                </Dialog.Positioner>
-              </Portal>
-            </Dialog.Root>
-
-            <Dialog.Root size="sm">
-              <Dialog.Trigger asChild>
-                <Button variant="subtle" colorPalette="green">
-                  <LuCheck />
-                  Aprobar
-                </Button>
-              </Dialog.Trigger>
-
-              <Portal>
-                <Dialog.Backdrop />
-                <Dialog.Positioner>
-                  <Dialog.Content>
-                    <Dialog.Header>
-                      <Dialog.Title>Confirmar aprobación</Dialog.Title>
-                    </Dialog.Header>
-
-                    <Dialog.Body>
-                      <Text>
-                        ¿Estás seguro de aprobar esta solicitud de horas extra?
-                      </Text>
-                    </Dialog.Body>
-
-                    <Dialog.Footer>
-                      <Dialog.ActionTrigger asChild>
-                        <Button variant="outline">Cancelar</Button>
-                      </Dialog.ActionTrigger>
-
-                      <Dialog.ActionTrigger asChild>
-                        <Button colorPalette="green" onClick={() => onApprove?.(item.id_solicitud_hx)}>
-                          Aprobar
-                        </Button>
-                      </Dialog.ActionTrigger>
-                    </Dialog.Footer>
-
-                    <Dialog.CloseTrigger asChild>
-                      <CloseButton size="sm" />
-                    </Dialog.CloseTrigger>
-                  </Dialog.Content>
-                </Dialog.Positioner>
-              </Portal>
-            </Dialog.Root>
+            <Button
+              appearance="primary"
+              size="sm"
+              onClick={() => onViewDetail(item)}
+            >
+              <LuEye />
+              Ver detalle
+            </Button>
           </HStack>
         </Card.Footer>
       )}

@@ -67,10 +67,10 @@ export const actualizarSolicitudHoraExtra = async ({
 
     const estadoActualTxt = String(estadoActual?.estado ?? "").toUpperCase();
 
-    const tieneCambiosCampos =
-      fecha_trabajo !== undefined ||
-      horas_solicitadas !== undefined ||
-      id_tipo_hx !== undefined;
+    const tieneCamposSolicitante =
+      fecha_trabajo !== undefined || horas_solicitadas !== undefined;
+    const tieneCamposAprobador = id_tipo_hx !== undefined;
+    const tieneCambiosCampos = tieneCamposSolicitante || tieneCamposAprobador;
 
     if (estadoActualTxt !== "PENDIENTE" && (tieneCambiosCampos || estado !== undefined)) {
       const err = new Error(
@@ -89,8 +89,14 @@ export const actualizarSolicitudHoraExtra = async ({
     const esSolicitante = Number(current.id_colaborador) === actorColaboradorId;
     const esAprobadorAsignado = Number(current.id_aprobador) === actorColaboradorId;
 
-    if (tieneCambiosCampos && !esSolicitante) {
-      const err = new Error("Solo el colaborador solicitante puede modificar la solicitud");
+    if (tieneCamposSolicitante && !esSolicitante) {
+      const err = new Error("Solo el colaborador solicitante puede modificar la fecha y las horas solicitadas");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    if (tieneCamposAprobador && !esAprobadorAsignado && !esSolicitante) {
+      const err = new Error("Solo el aprobador asignado o el solicitante pueden cambiar el tipo de hora extra");
       err.statusCode = 403;
       throw err;
     }

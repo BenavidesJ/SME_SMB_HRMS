@@ -3,6 +3,8 @@ import type { ApiResponse } from "./ApiResponse";
 export type ISODate = string;
 export type ISODateTime = string;
 
+export type TipoDia = "FERIADO" | "LABORAL" | "DESCANSO";
+
 export interface TipoHx {
   id: number;
   nombre: string;
@@ -29,6 +31,8 @@ export interface SolicitudHoraExtra {
   tipo_hx: TipoHx;
   estado: EstadoSolicitud;
   colaborador: ColaboradorLite;
+  tipo_dia?: TipoDia;
+  nombre_feriado?: string | null;
 }
 
 export type Agrupamiento =

@@ -19,13 +19,6 @@ import { SolicitudCard } from "./components";
 import { SolicitudesBoard } from "../../../components/general/requests/SolicitudesBoard";
 import { PERSONAL_REQUEST_COLUMNS } from "../../../utils/requestStatus";
 
-interface TipoHx {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  multiplicador: string;
-}
-
 interface TipoJornadaCatalog {
   id: number;
   tipo: string;
@@ -38,14 +31,12 @@ interface TipoHxRequest {
   id_aprobador: number;
   fecha_trabajo: string;
   horas_solicitadas: number;
-  id_tipo_hx: number;
 }
 
 type CreateRequestFormValues = {
   id_aprobador: string;
   fecha_trabajo: string;
   horas_solicitadas: string;
-  id_tipo_hx: string;
 };
 
 export const SolicitudHorasExtra = () => {
@@ -54,7 +45,6 @@ export const SolicitudHorasExtra = () => {
   const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
   const [openModal, setOpenModal] = useState(false);
 
-  const { data: tipoHx = [] } = useApiQuery<TipoHx[]>({ url: "mantenimientos/tipos-hora-extra" });
   const { data: tiposJornada = [] } = useApiQuery<TipoJornadaCatalog[]>({ url: "mantenimientos/tipos-jornada" });
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
   const { data: myContracts = [] } = useApiQuery<Contrato[]>({
@@ -74,11 +64,6 @@ export const SolicitudHorasExtra = () => {
     url: "/horas-extra/solicitud",
     method: "POST",
   });
-
-  const tipoHxOptions = useMemo(
-    () => tipoHx.map((item) => ({ label: toTitleCase(item.nombre), value: String(item.id) })),
-    [tipoHx]
-  );
 
   const jefeDirectoId = useMemo(() => {
     const activeContracts = myContracts.filter((contract) => String(contract.estado ?? "").toUpperCase() === "ACTIVO");
@@ -201,7 +186,6 @@ export const SolicitudHorasExtra = () => {
       const payload: TipoHxRequest = {
         fecha_trabajo: solicitud.fecha_trabajo,
         horas_solicitadas: requestedHours,
-        id_tipo_hx: Number(solicitud.id_tipo_hx),
         id_colaborador: Number(employeeId),
         id_aprobador: approverId,
       };
@@ -290,20 +274,6 @@ export const SolicitudHorasExtra = () => {
                   selectRootProps={{ disabled: overtimeHoursOptions.length === 0 }}
                 />
               )}
-              <InputField
-                fieldType="select"
-                label="Tipo de hora extra"
-                name="id_tipo_hx"
-                required
-                disableSelectPortal
-                placeholder={tipoHxOptions.length ? "Seleccione una opción" : "Cargando..."}
-                options={tipoHxOptions}
-                rules={{
-                  required: "El campo es obligatorio",
-                  setValueAs: (value) => String(value ?? "").trim(),
-                }}
-                selectRootProps={{ disabled: tipoHxOptions.length === 0 }}
-              />
             </Wrap>
 
             {isOvertimeBlocked && (
