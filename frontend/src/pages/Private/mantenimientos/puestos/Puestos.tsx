@@ -76,6 +76,7 @@ const normalizeTime = (value: string) => String(value ?? "").slice(0, 5);
 export default function Puestos() {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingRow, setEditingRow] = useState<JobPosition | null>(null);
   const [openTemplateModal, setOpenTemplateModal] = useState(false);
   const [templateEditId, setTemplateEditId] = useState<string | null>(null);
   const [templateScope, setTemplateScope] = useState<"create" | "edit">("create");
@@ -113,31 +114,19 @@ export default function Puestos() {
     method: "PATCH",
   });
 
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const id = Number(selection[0]);
-    return Number.isFinite(id) ? id : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return puestos.find((row) => row.id === selectedId) ?? null;
-  }, [puestos, selectedId]);
-
   useEffect(() => {
-    if (!openEditModal || !selectedRow) return;
+    if (!openEditModal || !editingRow) return;
 
     setEditTemplatesDraft(
       getContractTemplatesForPuesto({
-        puestoId: selectedRow.id,
-        puestoNombre: selectedRow.puesto,
+        puestoId: editingRow.id,
+        puestoNombre: editingRow.puesto,
       }),
     );
-  }, [openEditModal, selectedRow]);
+  }, [openEditModal, editingRow]);
 
   useEffect(() => {
     if (!openModal) {
@@ -367,7 +356,6 @@ export default function Puestos() {
       });
 
       setOpenModal(false);
-      setSelection([]);
       setPage(1);
       setCreateTemplatesDraft([]);
       await refetch();
@@ -379,7 +367,7 @@ export default function Puestos() {
   };
 
   const handleEdit = async (values: CreateJobPositionPayload) => {
-    if (!selectedId || !selectedRow) return false;
+    if (!editingRow) return false;
 
     try {
       const payload = {
@@ -387,7 +375,7 @@ export default function Puestos() {
         departamento: String(values.departamento ?? "").trim().toUpperCase(),
       };
 
-      const updated = await patchPuesto(selectedId, payload);
+      const updated = await patchPuesto(editingRow.id, payload);
 
       replaceContractTemplatesForPuesto({
         puestoId: updated.id,
@@ -396,7 +384,7 @@ export default function Puestos() {
       });
 
       setOpenEditModal(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetch();
       return true;
     } catch (error) {
@@ -405,16 +393,13 @@ export default function Puestos() {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (!selectedId) return;
-
+  const handleDeactivate = async (id: number) => {
     const payload = {
       estado: "INACTIVO",
     };
 
     try {
-      await patchPuesto(selectedId, payload);
-      setSelection([]);
+      await patchPuesto(id, payload);
       setPage(1);
       await refetch();
     } catch (error) {
@@ -446,34 +431,30 @@ export default function Puestos() {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (row) => String(row.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <HStack gap="2" justify="flex-end" wrap="wrap">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                  >
-                    Desactivar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEditModal(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEditModal(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDeactivate(row.id)}
+                  >
+                    <FiTrash2 /> Desactivar
+                  </ChakraButton>
+                </HStack>
               ),
             }}
             pagination={{
@@ -610,6 +591,7 @@ export default function Puestos() {
           setOpenEditModal(event.open);
           if (!event.open) {
             setTemplateEditId(null);
+            setEditingRow(null);
           }
         }}
         content={
@@ -617,9 +599,9 @@ export default function Puestos() {
             onSubmit={handleEdit}
             resetOnSuccess
             defaultValues={{
-              nombre: selectedRow?.puesto,
-              departamento: selectedRow?.departamento,
-              estado: selectedRow?.estado,
+              nombre: editingRow?.puesto,
+              departamento: editingRow?.departamento,
+              estado: editingRow?.estado,
             }}
           >
             <Stack gap="4">
@@ -670,7 +652,7 @@ export default function Puestos() {
                     appearance="login"
                     size="sm"
                     onClick={() => openTemplateEditor("edit")}
-                    disabled={!selectedRow}
+                    disabled={!editingRow}
                   >
                     Agregar plantilla <FiPlus />
                   </Button>

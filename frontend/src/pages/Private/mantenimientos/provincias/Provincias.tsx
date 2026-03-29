@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
@@ -21,11 +21,11 @@ type EditFormValues = { nombre: string };
 const BASE_URL = "mantenimientos/provincias";
 
 const Provincias = () => {
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [editingRow, setEditingRow] = useState<ProvinciaRow | null>(null);
 
   const {
     data: provincias = [],
@@ -42,17 +42,6 @@ const Provincias = () => {
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const parsed = Number(selection[0]);
-    return Number.isFinite(parsed) ? parsed : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return provincias.find((row) => row.id === selectedId) ?? null;
-  }, [provincias, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -87,7 +76,6 @@ const Provincias = () => {
       await createProvincia(payload);
 
       setOpenCreate(false);
-      setSelection([]);
       setPage(1);
       await refetch();
       return true;
@@ -98,16 +86,16 @@ const Provincias = () => {
   };
 
   const handleEdit = async (values: EditFormValues) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
     try {
       const payload: UpdatePayload = {
         nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
-      await updateProvincia(selectedId, payload);
+      await updateProvincia(editingRow.id, payload);
 
       setOpenEdit(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetch();
       return true;
     } catch (error) {
@@ -116,14 +104,12 @@ const Provincias = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
+  const handleDelete = async (id: number) => {
     try {
       await apiRequest<void>({
-        url: `${BASE_URL}/${selectedId}`,
+        url: `${BASE_URL}/${id}`,
         method: "DELETE",
       });
-      setSelection([]);
       setPage(1);
       await refetch();
     } catch (error) {
@@ -153,35 +139,30 @@ const Provincias = () => {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (row) => String(row.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={handleDelete}
-                  >
-                    Eliminar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEdit(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEdit(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <FiTrash2 /> Eliminar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -246,11 +227,14 @@ const Provincias = () => {
         title="Editar provincia"
         isOpen={openEdit}
         size="md"
-        onOpenChange={(event) => setOpenEdit(event.open)}
+        onOpenChange={(event) => {
+          setOpenEdit(event.open);
+          if (!event.open) setEditingRow(null);
+        }}
         content={
           <Form<EditFormValues>
             onSubmit={handleEdit}
-            defaultValues={{ nombre: selectedRow?.nombre ?? "" }}
+            defaultValues={{ nombre: editingRow?.nombre ?? "" }}
           >
             <InputField
               fieldType="text"
@@ -273,7 +257,7 @@ const Provincias = () => {
                 mt="4"
                 size="lg"
                 w="100%"
-                disabled={!selectedId}
+                disabled={!editingRow}
               >
                 Actualizar
               </Button>

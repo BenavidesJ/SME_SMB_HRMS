@@ -1,29 +1,27 @@
-import { useMemo, type Dispatch, type SetStateAction } from "react";
+import { useMemo } from "react";
 import { DataTable } from "../../../../../components/general/table/DataTable";
 import type { EmployeeRow } from "../../../../../types";
 import type { DataTableColumn, DataTablePagination } from "../../../../../components/general/table/types";
 import { Badge, Button as ChakraButton, HStack } from "@chakra-ui/react";
+import { FiEdit2, FiEye } from "react-icons/fi";
 import { toTitleCase } from "../../../../../utils";
 import { useNavigate } from "react-router";
 
 interface GestionEmpleadosTablaProps {
   loading: boolean;
   employees: EmployeeRow[];
-  selection: string[];
   tablePagination?: DataTablePagination;
   page: number;
-  setSelection: Dispatch<SetStateAction<string[]>>;
-  edit?: () => void;
+  // eslint-disable-next-line no-unused-vars
+  onEdit?: (_id: number) => void;
 }
 
 export const GestionEmpleadosTabla = ({
   employees,
   loading,
-  selection,
   tablePagination,
   page,
-  setSelection,
-  edit,
+  onEdit,
 }: GestionEmpleadosTablaProps) => {
   const nav = useNavigate();
   const pageSize = 10;
@@ -117,36 +115,29 @@ export const GestionEmpleadosTabla = ({
       columns={columns}
       isDataLoading={loading}
       size="md"
-      selection={{
-        enabled: true,
-        selectedKeys: selection,
-        onChange: setSelection,
-        getRowKey: (r) => String(r.id),
-      }}
-      actionBar={{
-        enabled: true,
-        renderActions: () => (
-          <>
+      actionColumn={{
+        header: "Acciones",
+        w: "300px",
+        cell: (row) => (
+          <HStack gap="2" justifyContent="flex-end" wrap="wrap">
             <ChakraButton
-              variant="solid"
+              variant="subtle"
               colorPalette="yellow"
               size="sm"
-              disabled={selection.length !== 1}
-              onClick={() => edit?.()}
+              onClick={() => onEdit?.(row.id)}
             >
-              Editar
+              <FiEdit2 /> Editar
             </ChakraButton>
 
             <ChakraButton
-              variant="solid"
-              colorPalette="teal"
+              variant="subtle"
+              colorPalette="blue"
               size="sm"
-              disabled={selection.length !== 1}
-              onClick={() => nav(`/mantenimientos-consultas/colaboradores/${selection[0]}`)}
+              onClick={() => nav(`/mantenimientos-consultas/colaboradores/${row.id}`)}
             >
-              Administrar Vínculo Laboral
+              <FiEye /> Ver detalle
             </ChakraButton>
-          </>
+          </HStack>
         ),
       }}
       pagination={tablePagination}

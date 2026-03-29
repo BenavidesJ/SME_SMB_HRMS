@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
@@ -27,11 +27,11 @@ type CreatePayload = { fecha: string; nombre: string; es_obligatorio: boolean };
 type UpdatePayload = { fecha?: string; nombre?: string; es_obligatorio?: boolean };
 
 const Feriados = () => {
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [editingRow, setEditingRow] = useState<FeriadoRow | null>(null);
 
   const { data: feriados = [], isLoading: isTableLoading, refetch } = useApiQuery<FeriadoRow[]>({ url: BASE_URL });
 
@@ -44,17 +44,6 @@ const Feriados = () => {
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const parsed = Number(selection[0]);
-    return Number.isFinite(parsed) ? parsed : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return feriados.find((row) => row.id === selectedId) ?? null;
-  }, [feriados, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -87,7 +76,6 @@ const Feriados = () => {
       await createFeriado(payload);
 
       setOpenCreate(false);
-      setSelection([]);
       setPage(1);
       await refetch();
       return true;
@@ -98,7 +86,7 @@ const Feriados = () => {
   };
 
   const handleEdit = async (values: UpdateFormValues) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
 
     try {
       const payload: UpdatePayload = {
@@ -107,10 +95,10 @@ const Feriados = () => {
         es_obligatorio: values.es_obligatorio === "true",
       };
 
-      await updateFeriado(selectedId, payload);
+      await updateFeriado(editingRow.id, payload);
 
       setOpenEdit(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetch();
       return true;
     } catch (error) {
@@ -119,11 +107,9 @@ const Feriados = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
+  const handleDelete = async (id: number) => {
     try {
-      await apiRequest<void>({ url: `${BASE_URL}/${selectedId}`, method: "DELETE" });
-      setSelection([]);
+      await apiRequest<void>({ url: `${BASE_URL}/${id}`, method: "DELETE" });
       setPage(1);
       await refetch();
     } catch (error) {
@@ -153,35 +139,30 @@ const Feriados = () => {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (row) => String(row.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={handleDelete}
-                  >
-                    Eliminar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEdit(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEdit(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <FiTrash2 /> Eliminar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -253,14 +234,17 @@ const Feriados = () => {
         title="Editar feriado"
         isOpen={openEdit}
         size="lg"
-        onOpenChange={(event) => setOpenEdit(event.open)}
+        onOpenChange={(event) => {
+          setOpenEdit(event.open);
+          if (!event.open) setEditingRow(null);
+        }}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
             defaultValues={{
-              fecha: selectedRow?.fecha ?? "",
-              nombre: selectedRow?.nombre ?? "",
-              es_obligatorio: selectedRow?.es_obligatorio ? "true" : "false",
+              fecha: editingRow?.fecha ?? "",
+              nombre: editingRow?.nombre ?? "",
+              es_obligatorio: editingRow?.es_obligatorio ? "true" : "false",
             }}
           >
             <InputField
@@ -300,7 +284,7 @@ const Feriados = () => {
                 mt="4"
                 size="lg"
                 w="100%"
-                disabled={!selectedId}
+                disabled={!editingRow}
               >
                 Actualizar
               </Button>

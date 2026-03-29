@@ -4,7 +4,7 @@ import type { Status } from "../../../../types";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import { Modal } from "../../../../components/general";
 import { Form, InputField } from "../../../../components/forms";
@@ -15,8 +15,8 @@ import { Layout } from "../../../../components/layout";
 export const Estados = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingRow, setEditingRow] = useState<Status | null>(null);
   const { data: estados = [], isLoading: statusLoading, refetch: refetchStatus } = useApiQuery<Status[]>({ url: "mantenimientos/estados" });
-  const [selection, setSelection] = useState<string[]>([]);
   const { mutate: createStatus, isLoading: isSubmitting } = useApiMutation<{ estado: string }, void>({ url: "mantenimientos/estados", method: "POST" });
   const { mutate: modifyStatus } =
     useApiMutation<{ estado: string }, void, number>({
@@ -25,17 +25,6 @@ export const Estados = () => {
     })
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const id = Number(selection[0]);
-    return Number.isFinite(id) ? id : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return estados.find((r) => r.id === selectedId) ?? null;
-  }, [estados, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -72,7 +61,6 @@ export const Estados = () => {
       await createStatus(payload);
 
       setOpenModal(false);
-      setSelection([]);
       setPage(1);
       await refetchStatus();
 
@@ -84,7 +72,7 @@ export const Estados = () => {
   };
 
   const handleEdit = async (values: { estado: string }) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
 
     try {
 
@@ -92,10 +80,10 @@ export const Estados = () => {
         estado: String(values.estado ?? "").trim().toUpperCase(),
       };
 
-      await modifyStatus(selectedId, payload);
+      await modifyStatus(editingRow.id, payload);
 
       setOpenEditModal(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetchStatus();
 
       return true;
@@ -105,14 +93,12 @@ export const Estados = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (!selectedId) return;
+  const handleDelete = async (id: number) => {
 
     try {
 
-      await deleteStatus(selectedId);
+      await deleteStatus(id);
 
-      setSelection([]);
       setPage(1);
       await refetchStatus();
     } catch (error) {
@@ -143,34 +129,30 @@ export const Estados = () => {
             columns={columns}
             isDataLoading={statusLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (r) => String(r.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                  >
-                    Desactivar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEditModal(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEditModal(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <FiTrash2 /> Desactivar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -226,12 +208,15 @@ export const Estados = () => {
         title="Editar estado"
         isOpen={openEditModal}
         size="md"
-        onOpenChange={(e) => setOpenEditModal(e.open)}
+        onOpenChange={(e) => {
+          setOpenEditModal(e.open);
+          if (!e.open) setEditingRow(null);
+        }}
         content={
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              estado: selectedRow?.estado ?? "",
+              estado: editingRow?.estado ?? "",
             }}
           >
             <InputField

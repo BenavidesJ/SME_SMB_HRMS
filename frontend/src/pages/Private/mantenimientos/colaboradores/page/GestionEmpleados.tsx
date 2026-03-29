@@ -62,7 +62,6 @@ const GestionEmpleados = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openConfirmEmployeeToggle, setOpenConfirmEmployeeToggle] = useState(false);
 
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [editId, setEditId] = useState<number | null>(null);
 
@@ -78,15 +77,8 @@ const GestionEmpleados = () => {
   const marStatsOptions = useMemo(() => mapMaritalStatusToOptions(maritalStatuses), [maritalStatuses, mapMaritalStatusToOptions]);
   const rolesOptions = useMemo(() => mapRoleToOptions(roles), [roles, mapRoleToOptions]);
 
-  const selectedColaboradorId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const id = Number(selection[0]);
-    return Number.isFinite(id) ? id : null;
-  }, [selection]);
-
-  const onClickEdit = () => {
-    if (!selectedColaboradorId) return;
-    setEditId(selectedColaboradorId);
+  const handleOpenEditEmployee = (employeeId: number) => {
+    setEditId(employeeId);
     setOpenEditModal(true);
   };
 
@@ -151,7 +143,6 @@ const GestionEmpleados = () => {
       }
 
       setOpenModal(false);
-      setSelection([]);
       setPage(1);
       await refetchProvincias();
 
@@ -181,7 +172,6 @@ const GestionEmpleados = () => {
       await patchEmployee(editId, patch);
 
       setOpenEditModal(false);
-      setSelection([]);
       await refetchEmployees();
 
       return true;
@@ -239,10 +229,8 @@ const GestionEmpleados = () => {
           <GestionEmpleadosTabla
             employees={employees}
             loading={isTableLoading}
-            selection={selection}
-            setSelection={setSelection}
             page={page}
-            edit={onClickEdit}
+            onEdit={handleOpenEditEmployee}
             tablePagination={
               {
                 enabled: true,

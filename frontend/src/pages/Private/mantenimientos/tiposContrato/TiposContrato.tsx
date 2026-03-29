@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, HStack, SimpleGrid, Stack } from "@chakra-ui/react";
-import { FiPlus } from "react-icons/fi";
+import { Box, Button as ChakraButton, SimpleGrid, Stack } from "@chakra-ui/react";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
@@ -25,21 +25,10 @@ const TiposContrato = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [rows, setRows] = useState<TipoContratoRow[]>([]);
-  const [selection, setSelection] = useState<string[]>([]);
+  const [editingRow, setEditingRow] = useState<TipoContratoRow | null>(null);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const n = Number(selection[0]);
-    return Number.isFinite(n) ? n : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return rows.find((r) => r.id === selectedId) ?? null;
-  }, [rows, selectedId]);
 
   const fill = useCallback(async () => {
     try {
@@ -82,7 +71,6 @@ const TiposContrato = () => {
       await createContractType(payload);
 
       await fill();
-      setSelection([]);
       setOpenCreate(false);
 
       return true;
@@ -91,23 +79,18 @@ const TiposContrato = () => {
     }
   };
 
-  const handleOpenEdit = () => {
-    if (!selectedRow) return;
-    setOpenEdit(true);
-  };
-
   const handleEdit = async (values: TipoContratoFormEdit) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
 
     try {
       setIsSubmitting(true);
 
       const payload = { tipo_contrato: String(values.tipo_contrato ?? "").trim() };
-      await patchContractType(selectedId, payload);
+      await patchContractType(editingRow.id, payload);
 
       await fill();
-      setSelection([]);
       setOpenEdit(false);
+      setEditingRow(null);
 
       return true;
     } finally {
@@ -115,21 +98,14 @@ const TiposContrato = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (selection.length === 0) return;
+  const handleDelete = async (id: number) => {
 
     try {
       setIsSubmitting(true);
 
-      for (const key of selection) {
-        const id = Number(key);
-        if (Number.isFinite(id)) {
-          await deleteContractType(id);
-        }
-      }
+      await deleteContractType(id);
 
       await fill();
-      setSelection([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -157,34 +133,31 @@ const TiposContrato = () => {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (r) => String(r.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <HStack gap="2">
-                  <Button
-                    appearance="login"
-                    loading={isSubmitting}
-                    disabled={selection.length !== 1}
-                    onClick={handleOpenEdit}
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="yellow"
+                    size="sm"
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEdit(true);
+                    }}
                   >
-                    Editar
-                  </Button>
-
-                  <Button
-                    appearance="login"
+                    <FiEdit2 /> Editar
+                  </ChakraButton>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
                     loading={isSubmitting}
-                    disabled={selection.length === 0}
-                    onClick={handleDelete}
+                    onClick={() => handleDelete(row.id)}
                   >
-                    Eliminar
-                  </Button>
-                </HStack>
+                    <FiTrash2 /> Eliminar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -250,12 +223,15 @@ const TiposContrato = () => {
         title="Editar Tipo de Contrato"
         isOpen={openEdit}
         size="lg"
-        onOpenChange={(e) => setOpenEdit(e.open)}
+        onOpenChange={(e) => {
+          setOpenEdit(e.open);
+          if (!e.open) setEditingRow(null);
+        }}
         content={
           <Form<TipoContratoFormEdit>
             onSubmit={handleEdit}
             defaultValues={{
-              tipo_contrato: selectedRow?.tipo_contrato ?? "",
+              tipo_contrato: editingRow?.tipo_contrato ?? "",
             }}
           >
             <SimpleGrid columns={1} gapX="1rem">
@@ -286,7 +262,7 @@ const TiposContrato = () => {
                 mt="4"
                 size="lg"
                 w="100%"
-                disabled={!selectedId}
+                disabled={!editingRow}
               >
                 Actualizar
               </Button>

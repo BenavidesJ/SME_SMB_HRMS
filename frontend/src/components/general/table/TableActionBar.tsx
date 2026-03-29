@@ -10,8 +10,9 @@ interface TableActionBarProps {
 
 export const TableActionBar = (props: TableActionBarProps) => {
   const { hasSelection, selectedKeys, actionBar, selectionEnabled } = props;
+  const renderActions = actionBar?.renderActions;
 
-  if (!selectionEnabled && !actionBar?.enabled) return null;
+  if (!selectionEnabled || !actionBar?.enabled || !renderActions) return null;
 
   return (
     <ActionBar.Root open={hasSelection}>
@@ -22,7 +23,7 @@ export const TableActionBar = (props: TableActionBarProps) => {
               {selectedKeys.length} seleccionados
             </ActionBar.SelectionTrigger>
             <ActionBar.Separator />
-            {actionBar!.renderActions!(selectedKeys.length)}
+            {renderActions(selectedKeys.length)}
           </ActionBar.Content>
         </ActionBar.Positioner>
       </Portal>

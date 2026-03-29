@@ -4,7 +4,7 @@ import type { MaritalStatus } from "../../../../types/MaritalStatus";
 import type { DataTableColumn } from "../../../../components/general/table/types";
 import { Box, Stack, Button as ChakraButton } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import { Modal } from "../../../../components/general";
 import { useApiMutation } from "../../../../hooks/useApiMutations";
@@ -15,6 +15,7 @@ import { Layout } from "../../../../components/layout";
 export const EstadosCiviles = () => {
   const [openModal, setOpenModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingRow, setEditingRow] = useState<MaritalStatus | null>(null);
   const { data: maritalStatuses = [], isLoading: isTableLoading, refetch: refetchMaritalStatuses } = useApiQuery<MaritalStatus[]>({ url: "mantenimientos/estados-civiles" });
   const { mutate: createMaritalStatus, isLoading: isSubmitting } = useApiMutation<{ estado_civil: string }, void>({ url: "mantenimientos/estados-civiles", method: "POST" });
   const { mutate: patchMaritalStatus } =
@@ -22,20 +23,8 @@ export const EstadosCiviles = () => {
       url: (id) => `mantenimientos/estados-civiles/${id}`,
       method: "PATCH",
     })
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const id = Number(selection[0]);
-    return Number.isFinite(id) ? id : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return maritalStatuses.find((r) => r.id === selectedId) ?? null;
-  }, [maritalStatuses, selectedId]);
 
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -52,7 +41,6 @@ export const EstadosCiviles = () => {
       await createMaritalStatus(payload);
 
       setOpenModal(false);
-      setSelection([]);
       setPage(1);
       await refetchMaritalStatuses();
 
@@ -64,7 +52,7 @@ export const EstadosCiviles = () => {
   };
 
   const handleEdit = async (values: { estado_civil: string }) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
 
     try {
 
@@ -72,10 +60,10 @@ export const EstadosCiviles = () => {
         estado_civil: String(values.estado_civil ?? "").trim().toUpperCase(),
       };
 
-      await patchMaritalStatus(selectedId, payload);
+      await patchMaritalStatus(editingRow.id, payload);
 
       setOpenEditModal(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetchMaritalStatuses();
 
       return true;
@@ -85,13 +73,11 @@ export const EstadosCiviles = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (!selectedId) return;
+  const handleDelete = async (id: number) => {
 
     try {
-      await deleteMaritalStatus(selectedId);
+      await deleteMaritalStatus(id);
 
-      setSelection([]);
       setPage(1);
       await refetchMaritalStatuses();
     } catch (error) {
@@ -143,34 +129,30 @@ export const EstadosCiviles = () => {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (r) => String(r.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                  >
-                    Desactivar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEditModal(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEditModal(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <FiTrash2 /> Desactivar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -226,12 +208,15 @@ export const EstadosCiviles = () => {
         title="Editar estado civil"
         isOpen={openEditModal}
         size="md"
-        onOpenChange={(e) => setOpenEditModal(e.open)}
+        onOpenChange={(e) => {
+          setOpenEditModal(e.open);
+          if (!e.open) setEditingRow(null);
+        }}
         content={
           <Form
             onSubmit={handleEdit}
             defaultValues={{
-              estado_civil: selectedRow?.estado_civil ?? "",
+              estado_civil: editingRow?.estado_civil ?? "",
             }}
           >
             <InputField

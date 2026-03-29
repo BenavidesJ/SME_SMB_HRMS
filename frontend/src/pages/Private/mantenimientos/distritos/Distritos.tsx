@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Box, Stack, Button as ChakraButton, Field, NativeSelect, Flex } from "@chakra-ui/react";
-import { FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { Layout } from "../../../../components/layout";
 import { DataTable } from "../../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../../components/general/table/types";
@@ -26,11 +26,11 @@ const CANTON_URL = "mantenimientos/cantones";
 const PROVINCE_URL = "mantenimientos/provincias";
 
 const Distritos = () => {
-  const [selection, setSelection] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [editingRow, setEditingRow] = useState<DistritoRow | null>(null);
   const [filterProvinceId, setFilterProvinceId] = useState("");
   const [filterCantonId, setFilterCantonId] = useState("");
   const filterFocusStyles = { outline: "1px solid", outlineColor: "brand.blue.100" } as const;
@@ -63,17 +63,6 @@ const Distritos = () => {
     url: (id) => `${BASE_URL}/${id}`,
     method: "PATCH",
   });
-
-  const selectedId = useMemo(() => {
-    if (selection.length !== 1) return null;
-    const parsed = Number(selection[0]);
-    return Number.isFinite(parsed) ? parsed : null;
-  }, [selection]);
-
-  const selectedRow = useMemo(() => {
-    if (!selectedId) return null;
-    return distritos.find((row) => row.id === selectedId) ?? null;
-  }, [distritos, selectedId]);
 
   const filteredDistritos = useMemo(() => {
     return distritos.filter((row) => {
@@ -127,7 +116,6 @@ const Distritos = () => {
       await createDistrito(payload);
 
       setOpenCreate(false);
-      setSelection([]);
       setPage(1);
       await refetch();
       return true;
@@ -138,7 +126,7 @@ const Distritos = () => {
   };
 
   const handleEdit = async (values: UpdateFormValues) => {
-    if (!selectedId) return false;
+    if (!editingRow) return false;
 
     try {
       const payload: UpdatePayload = {
@@ -146,10 +134,10 @@ const Distritos = () => {
         nombre: String(values.nombre ?? "").trim().toUpperCase(),
       };
 
-      await updateDistrito(selectedId, payload);
+      await updateDistrito(editingRow.id, payload);
 
       setOpenEdit(false);
-      setSelection([]);
+      setEditingRow(null);
       await refetch();
       return true;
     } catch (error) {
@@ -158,11 +146,9 @@ const Distritos = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
+  const handleDelete = async (id: number) => {
     try {
-      await apiRequest<void>({ url: `${BASE_URL}/${selectedId}`, method: "DELETE" });
-      setSelection([]);
+      await apiRequest<void>({ url: `${BASE_URL}/${id}`, method: "DELETE" });
       setPage(1);
       await refetch();
     } catch (error) {
@@ -198,7 +184,6 @@ const Distritos = () => {
                     onChange={(event) => {
                       setFilterProvinceId(event.target.value);
                       setFilterCantonId("");
-                      setSelection([]);
                       setPage(1);
                     }}
                   >
@@ -221,7 +206,6 @@ const Distritos = () => {
                   value={filterCantonId}
                   onChange={(event) => {
                     setFilterCantonId(event.target.value);
-                    setSelection([]);
                     setPage(1);
                   }}
                 >
@@ -242,7 +226,6 @@ const Distritos = () => {
                 onClick={() => {
                   setFilterProvinceId("");
                   setFilterCantonId("");
-                  setSelection([]);
                   setPage(1);
                 }}
                 disabled={!filterProvinceId && !filterCantonId}
@@ -257,35 +240,30 @@ const Distritos = () => {
             columns={columns}
             isDataLoading={isTableLoading}
             size="md"
-            selection={{
-              enabled: true,
-              selectedKeys: selection,
-              onChange: setSelection,
-              getRowKey: (row) => String(row.id),
-            }}
-            actionBar={{
-              enabled: true,
-              renderActions: () => (
-                <>
+            actionColumn={{
+              header: "Acciones",
+              cell: (row) => (
+                <Stack direction="row" gap="2" justifyContent="flex-end">
                   <ChakraButton
-                    variant="solid"
-                    colorPalette="red"
-                    size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={handleDelete}
-                  >
-                    Eliminar
-                  </ChakraButton>
-                  <ChakraButton
-                    variant="solid"
+                    variant="subtle"
                     colorPalette="yellow"
                     size="sm"
-                    disabled={selection.length !== 1}
-                    onClick={() => setOpenEdit(true)}
+                    onClick={() => {
+                      setEditingRow(row);
+                      setOpenEdit(true);
+                    }}
                   >
-                    Editar
+                    <FiEdit2 /> Editar
                   </ChakraButton>
-                </>
+                  <ChakraButton
+                    variant="subtle"
+                    colorPalette="red"
+                    size="sm"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <FiTrash2 /> Eliminar
+                  </ChakraButton>
+                </Stack>
               ),
             }}
             pagination={{
@@ -361,13 +339,16 @@ const Distritos = () => {
         title="Editar distrito"
         isOpen={openEdit}
         size="md"
-        onOpenChange={(event) => setOpenEdit(event.open)}
+        onOpenChange={(event) => {
+          setOpenEdit(event.open);
+          if (!event.open) setEditingRow(null);
+        }}
         content={
           <Form<UpdateFormValues>
             onSubmit={handleEdit}
             defaultValues={{
-              id_canton: selectedRow ? String(selectedRow.id_canton) : "",
-              nombre: selectedRow?.nombre ?? "",
+              id_canton: editingRow ? String(editingRow.id_canton) : "",
+              nombre: editingRow?.nombre ?? "",
             }}
           >
             <InputField
@@ -401,7 +382,7 @@ const Distritos = () => {
                 mt="4"
                 size="lg"
                 w="100%"
-                disabled={!selectedId}
+                disabled={!editingRow}
               >
                 Actualizar
               </Button>

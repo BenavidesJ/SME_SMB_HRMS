@@ -568,14 +568,14 @@ export default function ColaboradorDetalle() {
   const isTableLoading = isEmployeeLoading || isContractsLoading;
   const contractActionColumn = useMemo<DataTableActionColumn<Contrato>>(() => ({
     header: "Acciones",
-    w: "180px",
+    w: "300px",
     cell: (contract) => {
       const isActive = String(contract.estado ?? "").toUpperCase() === "ACTIVO";
 
       return (
         <Button
           size="xs"
-          variant="outline"
+          variant="subtle"
           colorPalette={isActive ? "red" : "blue"}
           onClick={() => setContractToToggle(contract)}
           loading={contractToggleLoadingId === contract.id_contrato}

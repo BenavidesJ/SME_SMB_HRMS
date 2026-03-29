@@ -69,6 +69,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const hasActionColumn = Boolean(actionColumn);
   const actionColumnIsSticky = Boolean(actionColumn?.sticky ?? true);
   const actionColumnTextAlign = actionColumn?.textAlign ?? "end";
+  const actionColumnRequestedWidth = String(actionColumn?.w ?? "");
+  const actionColumnWidth = actionColumnRequestedWidth === "300px" ? "300px" : "200px";
   const showStickyCss = (stickyHeader && enableStickyColumns) || (hasActionColumn && actionColumnIsSticky);
 
   const totalColSpan =
@@ -182,7 +184,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     insetInlineEnd: 0,
                   }
                   : {})}
-                w={actionColumn.w ?? "140px"}
+                w={actionColumnWidth}
+                minW={"200px"}
+                maxW={"400px"}
                 textAlign={actionColumnTextAlign}
               >
                 {actionColumn.cell(row)}
@@ -198,7 +202,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       size={size}
       variant={variant}
       striped={striped}
-      stickyHeader
+      stickyHeader={stickyHeader}
       interactive
       css={{
         ...(showStickyCss ? stickyCss : {}),
@@ -256,7 +260,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   insetInlineEnd: 0,
                 }
                 : {})}
-              w={actionColumn.w ?? "140px"}
+              w={actionColumnWidth}
+              minW={actionColumnWidth}
+              maxW={actionColumnWidth}
               textAlign={actionColumnTextAlign}
             >
               {actionColumn.header ?? "Acciones"}
