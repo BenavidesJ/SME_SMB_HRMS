@@ -19,6 +19,7 @@ import { Form, InputField } from "../../../components/forms";
 import { useAuth } from "../../../context/AuthContext";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { changePassword } from "../../../services/api/auth";
+import { formatDateUiCompact } from "../../../utils/dates";
 import type { Contrato, EmployeeRow } from "../../../types";
 
 interface PasswordFormValues {
@@ -111,7 +112,7 @@ const Perfil = () => {
               <Stack align={{ base: "center", md: "flex-start" }} gap="2">
                 <Heading size="lg">{fullName}</Heading>
                 <Text color="fg.muted">
-                  {employee?.fecha_ingreso}
+                  {formatDateUiCompact(employee?.fecha_ingreso)}
                 </Text>
                 <Text color="fg.muted">
                   {employee?.usuario?.username ??
@@ -170,7 +171,7 @@ const Perfil = () => {
                     />
                     <InfoBlock
                       label="Fecha de nacimiento"
-                      value={user?.fecha_nacimiento}
+                      value={formatDateUiCompact(user?.fecha_nacimiento)}
                     />
                   </SimpleGrid>
                 </Card.Body>
@@ -290,7 +291,7 @@ const Perfil = () => {
                       />
                       <InfoBlock
                         label="Fecha de inicio"
-                        value={activeContract.fecha_inicio}
+                        value={formatDateUiCompact(activeContract.fecha_inicio)}
                       />
                     </SimpleGrid>
                   </Card.Body>

@@ -51,22 +51,6 @@ export const NAV_MAIN: NavItem[] = [
     roles: rolesForPath("/mantenimientos-consultas"),
   },
   {
-    label: "Planillas",
-    icon: <PiMoney />,
-    path: "/planillas",
-    roles: rolesForPath("/planillas/mi-planilla"),
-    children: [
-      { label: "Gestión de planillas", path: "/planillas", roles: rolesForPath("/planillas") },
-      { label: "Mi planilla", path: "/planillas/mi-planilla", roles: rolesForPath("/planillas/mi-planilla") },
-    ],
-    childrenRoles: rolesForPath("/planillas/mi-planilla"),
-    parentClickBehavior: {
-      defaultChildPathForRoles: {
-        EMPLEADO: "/planillas/mi-planilla",
-      },
-    },
-  },
-  {
     label: "Asistencia",
     icon: <PiCalendarCheck />,
     path: "/asistencia",
@@ -79,6 +63,38 @@ export const NAV_MAIN: NavItem[] = [
     parentClickBehavior: {
       defaultChildPathForRoles: {
         EMPLEADO: "/asistencia/marca",
+      },
+    },
+  },
+  {
+    label: "Horas Extra",
+    icon: <PiCalendarPlus />,
+    path: "/horas-extra",
+    roles: rolesForPath("/horas-extra"),
+    children: [
+      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: rolesForPath("/horas-extra/solicitud") },
+      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: rolesForPath("/horas-extra/gestion") },
+    ],
+    childrenRoles: rolesForPath("/horas-extra/gestion"),
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/horas-extra/solicitud",
+      },
+    },
+  },
+  {
+    label: "Permisos",
+    icon: <FiUsers />,
+    path: "/permisos",
+    roles: rolesForPath("/permisos"),
+    children: [
+      { label: "Solicitud", path: "/permisos/solicitud", roles: rolesForPath("/permisos/solicitud") },
+      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: rolesForPath("/permisos/gestion") },
+    ],
+    childrenRoles: rolesForPath("/permisos/gestion"),
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/permisos/solicitud",
       },
     },
   },
@@ -99,26 +115,32 @@ export const NAV_MAIN: NavItem[] = [
     },
   },
   {
+    label: "Incapacidades",
+    icon: <PiHospital />,
+    path: "/incapacidades",
+    roles: rolesForPath("/incapacidades"),
+  },
+  {
+    label: "Planillas",
+    icon: <PiMoney />,
+    path: "/planillas",
+    roles: rolesForPath("/planillas/mi-planilla"),
+    children: [
+      { label: "Gestión de planillas", path: "/planillas", roles: rolesForPath("/planillas") },
+      { label: "Mi planilla", path: "/planillas/mi-planilla", roles: rolesForPath("/planillas/mi-planilla") },
+    ],
+    childrenRoles: rolesForPath("/planillas/mi-planilla"),
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/planillas/mi-planilla",
+      },
+    },
+  },
+  {
     label: "Aguinaldos",
     icon: <PiBank />,
     path: "/aguinaldos",
     roles: rolesForPath("/aguinaldos"),
-  },
-  {
-    label: "Horas Extra",
-    icon: <PiCalendarPlus />,
-    path: "/horas-extra",
-    roles: rolesForPath("/horas-extra"),
-    children: [
-      { label: "Horas Extra", path: "/horas-extra/solicitud", roles: rolesForPath("/horas-extra/solicitud") },
-      { label: "Gestionar Solicitudes", path: "/horas-extra/gestion", roles: rolesForPath("/horas-extra/gestion") },
-    ],
-    childrenRoles: rolesForPath("/horas-extra/gestion"),
-    parentClickBehavior: {
-      defaultChildPathForRoles: {
-        EMPLEADO: "/horas-extra/solicitud",
-      },
-    },
   },
   {
     label: "Liquidaciones",
@@ -127,38 +149,16 @@ export const NAV_MAIN: NavItem[] = [
     roles: rolesForPath("/liquidaciones"),
   },
   {
-    label: "Reportes",
-    icon: <FiBarChart2 />,
-    path: "/reportes",
-    roles: rolesForPath("/reportes"),
-  },
-  {
     label: "Evaluación de Desempeño",
     icon: <FiAward />,
     path: "/evaluacion",
     roles: rolesForPath("/evaluacion"),
   },
   {
-    label: "Incapacidades",
-    icon: <PiHospital />,
-    path: "/incapacidades",
-    roles: rolesForPath("/incapacidades"),
-  },
-  {
-    label: "Permisos",
-    icon: <FiUsers />,
-    path: "/permisos",
-    roles: rolesForPath("/permisos"),
-    children: [
-      { label: "Solicitud", path: "/permisos/solicitud", roles: rolesForPath("/permisos/solicitud") },
-      { label: "Gestionar Solcitudes", path: "/permisos/gestion", roles: rolesForPath("/permisos/gestion") },
-    ],
-    childrenRoles: rolesForPath("/permisos/gestion"),
-    parentClickBehavior: {
-      defaultChildPathForRoles: {
-        EMPLEADO: "/permisos/solicitud",
-      },
-    },
+    label: "Reportes",
+    icon: <FiBarChart2 />,
+    path: "/reportes",
+    roles: rolesForPath("/reportes"),
   },
 ];
 

@@ -1,6 +1,7 @@
 import { Box, Flex, List, Text } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { Tooltip } from "../../../components/ui/tooltip";
 import type { NavItem } from "./navItems";
 import { useAuth } from "../../../context/AuthContext";
@@ -24,45 +25,56 @@ export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: 
     return hasAnyRole(roleName, item.childrenRoles) && visibleChildren.length > 0;
   }, [item.children, item.childrenRoles, roleName, visibleChildren.length]);
 
-  const parentBehavior = item.parentClickBehavior;
-
-  const parentShouldNavigate = useMemo(() => {
-    if (!parentBehavior) return true;
-    return true;
-  }, [parentBehavior]);
+  // Only show the dropdown when the user has more than one child option.
+  // If there's only one visible child (e.g. EMPLEADO), navigate directly.
+  const isExpandable = canSeeChildren && visibleChildren.length > 1;
 
   const parentHref = useMemo(() => {
-    if (!parentBehavior) return item.path;
-
-    if (parentBehavior.defaultChildPathForRoles) {
-      const hit = parentBehavior.defaultChildPathForRoles[roleName];
+    const behavior = item.parentClickBehavior;
+    if (behavior?.defaultChildPathForRoles) {
+      const hit = behavior.defaultChildPathForRoles[roleName];
       if (hit) return hit;
     }
     return item.path;
-  }, [parentBehavior, item.path, roleName]);
+  }, [item.parentClickBehavior, item.path, roleName]);
 
-  const isExpandable = canSeeChildren;
+  const sharedFlexProps = {
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: "3" as const,
+    px: "3" as const,
+    py: "2" as const,
+    borderRadius: "lg" as const,
+    cursor: "pointer" as const,
+    _hover: { bg: "brand.green.25" },
+  };
 
   return (
     <List.Item listStyle="none">
-      <Box
-        onMouseEnter={isExpandable && !collapsed ? () => setOpen(true) : undefined}
-        onMouseLeave={isExpandable && !collapsed ? () => setOpen(false) : undefined}
-      >
-        {parentShouldNavigate ? (
+      <Box>
+        {isExpandable ? (
+          // Multi-child: clicking toggles the dropdown, no routing on the parent
+          <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
+            <Flex
+              {...sharedFlexProps}
+              onClick={() => setOpen((s) => !s)}
+            >
+              <Box fontSize="20px" color="gray.600">{item.icon}</Box>
+              {!collapsed && (
+                <Flex w="full" alignItems="center" justifyContent="space-between">
+                  <Text fontSize="sm" fontWeight="medium">{item.label}</Text>
+                  <Box fontSize="14px" color="gray.500">
+                    {open ? <FiChevronUp /> : <FiChevronDown />}
+                  </Box>
+                </Flex>
+              )}
+            </Flex>
+          </Tooltip>
+        ) : (
+          // Single destination: navigate directly (handles EMPLEADO single-child and no-child items)
           <RouterLink to={parentHref}>
             <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
-              <Flex
-                alignItems="center"
-                justifyContent="center"
-                gap="3"
-                px="3"
-                py="2"
-                borderRadius="lg"
-                cursor="pointer"
-                _hover={{ bg: "brand.green.25" }}
-                onClick={!parentShouldNavigate && isExpandable ? () => setOpen((s) => !s) : undefined}
-              >
+              <Flex {...sharedFlexProps}>
                 <Box fontSize="20px" color="gray.600">{item.icon}</Box>
                 {!collapsed && (
                   <Flex w="full" alignItems="center" justifyContent="space-between">
@@ -72,29 +84,6 @@ export const DesktopNavItem = ({ item, collapsed }: { item: NavItem; collapsed: 
               </Flex>
             </Tooltip>
           </RouterLink>
-        ) : (
-          <Box>
-            <Tooltip content={item.label} showArrow positioning={{ placement: "right-end" }}>
-              <Flex
-                alignItems="center"
-                justifyContent="center"
-                gap="3"
-                px="3"
-                py="2"
-                borderRadius="lg"
-                cursor="pointer"
-                _hover={{ bg: "brand.green.25" }}
-                onClick={!parentShouldNavigate && isExpandable ? () => setOpen((s) => !s) : undefined}
-              >
-                <Box fontSize="20px" color="gray.600">{item.icon}</Box>
-                {!collapsed && (
-                  <Flex w="full" alignItems="center" justifyContent="space-between">
-                    <Text fontSize="sm" fontWeight="medium">{item.label}</Text>
-                  </Flex>
-                )}
-              </Flex>
-            </Tooltip>
-          </Box>
         )}
 
         {isExpandable && !collapsed && (
