@@ -23,8 +23,17 @@ function parseQuery(rawQuery = {}) {
   const requestedSortBy = String(rawQuery.sortBy ?? "fecha_fin").trim();
   const sortBy = ALLOWED_SORT_FIELDS.has(requestedSortBy) ? requestedSortBy : "fecha_fin";
   const search = String(rawQuery.search ?? "").trim().toLowerCase();
+  const monthRaw = String(rawQuery.month ?? "").trim();
+  const yearRaw = String(rawQuery.year ?? "").trim();
 
-  return { page, limit, sortBy, sortDir, search };
+  const month = /^\d{2}$/.test(monthRaw)
+    && Number(monthRaw) >= 1
+    && Number(monthRaw) <= 12
+    ? monthRaw
+    : "";
+  const year = /^\d{4}$/.test(yearRaw) ? yearRaw : "";
+
+  return { page, limit, sortBy, sortDir, search, month, year };
 }
 
 function normalizeText(value) {
@@ -48,6 +57,24 @@ function compareValues(a, b, sortDir) {
   }
 
   return left < right ? 1 : -1;
+}
+
+function getReferenceDate(row) {
+  return row.fecha_pago || row.fecha_fin || row.fecha_inicio || "";
+}
+
+function getMonthValue(row) {
+  const referenceDate = getReferenceDate(row);
+  return /^\d{4}-\d{2}-\d{2}$/.test(referenceDate)
+    ? referenceDate.slice(5, 7)
+    : "";
+}
+
+function getYearValue(row) {
+  const referenceDate = getReferenceDate(row);
+  return /^\d{4}-\d{2}-\d{2}$/.test(referenceDate)
+    ? referenceDate.slice(0, 4)
+    : "";
 }
 
 export async function listarMisPlanillas({ tokenId, query = {} }) {
@@ -90,23 +117,35 @@ export async function listarMisPlanillas({ tokenId, query = {} }) {
     neto: toNumber(registro.neto),
   }));
 
-  const filteredRows = parsedQuery.search
-    ? rows.filter((row) => {
-        const searchable = [
-          row.id_periodo,
-          row.fecha_inicio,
-          row.fecha_fin,
-          row.fecha_pago,
-          row.estado,
-          row.bruto,
-          row.neto,
-        ]
-          .map((value) => normalizeText(value))
-          .join(" ");
+  const filteredRows = rows.filter((row) => {
+    if (parsedQuery.search) {
+      const searchable = [
+        row.id_periodo,
+        row.fecha_inicio,
+        row.fecha_fin,
+        row.fecha_pago,
+        row.estado,
+        row.bruto,
+        row.neto,
+      ]
+        .map((value) => normalizeText(value))
+        .join(" ");
 
-        return searchable.includes(normalizeText(parsedQuery.search));
-      })
-    : rows;
+      if (!searchable.includes(normalizeText(parsedQuery.search))) {
+        return false;
+      }
+    }
+
+    if (parsedQuery.month && getMonthValue(row) !== parsedQuery.month) {
+      return false;
+    }
+
+    if (parsedQuery.year && getYearValue(row) !== parsedQuery.year) {
+      return false;
+    }
+
+    return true;
+  });
 
   const sortedRows = [...filteredRows].sort((left, right) => {
     const result = compareValues(left[parsedQuery.sortBy], right[parsedQuery.sortBy], parsedQuery.sortDir);

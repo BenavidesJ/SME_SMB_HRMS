@@ -7,7 +7,6 @@ import {
   Grid,
   GridItem,
   HStack,
-  Input,
   Separator,
   SimpleGrid,
   Spinner,
@@ -15,14 +14,18 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react";
-import { Document, Image, Page, StyleSheet, Text as PdfText, View, pdf } from "@react-pdf/renderer";
-import { FiArrowDown, FiArrowUp, FiDownload, FiEye, FiSearch } from "react-icons/fi";
+import { Document, Font, Image, Page, StyleSheet, Text as PdfText, View, pdf } from "@react-pdf/renderer";
+import { FiArrowDown, FiArrowUp, FiDownload, FiEye } from "react-icons/fi";
+import notoSans400 from "@fontsource/noto-sans/files/noto-sans-latin-ext-400-normal.woff";
+import notoSans700 from "@fontsource/noto-sans/files/noto-sans-latin-ext-700-normal.woff";
 import logoColor from "../../../assets/LogoColor.svg";
 import logoPdf from "../../../assets/logo.jpg";
 import { Layout } from "../../../components/layout";
 import { Modal } from "../../../components/general/modal/Modal";
 import { DataTable } from "../../../components/general/table/DataTable";
 import type { DataTableColumn } from "../../../components/general/table/types";
+import { MonthPickerBase } from "../../../components/forms/InputField/fields/MonthPickerFieldVariant";
+import { YearPickerBase } from "../../../components/forms/InputField/fields/YearPickerFieldVariant";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import {
   buildMyPayrollsUrl,
@@ -36,12 +39,33 @@ import { formatSpanishLongDate } from "../../../utils";
 import { formatCRC } from "../../../utils/money";
 
 const COMPANY_NAME = "BioAlquimia";
+const PDF_COLON_SYMBOL = "\u20A1";
+
+Font.register({
+  family: "NotoSansPdf",
+  fonts: [
+    { src: notoSans400, fontWeight: 400 },
+    { src: notoSans700, fontWeight: 700 },
+  ],
+});
+
+function formatPdfCRC(value: number | string) {
+  const numericValue = typeof value === "string" ? Number(value.replace(/,/g, "")) : value;
+  if (!Number.isFinite(numericValue)) return `${PDF_COLON_SYMBOL}0,00`;
+
+  const formatted = new Intl.NumberFormat("es-CR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+
+  return `${PDF_COLON_SYMBOL}${formatted}`;
+}
 
 const pdfStyles = StyleSheet.create({
   page: {
     padding: 26,
     fontSize: 10,
-    fontFamily: "Helvetica",
+    fontFamily: "NotoSansPdf",
     color: "#1A202C",
   },
   topBar: {
@@ -249,7 +273,7 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
             <View key={item.label} style={pdfStyles.tableRow}>
               <PdfText style={pdfStyles.bodyCell}>{item.label}</PdfText>
               <PdfText style={pdfStyles.bodyCell}>{String(item.cantidad)}</PdfText>
-              <PdfText style={pdfStyles.bodyCell}>{formatCRC(item.monto)}</PdfText>
+              <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(item.monto)}</PdfText>
             </View>
           ))}
         </View>
@@ -265,7 +289,7 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
             <View key={`${item.label}-${item.monto}`} style={pdfStyles.tableRow}>
               <PdfText style={pdfStyles.bodyCell}>{item.label}</PdfText>
               <PdfText style={pdfStyles.bodyCell}>{item.porcentaje == null ? "—" : `${item.porcentaje}%`}</PdfText>
-              <PdfText style={pdfStyles.bodyCell}>{formatCRC(item.monto)}</PdfText>
+              <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(item.monto)}</PdfText>
             </View>
           ))}
         </View>
@@ -273,17 +297,17 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
         <View style={pdfStyles.totalsBox}>
           <View style={pdfStyles.totalRow}>
             <PdfText style={pdfStyles.label}>Salario devengado</PdfText>
-            <PdfText style={pdfStyles.value}>{formatCRC(comprobante.salario_devengado)}</PdfText>
+            <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_devengado)}</PdfText>
           </View>
           <View style={pdfStyles.totalRow}>
             <PdfText style={pdfStyles.label}>Total deducciones</PdfText>
-            <PdfText style={pdfStyles.value}>{formatCRC(comprobante.total_deducciones)}</PdfText>
+            <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.total_deducciones)}</PdfText>
           </View>
 
           <View style={pdfStyles.netHighlight}>
             <View style={pdfStyles.totalRow}>
               <PdfText style={pdfStyles.value}>Neto a recibir</PdfText>
-              <PdfText style={pdfStyles.value}>{formatCRC(comprobante.salario_neto)}</PdfText>
+              <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_neto)}</PdfText>
             </View>
           </View>
         </View>
@@ -337,7 +361,6 @@ export const MiPlanilla = () => {
     sortBy: "fecha_fin",
     sortDir: "desc",
   });
-  const [searchInput, setSearchInput] = useState("");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedPayrollId, setSelectedPayrollId] = useState<number | null>(null);
   const [receiptCache, setReceiptCache] = useState<Record<number, PayrollReceiptResponse>>({});
@@ -370,8 +393,29 @@ export const MiPlanilla = () => {
     setQuery((prev) => ({ ...prev, page: nextPage }));
   };
 
-  const handleApplySearch = () => {
-    setQuery((prev) => ({ ...prev, page: 1, search: searchInput.trim() || undefined }));
+  const handleMonthFilterChange = (month: string) => {
+    setQuery((prev) => ({
+      ...prev,
+      page: 1,
+      month: month || undefined,
+    }));
+  };
+
+  const handleYearFilterChange = (year: string) => {
+    setQuery((prev) => ({
+      ...prev,
+      page: 1,
+      year: year || undefined,
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setQuery((prev) => ({
+      ...prev,
+      page: 1,
+      month: undefined,
+      year: undefined,
+    }));
   };
 
   const loadReceipt = async (idDetalle: number) => {
@@ -704,7 +748,7 @@ export const MiPlanilla = () => {
                 <Text fontWeight="bold" color="brand.blue.700" fontSize="xl">{COMPANY_NAME}</Text>
                 <Card.Title>Consulta de comprobantes de planilla</Card.Title>
                 <Card.Description>
-                  Revise lo que se le va a pagar o lo que se le pagó por período, con acceso al detalle y descarga del comprobante.
+                  Revise lo que se le va a pagar o lo que se le pagó por período.
                 </Card.Description>
               </Stack>
               <Badge colorPalette="blue" variant="subtle">
@@ -713,34 +757,30 @@ export const MiPlanilla = () => {
             </HStack>
           </Card.Header>
           <Card.Body>
-            <HStack gap="3" align="end" wrap="wrap">
-              <Box minW={{ base: "full", md: "360px" }}>
-                <Text fontSize="sm" color="fg.muted" mb="1">Buscar por período o fecha</Text>
-                <Input
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Ejemplo: 2026, 15 de Marzo"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleApplySearch();
-                    }
-                  }}
-                />
-              </Box>
-              <Button colorPalette="blue" onClick={handleApplySearch}>
-                <FiSearch /> Buscar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchInput("");
-                  setQuery((prev) => ({ ...prev, page: 1, search: undefined }));
-                }}
-              >
-                Limpiar
-              </Button>
-            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+              <MonthPickerBase
+                monthOnly
+                value={query.month ?? ""}
+                onChange={handleMonthFilterChange}
+                placeholder="Todos"
+                label="Mes"
+                clearable
+              />
+
+              <YearPickerBase
+                value={query.year ?? ""}
+                onChange={handleYearFilterChange}
+                placeholder="Todos"
+                label="Año"
+                clearable
+              />
+
+              <HStack align="end">
+                <Button variant="outline" onClick={handleClearFilters}>
+                  Limpiar filtros
+                </Button>
+              </HStack>
+            </SimpleGrid>
           </Card.Body>
         </Card.Root>
 
@@ -753,9 +793,6 @@ export const MiPlanilla = () => {
                   Página {data?.pagination.page ?? 1} de {data?.pagination.pages ?? 1} • {data?.pagination.total ?? 0} comprobantes
                 </Card.Description>
               </Stack>
-              <Badge colorPalette="purple" variant="subtle">
-                Orden actual: {query.sortBy ?? "fecha_fin"} ({query.sortDir ?? "desc"})
-              </Badge>
             </HStack>
           </Card.Header>
           <Card.Body>

@@ -86,6 +86,7 @@ export function DatePickerFieldVariant({
               <DatePicker.Input
                 onBlur={field.onBlur}
                 aria-invalid={isInvalid || undefined}
+                _focus={focusStyles}
                 _focusVisible={focusStyles}
               />
               <DatePicker.IndicatorGroup>

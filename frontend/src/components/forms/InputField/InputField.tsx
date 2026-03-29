@@ -41,6 +41,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
     selectRootProps,
     clearable = true,
     disableSelectPortal = false,
+    monthOnly = false,
 
     ...restInputProps
   } = props;
@@ -129,6 +130,7 @@ export const InputField = forwardRef<HTMLDivElement, FieldProps>(function InputF
       {fieldType === "month" && (
         <MonthPickerFieldVariant
           name={name}
+          monthOnly={monthOnly}
           required={required}
           rules={rules}
           isInvalid={isInvalid}

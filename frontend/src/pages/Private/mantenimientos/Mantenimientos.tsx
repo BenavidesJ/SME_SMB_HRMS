@@ -48,7 +48,7 @@ const Mantenimientos = () => {
         <InputGroup startElement={<FiSearch />}>
           <Input
             name="find"
-            placeholder="Buscar módulos"
+            placeholder="Buscar mantenimientos"
             w="300px"
             onChange={searchModule}
             size="md"

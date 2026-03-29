@@ -9,6 +9,7 @@ import {
 import type { InputProps } from "@chakra-ui/react";
 import { CalendarDate } from "@internationalized/date";
 import { LuCalendar } from "react-icons/lu";
+import { getFocusStyles } from "../internal/focusStyles";
 
 const formatYear = (date: DateValue) => date.year.toString();
 
@@ -63,6 +64,8 @@ export function YearPickerBase({
   focusStyles,
   name,
 }: YearPickerBaseProps) {
+  const resolvedFocusStyles = focusStyles ?? getFocusStyles(Boolean(isInvalid));
+
   const currentValue = toDateValueFromYYYY(value);
   const pickerValue: DateValue[] = currentValue ? [currentValue] : [];
 
@@ -85,11 +88,12 @@ export function YearPickerBase({
       name={name}
     >
       {label && <DatePicker.Label>{label}</DatePicker.Label>}
-      <DatePicker.Control {...(focusStyles ? { _focusWithin: focusStyles } : {})}>
+      <DatePicker.Control _focusWithin={resolvedFocusStyles}>
         <DatePicker.Input
           onBlur={onBlur}
           aria-invalid={isInvalid || undefined}
-          {...(focusStyles ? { _focusVisible: focusStyles } : {})}
+          _focus={resolvedFocusStyles}
+          _focusVisible={resolvedFocusStyles}
         />
         <DatePicker.IndicatorGroup>
           {clearable && <DatePicker.ClearTrigger />}

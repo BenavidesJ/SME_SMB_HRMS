@@ -3,6 +3,8 @@ import { calcularLoteAguinaldo } from "../handlers/calcularLoteAguinaldo.js";
 import { crearLoteAguinaldo } from "../handlers/crearLoteAguinaldo.js";
 import { recalcularAguinaldos } from "../handlers/recalcularAguinaldos.js";
 import { listarAguinaldos } from "../handlers/listarAguinaldos.js";
+import { listarColaboradoresElegiblesAguinaldo } from "../handlers/listarColaboradoresElegiblesAguinaldo.js";
+import { obtenerDetalleAguinaldo } from "../handlers/obtenerDetalleAguinaldo.js";
 
 const { SUCCESS } = HTTP_CODES;
 
@@ -67,6 +69,41 @@ export async function listarAguinaldosController(req, res, next) {
       success: true,
       status_code: SUCCESS.OK,
       message: "Aguinaldos consultados",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarColaboradoresElegiblesAguinaldoController(req, res, next) {
+  try {
+    const data = await listarColaboradoresElegiblesAguinaldo({
+      periodo_desde: req.query?.periodo_desde,
+      periodo_hasta: req.query?.periodo_hasta,
+    });
+
+    return res.status(SUCCESS.OK).json({
+      success: true,
+      status_code: SUCCESS.OK,
+      message: "Colaboradores elegibles para aguinaldo consultados",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function obtenerDetalleAguinaldoController(req, res, next) {
+  try {
+    const data = await obtenerDetalleAguinaldo({
+      id_aguinaldo: req.params?.id,
+    });
+
+    return res.status(SUCCESS.OK).json({
+      success: true,
+      status_code: SUCCESS.OK,
+      message: "Detalle de aguinaldo consultado",
       data,
     });
   } catch (error) {

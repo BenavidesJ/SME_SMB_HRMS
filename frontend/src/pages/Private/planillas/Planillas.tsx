@@ -108,30 +108,6 @@ function buildReferenceMonth(month: string, year: string) {
   return `${year}-${month}`;
 }
 
-function buildMonthOptions() {
-  const monthLabels = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
-  const currentYear = new Date().getFullYear();
-  const monthOptions = monthLabels.map((label, index) => ({
-    label,
-    value: String(index + 1).padStart(2, "0"),
-  }));
-
-  return { monthOptions, currentYear };
-}
-
 function buildQuincenaDates(monthValue: string, quincena: QuincenaTipo | "") {
   if (!/^\d{4}-\d{2}$/.test(monthValue) || !quincena) return null;
 
@@ -249,7 +225,7 @@ function CreatePeriodFields({ quincenalCycleId }: { quincenalCycleId: number | n
   const referenceMonth = watch("mes_referencia_mes");
   const referenceYear = watch("mes_referencia_anio");
   const quincena = watch("quincena");
-  const { monthOptions, currentYear } = useMemo(() => buildMonthOptions(), []);
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
   const yearRules = useMemo(
     () => ({
       validate: (value: string) => {
@@ -296,19 +272,17 @@ function CreatePeriodFields({ quincenalCycleId }: { quincenalCycleId: number | n
         <InputField
           name="mes_referencia_mes"
           label="Mes"
-          fieldType="select"
+          fieldType="month"
+          monthOnly
           required
-          disableSelectPortal
-          options={monthOptions}
           placeholder="Seleccione el mes"
         />
         <InputField
           name="mes_referencia_anio"
           label="Año"
-          fieldType="text"
+          fieldType="year"
           required
-          numericOnly
-          maxDigits={4}
+          min={String(currentYear)}
           rules={yearRules}
           placeholder={String(currentYear)}
         />

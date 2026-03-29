@@ -4,10 +4,11 @@ import {
   Box,
   Button,
   Card,
-  Checkbox,
+  CloseButton,
   EmptyState,
   Flex,
   Heading,
+  HStack,
   Separator,
   SimpleGrid,
   Spinner,
@@ -15,29 +16,66 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react";
-import { useMemo, useRef, useState } from "react";
+import { Document, Font, Image, Page, StyleSheet, Text as PdfText, View, pdf } from "@react-pdf/renderer";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { FiUser, FiRefreshCw, FiDollarSign } from "react-icons/fi";
-import { Layout } from "../../../components/layout";
+import {
+  FiArrowDown,
+  FiArrowUp,
+  FiDollarSign,
+  FiDownload,
+  FiEye,
+  FiRefreshCw,
+  FiUser,
+} from "react-icons/fi";
+import notoSans400 from "@fontsource/noto-sans/files/noto-sans-latin-ext-400-normal.woff";
+import notoSans700 from "@fontsource/noto-sans/files/noto-sans-latin-ext-700-normal.woff";
+import logoPdf from "../../../assets/logo.jpg";
 import { Form } from "../../../components/forms/Form/Form";
 import {
   InputField,
   type SelectOption,
 } from "../../../components/forms/InputField/InputField";
-import { useApiQuery } from "../../../hooks/useApiQuery";
-import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase, formatCRC, formatDateUiCompact, parseUiDateSafe } from "../../../utils";
-import { showToast } from "../../../services/toast/toastService";
+import { Modal } from "../../../components/general/modal/Modal";
+import { DataTable } from "../../../components/general/table/DataTable";
+import type { DataTableColumn } from "../../../components/general/table/types";
+import { Layout } from "../../../components/layout";
 import { useAuth } from "../../../context/AuthContext";
-import type { EmployeeRow } from "../../../types";
+import { useApiMutation } from "../../../hooks/useApiMutations";
+import { useApiQuery } from "../../../hooks/useApiQuery";
 import type {
+  AguinaldoDetalleResponse,
+  AguinaldoElegiblesResponse,
+  AguinaldoRegistro,
   AguinaldoSimulacion,
   AguinaldoSimulacionResponse,
   CrearLoteResponse,
   RecalcularResponse,
-  AguinaldoRegistro,
 } from "../../../services/api/aguinaldos";
+import { showToast } from "../../../services/toast/toastService";
+import { formatCRC, formatDateUiCompact, parseUiDateSafe, toTitleCase } from "../../../utils";
 
+const MONTH_NAME_FORMATTER = new Intl.DateTimeFormat("es-CR", { month: "long" });
+const PDF_COLON_SYMBOL = "\u20A1";
+const COMPANY_NAME = "BioAlquimia";
+
+Font.register({
+  family: "NotoSansPdf",
+  fonts: [
+    { src: notoSans400, fontWeight: 400 },
+    { src: notoSans700, fontWeight: 700 },
+  ],
+});
+
+type SortDir = "asc" | "desc";
+type RegistroSortField = "nombre" | "anio" | "periodo" | "monto" | "fecha_pago" | "registrado_por";
+
+type CalcularFormValues = {
+  colaboradores: (string | number)[];
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_pago: string;
+};
 
 function getDefaultPeriodo() {
   const now = new Date();
@@ -50,47 +88,322 @@ function getDefaultPeriodo() {
   };
 }
 
-type CalcularFormValues = {
-  colaboradores: (string | number)[];
-  periodo_desde: string;
-  periodo_hasta: string;
-  fecha_pago: string;
-};
+function getMonthName(month: number) {
+  if (!Number.isInteger(month) || month < 1 || month > 12) return `Mes ${month}`;
+  return toTitleCase(MONTH_NAME_FORMATTER.format(new Date(Date.UTC(2000, month - 1, 1))));
+}
+
+function formatPdfCRC(value: number | string) {
+  const numericValue = typeof value === "string" ? Number(value.replace(/,/g, "")) : value;
+  if (!Number.isFinite(numericValue)) return `${PDF_COLON_SYMBOL}0,00`;
+
+  const formatted = new Intl.NumberFormat("es-CR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+
+  return `${PDF_COLON_SYMBOL}${formatted}`;
+}
+
+function buildAguinaldoPdfFileName(detail: AguinaldoDetalleResponse) {
+  return `detalle-aguinaldo-${detail.id_aguinaldo}-${detail.anio}.pdf`;
+}
+
+const aguinaldoPdfStyles = StyleSheet.create({
+  page: {
+    padding: 26,
+    fontSize: 10,
+    fontFamily: "NotoSansPdf",
+    color: "#1A202C",
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    fontSize: 9,
+  },
+  companyName: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#123B7A",
+  },
+  logo: {
+    width: 150,
+    height: 54,
+    marginBottom: 10,
+    objectFit: "contain",
+    alignSelf: "center",
+  },
+  title: {
+    fontSize: 14,
+    textAlign: "center",
+    fontWeight: 700,
+    marginBottom: 12,
+    color: "#123B7A",
+  },
+  sectionTitle: {
+    backgroundColor: "#123B7A",
+    color: "#FFFFFF",
+    padding: 5,
+    fontSize: 9,
+    fontWeight: 700,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  infoBox: {
+    borderWidth: 1,
+    borderColor: "#D7E0F1",
+    padding: 10,
+    marginBottom: 8,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 8.5,
+    color: "#4A5568",
+  },
+  value: {
+    fontSize: 9.5,
+    fontWeight: 700,
+  },
+  table: {
+    display: "flex",
+    width: "auto",
+    borderStyle: "solid",
+    borderColor: "#123B7A",
+    borderWidth: 1,
+  },
+  tableRow: {
+    flexDirection: "row",
+  },
+  headerCell: {
+    backgroundColor: "#123B7A",
+    color: "#FFFFFF",
+    borderStyle: "solid",
+    borderColor: "#123B7A",
+    borderWidth: 1,
+    padding: 5,
+    fontSize: 8.5,
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+  bodyCell: {
+    borderStyle: "solid",
+    borderColor: "#D7E0F1",
+    borderWidth: 1,
+    padding: 5,
+    fontSize: 8.5,
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+  totalsBox: {
+    marginTop: 12,
+    marginLeft: "auto",
+    width: 240,
+    borderWidth: 1,
+    borderColor: "#123B7A",
+    padding: 8,
+  },
+  footer: {
+    marginTop: 14,
+    textAlign: "center",
+    fontSize: 8,
+    color: "#4A5568",
+  },
+});
+
+function AguinaldoDetallePdfDocument({ detail }: { detail: AguinaldoDetalleResponse }) {
+  const companyName = detail.empresa?.nombre ?? COMPANY_NAME;
+
+  return (
+    <Document>
+      <Page size="A4" style={aguinaldoPdfStyles.page}>
+        <View style={aguinaldoPdfStyles.topBar}>
+          <PdfText style={aguinaldoPdfStyles.companyName}>{companyName}</PdfText>
+          <PdfText>{formatDateUiCompact(detail.generado_en ?? new Date().toISOString())}</PdfText>
+        </View>
+
+        <Image src={logoPdf} style={aguinaldoPdfStyles.logo} />
+        <PdfText style={aguinaldoPdfStyles.title}>Detalle de aguinaldo</PdfText>
+
+        <PdfText style={aguinaldoPdfStyles.sectionTitle}>Informacion de la empresa</PdfText>
+        <View style={aguinaldoPdfStyles.infoBox}>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Empresa</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{companyName}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Documento</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>Detalle de aguinaldo</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Generado en</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{formatDateUiCompact(detail.generado_en ?? new Date().toISOString())}</PdfText>
+          </View>
+        </View>
+
+        <PdfText style={aguinaldoPdfStyles.sectionTitle}>Informacion general</PdfText>
+        <View style={aguinaldoPdfStyles.infoBox}>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Colaborador</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{detail.nombre_completo}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Identificacion</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{String(detail.identificacion ?? "N/D")}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Periodo</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>
+              {formatDateUiCompact(detail.periodo_desde)} - {formatDateUiCompact(detail.periodo_hasta)}
+            </PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Fecha de pago</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{formatDateUiCompact(detail.fecha_pago)}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Registrado por</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{detail.registrado_por?.nombre_completo ?? "N/D"}</PdfText>
+          </View>
+        </View>
+
+        <PdfText style={aguinaldoPdfStyles.sectionTitle}>Desglose mensual bruto</PdfText>
+        <View style={aguinaldoPdfStyles.table}>
+          <View style={aguinaldoPdfStyles.tableRow}>
+            <PdfText style={aguinaldoPdfStyles.headerCell}>Mes</PdfText>
+            <PdfText style={aguinaldoPdfStyles.headerCell}>Anio</PdfText>
+            <PdfText style={aguinaldoPdfStyles.headerCell}>Bruto mensual</PdfText>
+          </View>
+
+          {detail.desglose_mensual_bruto.length > 0 ? (
+            detail.desglose_mensual_bruto.map((item) => (
+              <View key={`${item.anio}-${item.mes}`} style={aguinaldoPdfStyles.tableRow}>
+                <PdfText style={aguinaldoPdfStyles.bodyCell}>{getMonthName(item.mes)}</PdfText>
+                <PdfText style={aguinaldoPdfStyles.bodyCell}>{item.anio}</PdfText>
+                <PdfText style={aguinaldoPdfStyles.bodyCell}>{formatPdfCRC(item.total)}</PdfText>
+              </View>
+            ))
+          ) : (
+            <View style={aguinaldoPdfStyles.tableRow}>
+              <PdfText style={aguinaldoPdfStyles.bodyCell}>Sin registros en planilla para el periodo.</PdfText>
+              <PdfText style={aguinaldoPdfStyles.bodyCell}>-</PdfText>
+              <PdfText style={aguinaldoPdfStyles.bodyCell}>{formatPdfCRC(0)}</PdfText>
+            </View>
+          )}
+        </View>
+
+        <View style={aguinaldoPdfStyles.totalsBox}>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Total bruto periodo</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{formatPdfCRC(detail.total_bruto_periodo)}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Aguinaldo registrado</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{formatPdfCRC(detail.monto_registrado)}</PdfText>
+          </View>
+          <View style={aguinaldoPdfStyles.infoRow}>
+            <PdfText style={aguinaldoPdfStyles.label}>Aguinaldo recalculado actual</PdfText>
+            <PdfText style={aguinaldoPdfStyles.value}>{formatPdfCRC(detail.monto_calculado_actual)}</PdfText>
+          </View>
+        </View>
+
+        <PdfText style={aguinaldoPdfStyles.footer}>Generado por BioAlquimia para consulta del periodo de aguinaldo.</PdfText>
+      </Page>
+    </Document>
+  );
+}
+
+function SortHeader<TField extends string>({
+  label,
+  field,
+  currentSortBy,
+  currentSortDir,
+  onChange,
+}: {
+  label: string;
+  field: TField;
+  currentSortBy: TField;
+  currentSortDir: SortDir;
+  // eslint-disable-next-line no-unused-vars
+  onChange: (field: TField) => void;
+}) {
+  const isActive = currentSortBy === field;
+  const icon = isActive && currentSortDir === "asc" ? <FiArrowUp /> : <FiArrowDown />;
+
+  return (
+    <Button type="button" variant="ghost" size="xs" px="0" onClick={() => onChange(field)}>
+      <HStack gap="1">
+        <Text>{label}</Text>
+        <Box color={isActive ? "brand.blue.600" : "fg.muted"}>{icon}</Box>
+      </HStack>
+    </Button>
+  );
+}
 
 export const Aguinaldos = () => {
   const { user } = useAuth();
   const defaults = useMemo(() => getDefaultPeriodo(), []);
   const existentesRef = useRef<HTMLDivElement>(null);
 
-  const { data: employees = [], isLoading: employeesLoading } =
-    useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const [periodoElegibles, setPeriodoElegibles] = useState({
+    periodo_desde: defaults.periodo_desde,
+    periodo_hasta: defaults.periodo_hasta,
+  });
+
+  const elegiblesUrl = useMemo(() => {
+    if (!periodoElegibles.periodo_desde || !periodoElegibles.periodo_hasta) return "";
+
+    const params = new URLSearchParams({
+      periodo_desde: periodoElegibles.periodo_desde,
+      periodo_hasta: periodoElegibles.periodo_hasta,
+    });
+
+    return `aguinaldos/elegibles?${params.toString()}`;
+  }, [periodoElegibles.periodo_desde, periodoElegibles.periodo_hasta]);
+
+  const {
+    data: eligibleData,
+    isLoading: eligibleLoading,
+  } = useApiQuery<AguinaldoElegiblesResponse | null>({
+    url: elegiblesUrl,
+    enabled: Boolean(elegiblesUrl),
+  });
+
+  const eligibleCollaborators = useMemo(
+    () => eligibleData?.colaboradores ?? [],
+    [eligibleData],
+  );
+
+  const pendingEligibleCollaboratorIds = useMemo(
+    () => eligibleCollaborators
+      .filter((item) => !item.tiene_aguinaldo)
+      .map((item) => item.id_colaborador),
+    [eligibleCollaborators],
+  );
 
   const options = useMemo<SelectOption[]>(
-    () =>
-      employees.map((emp) => ({
-        label: toTitleCase(
-          `${emp.nombre} ${emp.primer_apellido} ${emp.segundo_apellido}`.trim(),
-        ),
-        value: String(emp.id),
-      })),
-    [employees],
+    () => eligibleCollaborators.map((collaborator) => ({
+      label: collaborator.tiene_aguinaldo
+        ? `${toTitleCase(collaborator.nombre_completo)} (ya registrado)`
+        : toTitleCase(collaborator.nombre_completo),
+      value: String(collaborator.id_colaborador),
+    })),
+    [eligibleCollaborators],
   );
 
   const collaboratorNameMap = useMemo(() => {
     const map = new Map<number, string>();
-    options.forEach((opt) => map.set(Number(opt.value), opt.label));
+    eligibleCollaborators.forEach((collaborator) => {
+      map.set(Number(collaborator.id_colaborador), toTitleCase(collaborator.nombre_completo));
+    });
     return map;
-  }, [options]);
+  }, [eligibleCollaborators]);
 
-  const defaultSelectedCollaborators = useMemo(
-    () =>
-      employees
-        .map((emp) => String(emp.id))
-        .filter((id) => Number.isInteger(Number(id)) && Number(id) > 0),
-    [employees],
-  );
-
-  const hasEmployees = defaultSelectedCollaborators.length > 0;
+  const hasEligibleCollaborators = options.length > 0;
 
   const {
     mutate: simularCalculo,
@@ -135,14 +448,122 @@ export const Aguinaldos = () => {
     refetch: refetchRecords,
   } = useApiQuery<AguinaldoRegistro[]>({ url: "aguinaldos" });
 
-  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<number>>(
-    new Set(),
+  const [selectedRecordKeys, setSelectedRecordKeys] = useState<string[]>([]);
+  const [recordsSortBy, setRecordsSortBy] = useState<RegistroSortField>("anio");
+  const [recordsSortDir, setRecordsSortDir] = useState<SortDir>("desc");
+
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedRecordForDetail, setSelectedRecordForDetail] = useState<number | null>(null);
+  const [isDownloadingDetailPdf, setIsDownloadingDetailPdf] = useState(false);
+
+  const detailUrl = selectedRecordForDetail
+    ? `aguinaldos/${selectedRecordForDetail}/detalle`
+    : "";
+
+  const {
+    data: selectedRecordDetail,
+    isLoading: isDetailLoading,
+  } = useApiQuery<AguinaldoDetalleResponse | null>({
+    url: detailUrl,
+    enabled: Boolean(detailUrl) && isDetailOpen,
+  });
+
+  useEffect(() => {
+    if (existingRecords.length === 0) {
+      setSelectedRecordKeys((prev) => (prev.length > 0 ? [] : prev));
+      return;
+    }
+
+    const validKeys = new Set(existingRecords.map((record) => String(record.id_aguinaldo)));
+
+    setSelectedRecordKeys((prev) => {
+      const next = prev.filter((key) => validKeys.has(key));
+      const hasSameOrder = next.length === prev.length && next.every((key, index) => key === prev[index]);
+      return hasSameOrder ? prev : next;
+    });
+  }, [existingRecords]);
+
+  const selectedRecordIds = useMemo(
+    () => selectedRecordKeys
+      .map((key) => Number(key))
+      .filter((id) => Number.isInteger(id) && id > 0),
+    [selectedRecordKeys],
   );
 
-  const handleSimular = async (values: CalcularFormValues) => {
+  const sortedExistingRecords = useMemo(() => {
+    const rows = [...existingRecords];
+
+    rows.sort((left, right) => {
+      let result = 0;
+
+      if (recordsSortBy === "nombre") {
+        result = String(left.nombre_completo ?? "").localeCompare(String(right.nombre_completo ?? ""), "es", {
+          sensitivity: "base",
+        });
+      } else if (recordsSortBy === "anio") {
+        result = Number(left.anio) - Number(right.anio);
+      } else if (recordsSortBy === "periodo") {
+        result = String(left.periodo_desde).localeCompare(String(right.periodo_desde));
+      } else if (recordsSortBy === "monto") {
+        result = Number(left.monto_calculado) - Number(right.monto_calculado);
+      } else if (recordsSortBy === "fecha_pago") {
+        result = String(left.fecha_pago).localeCompare(String(right.fecha_pago));
+      } else {
+        result = String(left.registrado_por_nombre ?? "").localeCompare(String(right.registrado_por_nombre ?? ""), "es", {
+          sensitivity: "base",
+        });
+      }
+
+      if (result === 0) {
+        result = Number(right.id_aguinaldo) - Number(left.id_aguinaldo);
+      }
+
+      return recordsSortDir === "asc" ? result : -result;
+    });
+
+    return rows;
+  }, [existingRecords, recordsSortBy, recordsSortDir]);
+
+  const handleRecordsSortChange = (field: RegistroSortField) => {
+    setRecordsSortBy((prevSortBy) => {
+      if (prevSortBy === field) {
+        setRecordsSortDir((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
+        return prevSortBy;
+      }
+
+      setRecordsSortDir("asc");
+      return field;
+    });
+  };
+
+  const handleOpenDetail = (recordId: number) => {
+    setSelectedRecordForDetail(recordId);
+    setIsDetailOpen(true);
+  };
+
+  const handleDownloadDetailPdf = async () => {
+    if (!selectedRecordDetail) return;
+
+    setIsDownloadingDetailPdf(true);
+    try {
+      const blob = await pdf(<AguinaldoDetallePdfDocument detail={selectedRecordDetail} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = buildAguinaldoPdfFileName(selectedRecordDetail);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloadingDetailPdf(false);
+    }
+  };
+
+  const handlePrecalculo = async (values: CalcularFormValues) => {
     const collaboratorIds = (values.colaboradores ?? [])
-      .map((v) => Number(v))
-      .filter((v) => Number.isInteger(v) && v > 0);
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
 
     if (collaboratorIds.length === 0) {
       showToast("Seleccione al menos un colaborador.", "error");
@@ -157,11 +578,13 @@ export const Aguinaldos = () => {
       });
 
       const data = (response as any)?.resultados ?? (response as any)?.data?.resultados ?? [];
+
       setSimulacion(data);
       setSimulacionMeta({
         periodo_desde: values.periodo_desde,
         periodo_hasta: values.periodo_hasta,
       });
+
       return true;
     } catch {
       setSimulacion([]);
@@ -171,8 +594,8 @@ export const Aguinaldos = () => {
 
   const handleCrear = async (values: CalcularFormValues) => {
     const collaboratorIds = (values.colaboradores ?? [])
-      .map((v) => Number(v))
-      .filter((v) => Number.isInteger(v) && v > 0);
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
 
     if (collaboratorIds.length === 0) {
       showToast("Seleccione al menos un colaborador.", "error");
@@ -199,10 +622,10 @@ export const Aguinaldos = () => {
       setSimulacion([]);
       setSimulacionMeta(null);
       refetchRecords();
-    } catch (err: any) {
-      if (err?.status === 409 || err?.response?.status === 409) {
+    } catch (error: any) {
+      if (error?.status === 409 || error?.response?.status === 409) {
         showToast(
-          "Algunos colaboradores ya tienen aguinaldo para este período. Utilice la opción de recalcular en la tabla de registros existentes.",
+          "Algunos colaboradores ya tienen aguinaldo para este periodo. Use la opcion de recalcular en la tabla de registros.",
           "warning",
         );
         setTimeout(() => {
@@ -214,79 +637,164 @@ export const Aguinaldos = () => {
   };
 
   const handleRecalcular = async () => {
-    if (selectedRecordIds.size === 0) {
+    if (selectedRecordIds.length === 0) {
       showToast("Seleccione al menos un registro para recalcular.", "info");
       return;
     }
 
     try {
-      await recalcular({ ids: Array.from(selectedRecordIds) });
-      setSelectedRecordIds(new Set());
+      await recalcular({ ids: selectedRecordIds });
+      setSelectedRecordKeys([]);
       refetchRecords();
     } catch {
-      // toast ya se muestra automáticamente
+      // Global API toast handles visible error
     }
   };
-
-  const toggleRecordSelection = (id: number) => {
-    setSelectedRecordIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedRecordIds.size === existingRecords.length) {
-      setSelectedRecordIds(new Set());
-    } else {
-      setSelectedRecordIds(new Set(existingRecords.map((r) => r.id_aguinaldo)));
-    }
-  };
-
 
   const totalSimulado = useMemo(
-    () => simulacion.reduce((acc, r) => acc + (r.monto_aguinaldo ?? 0), 0),
+    () => simulacion.reduce((acc, row) => acc + (row.monto_aguinaldo ?? 0), 0),
     [simulacion],
+  );
+
+  const existingRecordsColumns = useMemo<DataTableColumn<AguinaldoRegistro>[]>(
+    () => [
+      {
+        id: "colaborador",
+        minW: "240px",
+        header: (
+          <SortHeader
+            label="Colaborador"
+            field="nombre"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => toTitleCase(row.nombre_completo),
+      },
+      {
+        id: "anio",
+        minW: "100px",
+        header: (
+          <SortHeader
+            label="Anio"
+            field="anio"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => row.anio,
+      },
+      {
+        id: "periodo",
+        minW: "230px",
+        header: (
+          <SortHeader
+            label="Periodo"
+            field="periodo"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => `${formatDateUiCompact(row.periodo_desde)} - ${formatDateUiCompact(row.periodo_hasta)}`,
+      },
+      {
+        id: "monto",
+        minW: "150px",
+        textAlign: "end",
+        header: (
+          <SortHeader
+            label="Monto"
+            field="monto"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => (
+          <Text fontWeight="semibold" color="green.600">{formatCRC(row.monto_calculado)}</Text>
+        ),
+      },
+      {
+        id: "fecha_pago",
+        minW: "170px",
+        header: (
+          <SortHeader
+            label="Fecha pago"
+            field="fecha_pago"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => formatDateUiCompact(row.fecha_pago),
+      },
+      {
+        id: "registrado_por",
+        minW: "220px",
+        header: (
+          <SortHeader
+            label="Registrado por"
+            field="registrado_por"
+            currentSortBy={recordsSortBy}
+            currentSortDir={recordsSortDir}
+            onChange={handleRecordsSortChange}
+          />
+        ),
+        cell: (row) => toTitleCase(row.registrado_por_nombre),
+      },
+    ],
+    [recordsSortBy, recordsSortDir],
   );
 
   return (
     <Layout pageTitle="Aguinaldos">
       <Stack gap="8" marginBottom="5rem">
         <Form<CalcularFormValues>
-          onSubmit={handleSimular}
+          onSubmit={handlePrecalculo}
           defaultValues={{
-            colaboradores: defaultSelectedCollaborators,
+            colaboradores: [],
             periodo_desde: defaults.periodo_desde,
             periodo_hasta: defaults.periodo_hasta,
             fecha_pago: `${defaults.anio}-12-15`,
           }}
         >
-          <Stack
-            direction={{ base: "column", xl: "row" }}
-            align="flex-start"
-            gap="6"
-          >
-            <Card.Root
-              as="section"
-              w={{ base: "full", xl: "560px" }}
-              flexShrink={0}
-            >
+          <EligiblePeriodWatcher onPeriodChange={setPeriodoElegibles} />
+          <SyncEligibleCollaboratorSelection
+            isLoading={eligibleLoading}
+            periodoKey={`${periodoElegibles.periodo_desde}|${periodoElegibles.periodo_hasta}`}
+            pendingIds={pendingEligibleCollaboratorIds}
+          />
+
+          <Stack direction={{ base: "column", xl: "row" }} align="flex-start" gap="6">
+            <Card.Root as="section" w={{ base: "full", xl: "560px" }} flexShrink={0}>
               <Card.Header>
                 <Card.Title>Calcular aguinaldos</Card.Title>
                 <Card.Description>
-                  Seleccione los colaboradores y el rango del período para
-                  simular el cálculo de aguinaldo. El período por defecto es Dic{" "}
-                  {defaults.anio - 1} – Nov {defaults.anio}.
+                  Se preseleccionan colaboradores elegibles pendientes para el periodo indicado.
+                  Puede retirar cualquiera con la X antes de ejecutar el precalculo.
                 </Card.Description>
               </Card.Header>
 
               <Card.Body>
                 <Stack gap="4">
+                  <SimpleGrid columns={2} gap="3">
+                    <InputField
+                      fieldType="date"
+                      name="periodo_desde"
+                      label="Periodo desde"
+                      required
+                    />
+                    <InputField
+                      fieldType="date"
+                      name="periodo_hasta"
+                      label="Periodo hasta"
+                      required
+                    />
+                  </SimpleGrid>
+
                   <InputField
                     fieldType="select"
                     name="colaboradores"
@@ -295,15 +803,15 @@ export const Aguinaldos = () => {
                     disableSelectPortal
                     options={options}
                     placeholder={
-                      employeesLoading
-                        ? "Cargando colaboradores..."
+                      eligibleLoading
+                        ? "Cargando elegibles..."
                         : options.length === 0
-                          ? "Sin colaboradores disponibles"
+                          ? "Sin colaboradores elegibles"
                           : "Seleccione uno o varios"
                     }
                     selectRootProps={{
                       multiple: true,
-                      disabled: employeesLoading || !hasEmployees,
+                      disabled: eligibleLoading || !hasEligibleCollaborators,
                     }}
                     rules={{
                       validate: (value: any) =>
@@ -315,24 +823,15 @@ export const Aguinaldos = () => {
                     }}
                   />
 
-                  <SelectedCollaboratorsBadges
-                    collaboratorNameMap={collaboratorNameMap}
-                  />
+                  <SelectedCollaboratorsBadges collaboratorNameMap={collaboratorNameMap} />
 
-                  <SimpleGrid columns={2} gap="3">
-                    <InputField
-                      fieldType="date"
-                      name="periodo_desde"
-                      label="Período desde"
-                      required
-                    />
-                    <InputField
-                      fieldType="date"
-                      name="periodo_hasta"
-                      label="Período hasta"
-                      required
-                    />
-                  </SimpleGrid>
+                  {eligibleData && (
+                    <HStack justify="space-between" fontSize="sm" color="fg.muted">
+                      <Text>Elegibles: {eligibleData.total_elegibles}</Text>
+                      <Text>Pendientes: {eligibleData.total_pendientes}</Text>
+                      <Text>Registrados: {eligibleData.total_generados}</Text>
+                    </HStack>
+                  )}
 
                   <InputField
                     fieldType="date"
@@ -348,7 +847,7 @@ export const Aguinaldos = () => {
                   isSimulating={isSimulating}
                   isCreating={isCreating}
                   hasSimulacion={simulacion.length > 0}
-                  disabled={employeesLoading || !hasEmployees}
+                  disabled={eligibleLoading || !hasEligibleCollaborators}
                   onCrear={handleCrear}
                 />
               </Card.Footer>
@@ -358,7 +857,7 @@ export const Aguinaldos = () => {
               {isSimulating ? (
                 <Stack align="center" py="10" gap="3">
                   <Spinner size="lg" />
-                  <Text color="fg.muted">Calculando aguinaldos…</Text>
+                  <Text color="fg.muted">Generando precalculo...</Text>
                 </Stack>
               ) : simulacion.length > 0 ? (
                 <Stack gap="4">
@@ -366,27 +865,19 @@ export const Aguinaldos = () => {
                     <Card.Body>
                       <SimpleGrid columns={{ base: 2, md: 3 }} gap="4">
                         <Box>
-                          <Text textStyle="xs" color="fg.muted">
-                            Colaboradores
-                          </Text>
+                          <Text textStyle="xs" color="fg.muted">Colaboradores</Text>
                           <Heading size="md">{simulacion.length}</Heading>
                         </Box>
                         <Box>
-                          <Text textStyle="xs" color="fg.muted">
-                            Período
-                          </Text>
+                          <Text textStyle="xs" color="fg.muted">Periodo</Text>
                           <Text fontWeight="semibold">
-                            {formatDateUiCompact(simulacionMeta?.periodo_desde)} -{" "}
+                            {formatDateUiCompact(simulacionMeta?.periodo_desde)} - {" "}
                             {formatDateUiCompact(simulacionMeta?.periodo_hasta)}
                           </Text>
                         </Box>
                         <Box>
-                          <Text textStyle="xs" color="fg.muted">
-                            Total aguinaldos
-                          </Text>
-                          <Heading size="md" color="green.600">
-                            {formatCRC(totalSimulado)}
-                          </Heading>
+                          <Text textStyle="xs" color="fg.muted">Total aguinaldos</Text>
+                          <Heading size="md" color="green.600">{formatCRC(totalSimulado)}</Heading>
                         </Box>
                       </SimpleGrid>
                     </Card.Body>
@@ -394,53 +885,35 @@ export const Aguinaldos = () => {
 
                   <Card.Root>
                     <Card.Header>
-                      <Card.Title>Vista previa del cálculo</Card.Title>
+                      <Card.Title>Vista previa del precalculo</Card.Title>
                     </Card.Header>
                     <Card.Body p="0">
                       <Table.Root size="sm" variant="outline">
                         <Table.Header>
                           <Table.Row>
                             <Table.ColumnHeader>Colaborador</Table.ColumnHeader>
-                            <Table.ColumnHeader>Identificación</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="right">
-                              Total bruto
-                            </Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="right">
-                              Aguinaldo
-                            </Table.ColumnHeader>
+                            <Table.ColumnHeader>Identificacion</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">Total bruto</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">Aguinaldo</Table.ColumnHeader>
                             <Table.ColumnHeader>Estado</Table.ColumnHeader>
                           </Table.Row>
                         </Table.Header>
                         <Table.Body>
                           {simulacion.map((item) => (
                             <Table.Row key={item.id_colaborador}>
-                              <Table.Cell>
-                                {toTitleCase(item.nombre_completo)}
-                              </Table.Cell>
-                              <Table.Cell>
-                                {item.identificacion ?? "N/D"}
-                              </Table.Cell>
+                              <Table.Cell>{toTitleCase(item.nombre_completo)}</Table.Cell>
+                              <Table.Cell>{item.identificacion ?? "N/D"}</Table.Cell>
+                              <Table.Cell textAlign="right">{formatCRC(item.total_bruto)}</Table.Cell>
                               <Table.Cell textAlign="right">
-                                {formatCRC(item.total_bruto)}
-                              </Table.Cell>
-                              <Table.Cell textAlign="right">
-                                <Text fontWeight="bold" color="green.600">
-                                  {formatCRC(item.monto_aguinaldo)}
-                                </Text>
+                                <Text fontWeight="bold" color="green.600">{formatCRC(item.monto_aguinaldo)}</Text>
                               </Table.Cell>
                               <Table.Cell>
                                 {item.error ? (
-                                  <Badge colorPalette="red" variant="subtle">
-                                    Error
-                                  </Badge>
+                                  <Badge colorPalette="red" variant="subtle">Error</Badge>
                                 ) : item.monto_aguinaldo > 0 ? (
-                                  <Badge colorPalette="green" variant="subtle">
-                                    OK
-                                  </Badge>
+                                  <Badge colorPalette="green" variant="subtle">OK</Badge>
                                 ) : (
-                                  <Badge colorPalette="yellow" variant="subtle">
-                                    Sin datos
-                                  </Badge>
+                                  <Badge colorPalette="yellow" variant="subtle">Sin datos</Badge>
                                 )}
                               </Table.Cell>
                             </Table.Row>
@@ -451,23 +924,14 @@ export const Aguinaldos = () => {
                   </Card.Root>
                 </Stack>
               ) : (
-                <EmptyState.Root
-                  colorPalette="blue"
-                  border="0.15rem dashed"
-                  borderColor="blue.600"
-                  py="12"
-                >
+                <EmptyState.Root colorPalette="blue" border="0.15rem dashed" borderColor="blue.600" py="12">
                   <EmptyState.Content>
                     <EmptyState.Indicator>
                       <FiDollarSign />
                     </EmptyState.Indicator>
-                    <EmptyState.Title>
-                      Simule el cálculo de aguinaldos
-                    </EmptyState.Title>
+                    <EmptyState.Title>Ejecute el precalculo de aguinaldos</EmptyState.Title>
                     <EmptyState.Description>
-                      Seleccione colaboradores y el rango de período, luego
-                      presione &quot;Simular cálculo&quot; para obtener una vista
-                      previa de los montos.
+                      Seleccione colaboradores y periodo, luego presione "Precalculo" para ver el resultado antes de crear registros.
                     </EmptyState.Description>
                   </EmptyState.Content>
                 </EmptyState.Root>
@@ -484,8 +948,7 @@ export const Aguinaldos = () => {
                 <Box>
                   <Card.Title>Aguinaldos registrados</Card.Title>
                   <Card.Description>
-                    Registros de aguinaldo creados previamente. Seleccione uno o
-                    varios para recalcular sus montos.
+                    Seleccione uno o varios para recalcular, y use "Ver" para abrir detalle mensual bruto.
                   </Card.Description>
                 </Box>
                 <Button
@@ -494,10 +957,10 @@ export const Aguinaldos = () => {
                   size="sm"
                   onClick={handleRecalcular}
                   loading={isRecalculating}
-                  disabled={selectedRecordIds.size === 0 || isRecalculating}
+                  disabled={selectedRecordIds.length === 0 || isRecalculating}
                 >
                   <FiRefreshCw />
-                  Recalcular seleccionados ({selectedRecordIds.size})
+                  Recalcular seleccionados ({selectedRecordIds.length})
                 </Button>
               </Flex>
             </Card.Header>
@@ -506,99 +969,192 @@ export const Aguinaldos = () => {
               {loadingRecords ? (
                 <Stack align="center" py="10" gap="3">
                   <Spinner size="lg" />
-                  <Text color="fg.muted">Cargando registros…</Text>
+                  <Text color="fg.muted">Cargando registros...</Text>
                 </Stack>
-              ) : existingRecords.length > 0 ? (
-                <Table.Root size="sm" variant="outline">
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeader w="40px">
-                        <Checkbox.Root
-                          checked={
-                            selectedRecordIds.size === existingRecords.length &&
-                            existingRecords.length > 0
-                          }
-                          onCheckedChange={toggleSelectAll}
-                        >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                        </Checkbox.Root>
-                      </Table.ColumnHeader>
-                      <Table.ColumnHeader>Colaborador</Table.ColumnHeader>
-                      <Table.ColumnHeader>Año</Table.ColumnHeader>
-                      <Table.ColumnHeader>Período</Table.ColumnHeader>
-                      <Table.ColumnHeader textAlign="right">
-                        Monto
-                      </Table.ColumnHeader>
-                      <Table.ColumnHeader>Fecha pago</Table.ColumnHeader>
-                      <Table.ColumnHeader>Registrado por</Table.ColumnHeader>
-                    </Table.Row>
-                  </Table.Header>
-                  <Table.Body>
-                    {existingRecords.map((record) => (
-                      <Table.Row
-                        key={record.id_aguinaldo}
-                        bg={
-                          selectedRecordIds.has(record.id_aguinaldo)
-                            ? "blue.50"
-                            : undefined
-                        }
-                        cursor="pointer"
-                        onClick={() =>
-                          toggleRecordSelection(record.id_aguinaldo)
-                        }
-                      >
-                        <Table.Cell>
-                          <Checkbox.Root
-                            checked={selectedRecordIds.has(
-                              record.id_aguinaldo,
-                            )}
-                            onCheckedChange={() =>
-                              toggleRecordSelection(record.id_aguinaldo)
-                            }
-                          >
-                            <Checkbox.HiddenInput />
-                            <Checkbox.Control />
-                          </Checkbox.Root>
-                        </Table.Cell>
-                        <Table.Cell>
-                          {toTitleCase(record.nombre_completo)}
-                        </Table.Cell>
-                        <Table.Cell>{record.anio}</Table.Cell>
-                        <Table.Cell>
-                          {formatDateUiCompact(record.periodo_desde)} -{" "}
-                          {formatDateUiCompact(record.periodo_hasta)}
-                        </Table.Cell>
-                        <Table.Cell textAlign="right">
-                          <Text fontWeight="semibold" color="green.600">
-                            {formatCRC(record.monto_calculado)}
-                          </Text>
-                        </Table.Cell>
-                        <Table.Cell>{formatDateUiCompact(record.fecha_pago)}</Table.Cell>
-                        <Table.Cell>
-                          {toTitleCase(record.registrado_por_nombre)}
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table.Root>
               ) : (
-                <EmptyState.Root py="10">
-                  <EmptyState.Content>
-                    <EmptyState.Title>Sin registros</EmptyState.Title>
-                    <EmptyState.Description>
-                      No hay aguinaldos registrados. Utilice la sección superior
-                      para calcular y crear registros.
-                    </EmptyState.Description>
-                  </EmptyState.Content>
-                </EmptyState.Root>
+                <DataTable<AguinaldoRegistro>
+                  isDataLoading={loadingRecords}
+                  data={sortedExistingRecords}
+                  columns={existingRecordsColumns}
+                  selection={{
+                    enabled: true,
+                    selectedKeys: selectedRecordKeys,
+                    onChange: setSelectedRecordKeys,
+                    getRowKey: (row) => String(row.id_aguinaldo),
+                  }}
+                  actionColumn={{
+                    header: "Acciones",
+                    w: "200px",
+                    textAlign: "end",
+                    cell: (row) => (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        colorPalette="blue"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleOpenDetail(row.id_aguinaldo);
+                        }}
+                      >
+                        <FiEye />
+                        Ver
+                      </Button>
+                    ),
+                  }}
+                />
               )}
             </Card.Body>
           </Card.Root>
         </div>
       </Stack>
+
+      <Modal
+        title={selectedRecordDetail ? `Detalle de aguinaldo #${selectedRecordDetail.id_aguinaldo}` : "Detalle de aguinaldo"}
+        size="xl"
+        isOpen={isDetailOpen}
+        onOpenChange={(event) => {
+          if (!event.open) setIsDetailOpen(false);
+        }}
+        footerContent={(
+          <HStack w="full" justify="space-between" gap="3">
+            <Button type="button" variant="outline" onClick={() => setIsDetailOpen(false)}>
+              Cerrar
+            </Button>
+            <Button
+              type="button"
+              colorPalette="blue"
+              loading={isDownloadingDetailPdf}
+              onClick={handleDownloadDetailPdf}
+              disabled={!selectedRecordDetail || isDetailLoading}
+            >
+              <FiDownload />
+              Descargar PDF
+            </Button>
+          </HStack>
+        )}
+      >
+        {isDetailLoading ? (
+          <Stack align="center" py="10" gap="3">
+            <Spinner size="lg" />
+            <Text color="fg.muted">Cargando detalle...</Text>
+          </Stack>
+        ) : !selectedRecordDetail ? (
+          <EmptyState.Root>
+            <EmptyState.Content>
+              <EmptyState.Title>No hay detalle disponible</EmptyState.Title>
+              <EmptyState.Description>
+                No fue posible obtener los datos del registro seleccionado.
+              </EmptyState.Description>
+            </EmptyState.Content>
+          </EmptyState.Root>
+        ) : (
+          <Stack gap="4">
+
+            <Card.Root>
+              <Card.Header pb="2">
+                <Card.Title fontSize="md">Datos del colaborador</Card.Title>
+              </Card.Header>
+              <Card.Body pt="0">
+                <Stack gap="1">
+                  <Text fontWeight="semibold">{toTitleCase(selectedRecordDetail.nombre_completo)}</Text>
+                  <Text color="fg.muted">Identificacion: {selectedRecordDetail.identificacion ?? "N/D"}</Text>
+                  <Text color="fg.muted">
+                    Periodo: {formatDateUiCompact(selectedRecordDetail.periodo_desde)} - {" "}
+                    {formatDateUiCompact(selectedRecordDetail.periodo_hasta)}
+                  </Text>
+                  <Text color="fg.muted">Fecha pago: {formatDateUiCompact(selectedRecordDetail.fecha_pago)}</Text>
+                  <Text color="fg.muted">
+                    Registrado por: {toTitleCase(selectedRecordDetail.registrado_por?.nombre_completo ?? "N/D")}
+                  </Text>
+                </Stack>
+              </Card.Body>
+            </Card.Root>
+
+            <Card.Root>
+              <Card.Header>
+                <Card.Title fontSize="md">Detalle mensual bruto</Card.Title>
+              </Card.Header>
+              <Card.Body p="0">
+                <Table.Root size="sm" variant="outline">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader>Mes</Table.ColumnHeader>
+                      <Table.ColumnHeader>Anio</Table.ColumnHeader>
+                      <Table.ColumnHeader textAlign="right">Bruto mensual</Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {selectedRecordDetail.desglose_mensual_bruto.length > 0 ? (
+                      selectedRecordDetail.desglose_mensual_bruto.map((item) => (
+                        <Table.Row key={`${item.anio}-${item.mes}`}>
+                          <Table.Cell>{getMonthName(item.mes)}</Table.Cell>
+                          <Table.Cell>{item.anio}</Table.Cell>
+                          <Table.Cell textAlign="right">{formatCRC(item.total)}</Table.Cell>
+                        </Table.Row>
+                      ))
+                    ) : (
+                      <Table.Row>
+                        <Table.Cell colSpan={3}>
+                          <Text color="fg.muted">Sin salarios en planilla para el periodo guardado.</Text>
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                  </Table.Body>
+                </Table.Root>
+              </Card.Body>
+            </Card.Root>
+          </Stack>
+        )}
+      </Modal>
     </Layout>
   );
+};
+
+const EligiblePeriodWatcher = ({
+  onPeriodChange,
+}: {
+  // eslint-disable-next-line no-unused-vars
+  onPeriodChange: (periodo: { periodo_desde: string; periodo_hasta: string }) => void;
+}) => {
+  const { control } = useFormContext<CalcularFormValues>();
+  const periodoDesde = useWatch({ control, name: "periodo_desde" });
+  const periodoHasta = useWatch({ control, name: "periodo_hasta" });
+
+  useEffect(() => {
+    if (!periodoDesde || !periodoHasta) return;
+    onPeriodChange({ periodo_desde: periodoDesde, periodo_hasta: periodoHasta });
+  }, [onPeriodChange, periodoDesde, periodoHasta]);
+
+  return null;
+};
+
+const SyncEligibleCollaboratorSelection = ({
+  pendingIds,
+  periodoKey,
+  isLoading,
+}: {
+  pendingIds: number[];
+  periodoKey: string;
+  isLoading: boolean;
+}) => {
+  const { setValue } = useFormContext<CalcularFormValues>();
+  const lastSyncedPeriodoRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!periodoKey || isLoading) return;
+    if (lastSyncedPeriodoRef.current === periodoKey) return;
+
+    setValue(
+      "colaboradores",
+      pendingIds.map((id) => String(id)),
+      { shouldDirty: false, shouldValidate: true },
+    );
+
+    lastSyncedPeriodoRef.current = periodoKey;
+  }, [isLoading, pendingIds, periodoKey, setValue]);
+
+  return null;
 };
 
 const SelectedCollaboratorsBadges = ({
@@ -606,7 +1162,7 @@ const SelectedCollaboratorsBadges = ({
 }: {
   collaboratorNameMap: Map<number, string>;
 }) => {
-  const { control } = useFormContext<CalcularFormValues>();
+  const { control, setValue } = useFormContext<CalcularFormValues>();
   const selected = useWatch({ control, name: "colaboradores" });
 
   if (!Array.isArray(selected) || selected.length === 0) {
@@ -617,12 +1173,23 @@ const SelectedCollaboratorsBadges = ({
     );
   }
 
+  const handleRemove = (idToRemove: string) => {
+    const nextValues = selected
+      .map((value) => String(value))
+      .filter((id) => id !== idToRemove);
+
+    setValue("colaboradores", nextValues, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
   return (
     <Stack direction="row" flexWrap="wrap" gap="2">
       {selected.map((value) => {
         const numericId = Number(value);
-        const label =
-          collaboratorNameMap.get(numericId) ?? `Colaborador #${numericId}`;
+        const label = collaboratorNameMap.get(numericId) ?? `Colaborador #${numericId}`;
+
         return (
           <Badge
             key={String(value)}
@@ -636,6 +1203,13 @@ const SelectedCollaboratorsBadges = ({
           >
             <FiUser />
             {label}
+            <CloseButton
+              size="2xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleRemove(String(value));
+              }}
+            />
           </Badge>
         );
       })}
@@ -668,11 +1242,12 @@ const SubmitButtons = ({
         loading={isSimulating}
         disabled={disabled || isSimulating}
       >
-        Simular cálculo
+        Precalculo
       </Button>
 
       {hasSimulacion && (
         <Button
+          type="button"
           colorPalette="green"
           loading={isCreating}
           disabled={disabled || isCreating}

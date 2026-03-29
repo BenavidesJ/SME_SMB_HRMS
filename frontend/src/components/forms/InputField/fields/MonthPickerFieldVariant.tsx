@@ -9,6 +9,7 @@ import {
 import type { InputProps } from "@chakra-ui/react";
 import { CalendarDate } from "@internationalized/date";
 import { LuCalendar } from "react-icons/lu";
+import { getFocusStyles } from "../internal/focusStyles";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -113,6 +114,8 @@ export function MonthPickerBase({
   focusStyles,
   name,
 }: MonthPickerBaseProps) {
+  const resolvedFocusStyles = focusStyles ?? getFocusStyles(Boolean(isInvalid));
+
   const currentValue = monthOnly
     ? toDateValueFromMM(value)
     : toDateValueFromYYYYMM(value);
@@ -142,11 +145,12 @@ export function MonthPickerBase({
       name={name}
     >
       {label && <DatePicker.Label>{label}</DatePicker.Label>}
-      <DatePicker.Control {...(focusStyles ? { _focusWithin: focusStyles } : {})}>
+      <DatePicker.Control _focusWithin={resolvedFocusStyles}>
         <DatePicker.Input
           onBlur={onBlur}
           aria-invalid={isInvalid || undefined}
-          {...(focusStyles ? { _focusVisible: focusStyles } : {})}
+          _focus={resolvedFocusStyles}
+          _focusVisible={resolvedFocusStyles}
         />
         <DatePicker.IndicatorGroup>
           {clearable && <DatePicker.ClearTrigger />}
@@ -177,6 +181,7 @@ export function MonthPickerBase({
 
 interface MonthPickerFieldVariantProps {
   name: string;
+  monthOnly?: boolean;
   required?: boolean;
   rules?: RegisterOptions;
   isInvalid: boolean;
@@ -186,6 +191,7 @@ interface MonthPickerFieldVariantProps {
 
 export function MonthPickerFieldVariant({
   name,
+  monthOnly = false,
   required,
   rules,
   isInvalid,
@@ -196,13 +202,15 @@ export function MonthPickerFieldVariant({
 
   const minDate = useMemo(() => {
     const v = restInputProps.min as string | undefined;
-    return v ? toDateValueFromYYYYMM(v) : undefined;
-  }, [restInputProps.min]);
+    if (!v) return undefined;
+    return monthOnly ? toDateValueFromMM(v) : toDateValueFromYYYYMM(v);
+  }, [monthOnly, restInputProps.min]);
 
   const maxDate = useMemo(() => {
     const v = restInputProps.max as string | undefined;
-    return v ? toDateValueFromYYYYMM(v) : undefined;
-  }, [restInputProps.max]);
+    if (!v) return undefined;
+    return monthOnly ? toDateValueFromMM(v) : toDateValueFromYYYYMM(v);
+  }, [monthOnly, restInputProps.max]);
 
   const isDisabled = Boolean(restInputProps.disabled);
 
@@ -216,6 +224,7 @@ export function MonthPickerFieldVariant({
           value={field.value ? String(field.value) : ""}
           onChange={field.onChange}
           onBlur={field.onBlur}
+          monthOnly={monthOnly}
           name={field.name}
           isInvalid={isInvalid}
           focusStyles={focusStyles}

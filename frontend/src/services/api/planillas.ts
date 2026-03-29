@@ -102,6 +102,8 @@ export type PayrollListQuery = {
   sortBy?: PayrollSortField;
   sortDir?: "asc" | "desc";
   search?: string;
+  month?: string;
+  year?: string;
 };
 
 export function buildMyPayrollsUrl(params: PayrollListQuery = {}) {

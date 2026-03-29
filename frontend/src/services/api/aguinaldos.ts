@@ -70,6 +70,48 @@ export interface AguinaldoRegistro {
   registrado_por_nombre: string;
 }
 
+export interface AguinaldoElegible {
+  id_colaborador: number;
+  id_contrato: number;
+  nombre_completo: string;
+  identificacion: string | number | null;
+  fecha_inicio_contrato: string;
+  tiene_aguinaldo: boolean;
+}
+
+export interface AguinaldoElegiblesResponse {
+  periodo_desde: string;
+  periodo_hasta: string;
+  anio: number;
+  colaboradores: AguinaldoElegible[];
+  total_elegibles: number;
+  total_generados: number;
+  total_pendientes: number;
+}
+
+export interface AguinaldoDetalleResponse {
+  id_aguinaldo: number;
+  id_colaborador: number;
+  nombre_completo: string;
+  identificacion: string | number | null;
+  anio: number;
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_pago: string;
+  monto_registrado: number;
+  monto_calculado_actual: number;
+  total_bruto_periodo: number;
+  desglose_mensual_bruto: AguinaldoDesglose[];
+  registrado_por: {
+    id_colaborador: number;
+    nombre_completo: string;
+  } | null;
+  empresa?: {
+    nombre?: string | null;
+  } | null;
+  generado_en?: string;
+}
+
 // ── API calls ──
 
 export const calcularLoteAguinaldo = (payload: {
@@ -106,4 +148,17 @@ export const listarAguinaldos = (params?: {
   id_colaborador?: number;
 }) => {
   return api.get<{ data: AguinaldoRegistro[] }>("aguinaldos", { params });
+};
+
+export const listarAguinaldoElegibles = (params: {
+  periodo_desde: string;
+  periodo_hasta: string;
+}) => {
+  return api.get<{ data: AguinaldoElegiblesResponse }>("aguinaldos/elegibles", {
+    params,
+  });
+};
+
+export const obtenerDetalleAguinaldo = (id_aguinaldo: number) => {
+  return api.get<{ data: AguinaldoDetalleResponse }>(`aguinaldos/${id_aguinaldo}/detalle`);
 };

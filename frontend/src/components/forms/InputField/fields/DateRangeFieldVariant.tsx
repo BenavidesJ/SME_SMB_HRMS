@@ -60,6 +60,8 @@ export function DateRangePickerBase({
   label,
   clearable = false,
 }: DateRangePickerBaseProps) {
+  const resolvedFocusStyles = focusStyles ?? getFocusStyles(Boolean(isInvalid));
+
   const start = toDateValue(startValue);
   const end = toDateValue(endValue);
   const pickerValue: DateValue[] = [];
@@ -82,20 +84,20 @@ export function DateRangePickerBase({
       name={name}
     >
       {label && <DatePicker.Label>{label}</DatePicker.Label>}
-      <DatePicker.Control
-        {...(focusStyles ? { _focusWithin: focusStyles } : {})}
-      >
+      <DatePicker.Control>
         <DatePicker.Input
           index={0}
           onBlur={onBlur}
           aria-invalid={isInvalid || undefined}
-          {...(focusStyles ? { _focusVisible: focusStyles } : {})}
+          _focus={resolvedFocusStyles}
+          _focusVisible={resolvedFocusStyles}
         />
         <DatePicker.Input
           index={1}
           onBlur={onBlur}
           aria-invalid={isInvalid || undefined}
-          {...(focusStyles ? { _focusVisible: focusStyles } : {})}
+          _focus={resolvedFocusStyles}
+          _focusVisible={resolvedFocusStyles}
         />
         <DatePicker.IndicatorGroup>
           {clearable && <DatePicker.ClearTrigger />}

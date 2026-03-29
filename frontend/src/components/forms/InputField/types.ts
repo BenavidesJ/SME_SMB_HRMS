@@ -92,4 +92,6 @@ export interface FieldProps extends InputProps {
   clearable?: boolean;
   /** Renderiza el contenido del select sin Portal cuando es true. */
   disableSelectPortal?: boolean;
+  /** Para fieldType="month": cuando es true, permite seleccionar solo mes (MM). */
+  monthOnly?: boolean;
 }
