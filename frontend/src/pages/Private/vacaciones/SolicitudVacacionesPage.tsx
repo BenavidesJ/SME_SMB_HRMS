@@ -1,4 +1,4 @@
-import { Box, Stack, Wrap } from "@chakra-ui/react";
+import { Alert, Box, Stack, Wrap } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import { Form, InputField } from "../../../components/forms";
 import { Modal } from "../../../components/general";
@@ -18,6 +18,7 @@ import type {
   VacacionCreateResponse,
   VacacionListItem,
   VacacionPayload,
+  VacacionSaldoData,
 } from "./types";
 import { DateRangeField } from "../../../components/forms/InputField/fields";
 
@@ -35,6 +36,14 @@ export const SolicitudVacacionesPage = () => {
     refetch: refetchMyVacaciones,
   } = useApiQuery<VacacionListItem[]>({
     url: `vacaciones/colaborador/${userID}`,
+    enabled: Boolean(userID),
+  });
+
+  const {
+    data: saldoVacaciones,
+    isLoading: isLoadingSaldoVacaciones,
+  } = useApiQuery<VacacionSaldoData>({
+    url: userID ? `vacaciones/saldo/${userID}` : "",
     enabled: Boolean(userID),
   });
 
@@ -68,6 +77,13 @@ export const SolicitudVacacionesPage = () => {
     const displayName = baseName ? toTitleCase(baseName) : `Colaborador ${jefeDirectoId}`;
     return [{ label: displayName, value: String(jefeDirectoId) }];
   }, [employees, jefeDirectoId]);
+
+  const availableBalance = useMemo(() => {
+    if (!userID || isLoadingSaldoVacaciones) return null;
+    return Number(saldoVacaciones?.dias_disponibles ?? 0);
+  }, [userID, isLoadingSaldoVacaciones, saldoVacaciones]);
+
+  const hasNoBalance = availableBalance !== null && availableBalance <= 0;
 
   const defaultApproverId = useMemo(() => approverOptions[0]?.value ?? "", [approverOptions]);
   const formKey = useMemo(() => `vacaciones-form-${defaultApproverId}`, [defaultApproverId]);
@@ -145,6 +161,23 @@ export const SolicitudVacacionesPage = () => {
           </Button>
         </Box>
 
+        {Boolean(userID) && !isLoadingSaldoVacaciones && (
+          hasNoBalance ? (
+            <Alert.Root status="warning">
+              <Alert.Indicator />
+              <Alert.Title>En este momento no tienes saldo de vacaciones.</Alert.Title>
+            </Alert.Root>
+          ) : (
+            <Alert.Root status="success">
+              <Alert.Indicator />
+              <Alert.Title>
+                {availableBalance !== null && availableBalance > 0
+                  && `Tienes saldo de ${availableBalance} ${availableBalance === 1 ? "día disponible" : "días disponibles"}.`}
+              </Alert.Title>
+            </Alert.Root>
+          )
+        )}
+
         <SolicitudesBoard
           columns={PERSONAL_REQUEST_COLUMNS}
           items={vacacionesResponse}
@@ -212,7 +245,7 @@ export const SolicitudVacacionesPage = () => {
                 type="submit"
                 size="lg"
                 w="100%"
-                disabled={!approverOptions.length}
+                disabled={!approverOptions.length || isLoadingSaldoVacaciones || hasNoBalance}
               >
                 Registrar vacaciones
               </Button>

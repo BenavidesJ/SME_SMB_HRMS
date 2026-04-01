@@ -6,6 +6,14 @@ export interface VacacionPayload {
   observaciones?: string;
 }
 
+export interface VacacionSaldoData {
+  id_colaborador: number;
+  id_saldo_vacaciones: number | null;
+  dias_ganados: number;
+  dias_tomados: number;
+  dias_disponibles: number;
+}
+
 export interface VacacionListItem {
   id_solicitud_vacaciones: number;
   id_colaborador: number;

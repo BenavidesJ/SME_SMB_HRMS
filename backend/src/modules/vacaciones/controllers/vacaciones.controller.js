@@ -3,6 +3,7 @@ import { listarVacacionesPorColaborador } from "../handlers/listarVacacionesPorC
 import { listarVacaciones } from "../handlers/listarVacaciones.js";
 import { solicitarVacaciones } from "../handlers/solicitarVacaciones.js";
 import { actualizarEstadoSolicitudVacaciones } from "../handlers/actualizarEstadoSolicitudVacaciones.js";
+import { obtenerSaldoVacaciones } from "../handlers/obtenerSaldoVacaciones.js";
 import { Usuario } from "../../../models/index.js";
 
 const CREATED = HTTP_CODES.SUCCESS.CREATED;
@@ -115,6 +116,35 @@ export async function listarVacacionesController(req, res, next) {
       success: true,
       status_code: OK,
       message: "Solicitudes de vacaciones recuperadas",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function obtenerSaldoVacacionesController(req, res, next) {
+  try {
+    const idColaborador = req.params?.id_colaborador ?? req.params?.id;
+    const actor = await resolveActorFromToken(req.user?.id);
+
+    const targetColaboradorId = Number(idColaborador);
+    if (!Number.isInteger(targetColaboradorId) || targetColaboradorId <= 0) {
+      throw new Error("id_colaborador debe ser un entero positivo");
+    }
+
+    if (targetColaboradorId !== actor.id_colaborador) {
+      throw new Error("No puedes consultar saldo de otro colaborador");
+    }
+
+    const data = await obtenerSaldoVacaciones({
+      id_colaborador: targetColaboradorId,
+    });
+
+    return res.status(OK).json({
+      success: true,
+      status_code: OK,
+      message: "Saldo de vacaciones recuperado",
       data,
     });
   } catch (error) {
