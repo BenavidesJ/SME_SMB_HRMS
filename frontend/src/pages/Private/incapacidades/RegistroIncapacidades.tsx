@@ -46,7 +46,7 @@ interface IncapacidadRow extends IncapacidadGrupo {
   dias_totales: number;
 }
 
-const ADMIN_ROLES = new Set(["ADMIN", "ADMINISTRADOR", "SUPER_ADMIN"]);
+const ADMIN_ROLES = new Set(["ADMIN", "ADMINISTRADOR"]);
 const normalizeTipo = (value?: string | null) => String(value ?? "").replace(/_/g, " ").trim().toUpperCase();
 
 const getTipoLabel = (tipo: string | null | undefined) => {

@@ -21,7 +21,7 @@ import {
   resolveRol,
 } from "./shared.js";
 
-const { Colaborador, Usuario } = empleadoModels;
+const { Colaborador, Usuario, SaldoVacaciones } = empleadoModels;
 
 export const createEmpleado = (payload) =>
   runInTransaction(async (transaction) => {
@@ -60,6 +60,16 @@ export const createEmpleado = (payload) =>
       },
       { transaction },
     );
+
+    await SaldoVacaciones.findOrCreate({
+      where: { id_colaborador: colaborador.id_colaborador },
+      defaults: {
+        id_colaborador: colaborador.id_colaborador,
+        dias_ganados: "0.00",
+        dias_tomados: "0.00",
+      },
+      transaction,
+    });
 
     if (direccionPayload) {
       await empleadoModels.Direccion.create(

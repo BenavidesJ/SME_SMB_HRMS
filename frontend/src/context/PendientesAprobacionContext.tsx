@@ -13,7 +13,7 @@ interface PendientesAprobacionContextValue {
   refreshPendientes: () => Promise<void>;
 }
 
-const PRIVILEGED_ROLES = ["ADMINISTRADOR", "SUPER_ADMIN"];
+const PRIVILEGED_ROLES = ["ADMINISTRADOR"];
 const EMPTY_RESPONSE: PendingApprovalsResponse = {
   total_pendientes: 0,
   items: [],

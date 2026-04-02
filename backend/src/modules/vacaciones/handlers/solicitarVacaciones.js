@@ -7,7 +7,6 @@ import {
   SolicitudVacaciones,
   SolicitudPermisos,
   JornadaDiaria,
-  SaldoVacaciones,
   Feriado,
 } from "../../../models/index.js";
 import { sendEmail } from "../../../services/mail.js";
@@ -20,6 +19,7 @@ import {
   collectConflictDates,
   splitDatesBySchedule,
 } from "./utils/vacacionesUtils.js";
+import { syncSaldoVacacionesForColaborador } from "./utils/saldoVacacionesSync.js";
 
 export async function solicitarVacaciones({
   id_colaborador,
@@ -96,11 +96,14 @@ export async function solicitarVacaciones({
       throw new Error("El contrato activo no tiene un horario ACTIVO asignado");
     }
 
-    const saldoVacaciones = await SaldoVacaciones.findOne({
-      where: { id_colaborador: idColaborador },
+    const { saldo: saldoVacaciones } = await syncSaldoVacacionesForColaborador({
+      idColaborador,
       transaction: tx,
-      lock: tx.LOCK.UPDATE,
+      lockForUpdate: true,
+      contratoActivo,
+      estadoActivoId,
     });
+
     if (!saldoVacaciones) {
       throw new Error("No se encontró saldo de vacaciones para el colaborador");
     }

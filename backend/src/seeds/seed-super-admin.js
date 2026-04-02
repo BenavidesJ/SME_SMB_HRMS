@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import { models, sequelize } from "../models/index.js";
 
 const {
@@ -16,51 +17,49 @@ const {
   TipoJornada,
   Contrato,
   HorarioLaboral,
+  SaldoVacaciones,
 } = models;
+
+async function requireCatalog(model, where, name, transaction) {
+  const record = await model.findOne({ where, transaction });
+  if (!record) {
+    throw new Error(`[seed] Falta catalogo requerido: ${name}`);
+  }
+  return record;
+}
+
+function sanitizeUsernamePart(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "");
+}
+
+function buildAdminUsername(nombre, primerApellido, identificacion) {
+  const initial = sanitizeUsernamePart(String(nombre ?? "").trim().charAt(0));
+  const surname = sanitizeUsernamePart(String(primerApellido ?? "").trim().replace(/\s+/g, ""));
+  const last4 = String(identificacion ?? "").slice(-4);
+
+  if (!initial || !surname || last4.length !== 4) {
+    throw new Error("[seed] No se pudo generar username con formato requerido");
+  }
+
+  return `${initial}${surname}${last4}`.toLowerCase();
+}
 
 export async function seedSuperAdmin() {
   const t = await sequelize.transaction();
   try {
-    let estadoActivo = await Estado.findOne({
-      where: { estado: "ACTIVO" },
-      transaction: t,
-    });
-
-    if (!estadoActivo) {
-      const maxId = Number(await Estado.max("id_estado", { transaction: t })) || 0;
-      estadoActivo = await Estado.create(
-        { id_estado: maxId + 1, estado: "ACTIVO" },
-        { transaction: t }
-      );
-    }
-
-    const [estadoCivil] = await EstadoCivil.findOrCreate({
-      where: { estado_civil: "CASADO" },
-      defaults: { estado_civil: "CASADO" },
-      transaction: t,
-    });
-
-    const [rolSuperAdmin] = await Rol.findOrCreate({
-      where: { nombre: "SUPER_ADMIN" },
-      defaults: { nombre: "SUPER_ADMIN" },
-      transaction: t,
-    });
-
-    const [departamentoTI] = await Departamento.findOrCreate({
-      where: { nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
-      defaults: { nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
-      transaction: t,
-    });
-
-    const [puesto] = await Puesto.findOrCreate({
-      where: { nombre: "INGENIERO DE SOFTWARE" },
-      defaults: {
-        id_departamento: departamentoTI.id_departamento,
-        nombre: "INGENIERO DE SOFTWARE",
-        estado: estadoActivo.id_estado,
-      },
-      transaction: t,
-    });
+    const estadoActivo = await requireCatalog(Estado, { estado: "ACTIVO" }, "Estado.ACTIVO", t);
+    const estadoCivil = await requireCatalog(EstadoCivil, { estado_civil: "CASADO" }, "EstadoCivil.CASADO", t);
+    const rolAdministrador = await requireCatalog(Rol, { nombre: "ADMINISTRADOR" }, "Rol.ADMINISTRADOR", t);
+    const departamentoTI = await requireCatalog(
+      Departamento,
+      { nombre: "TECNOLOGÍAS DE INFORMACIÓN" },
+      "Departamento.TECNOLOGÍAS DE INFORMACIÓN",
+      t
+    );
+    const puesto = await requireCatalog(Puesto, { nombre: "INGENIERO DE SOFTWARE" }, "Puesto.INGENIERO DE SOFTWARE", t);
 
     if (
       Number(puesto.id_departamento) !== Number(departamentoTI.id_departamento) ||
@@ -75,34 +74,8 @@ export async function seedSuperAdmin() {
       );
     }
 
-    const [tipoContrato] = await TipoContrato.findOrCreate({
-      where: { tipo_contrato: "INDEFINIDO" },
-      defaults: { tipo_contrato: "INDEFINIDO" },
-      transaction: t,
-    });
-
-    const [tipoJornada] = await TipoJornada.findOrCreate({
-      where: { tipo: "DIURNA" },
-      defaults: {
-        tipo: "DIURNA",
-        max_horas_diarias: "8.00",
-        max_horas_semanales: "48.00",
-      },
-      transaction: t,
-    });
-
-    if (
-      Number(tipoJornada.max_horas_diarias) !== 8 ||
-      Number(tipoJornada.max_horas_semanales) !== 48
-    ) {
-      await tipoJornada.update(
-        {
-          max_horas_diarias: "8.00",
-          max_horas_semanales: "48.00",
-        },
-        { transaction: t }
-      );
-    }
+    const tipoContrato = await requireCatalog(TipoContrato, { tipo_contrato: "INDEFINIDO" }, "TipoContrato.INDEFINIDO", t);
+    const tipoJornada = await requireCatalog(TipoJornada, { tipo: "DIURNA" }, "TipoJornada.DIURNA", t);
 
     const [colab] = await Colaborador.findOrCreate({
       where: { identificacion: 115050783 },
@@ -130,38 +103,70 @@ export async function seedSuperAdmin() {
       { transaction: t }
     );
 
-    const username = "jbenavides0783";
-    const passwordHash =
-      "$2b$10$p2kovfeKLi/4sZ/A54pos.7E5RUcAXcuFXfS5MZ4keJB4Brz0bdNC";
+    const username = buildAdminUsername(colab.nombre, colab.primer_apellido, String(colab.identificacion));
+    const passwordHash = await bcrypt.hash("pAssword123*", 10);
 
-    const [user] = await Usuario.findOrCreate({
-      where: { username },
-      defaults: {
-        username,
-        contrasena_hash: passwordHash,
-        requiere_cambio_contrasena: false,
-        id_colaborador: colab.id_colaborador,
-        id_rol: rolSuperAdmin.id_rol,
-        estado: estadoActivo.id_estado,
-      },
+    let user = await Usuario.findOne({
+      where: { id_colaborador: colab.id_colaborador },
       transaction: t,
     });
 
-    await user.update(
-      {
-        id_colaborador: colab.id_colaborador,
-        id_rol: rolSuperAdmin.id_rol,
-        estado: estadoActivo.id_estado,
-      },
-      { transaction: t }
-    );
+    if (!user) {
+      const userByUsername = await Usuario.findOne({ where: { username }, transaction: t });
+      if (userByUsername && Number(userByUsername.id_colaborador) !== Number(colab.id_colaborador)) {
+        throw new Error(`[seed] Username ya existe para otro colaborador: ${username}`);
+      }
+      user = userByUsername;
+    }
 
-    const provincia = (await Provincia.findByPk(1, { transaction: t }))
-      ?? (await Provincia.findOne({ order: [["id_provincia", "ASC"]], transaction: t }));
-    const canton = (await Canton.findByPk(115, { transaction: t }))
-      ?? (await Canton.findOne({ order: [["id_canton", "ASC"]], transaction: t }));
-    const distrito = (await Distrito.findByPk(10203, { transaction: t }))
-      ?? (await Distrito.findOne({ order: [["id_distrito", "ASC"]], transaction: t }));
+    if (!user) {
+      user = await Usuario.create(
+        {
+          username,
+          contrasena_hash: passwordHash,
+          requiere_cambio_contrasena: false,
+          id_colaborador: colab.id_colaborador,
+          id_rol: rolAdministrador.id_rol,
+          estado: estadoActivo.id_estado,
+        },
+        { transaction: t }
+      );
+    } else {
+      await user.update(
+        {
+          username,
+          contrasena_hash: passwordHash,
+          requiere_cambio_contrasena: false,
+          id_colaborador: colab.id_colaborador,
+          id_rol: rolAdministrador.id_rol,
+          estado: estadoActivo.id_estado,
+        },
+        { transaction: t }
+      );
+    }
+
+    const provincia = await Provincia.findOne({ order: [["id_provincia", "ASC"]], transaction: t });
+    if (!provincia) {
+      throw new Error("[seed] Falta catalogo requerido: Provincia");
+    }
+
+    const canton = await Canton.findOne({
+      where: { id_provincia: provincia.id_provincia },
+      order: [["id_canton", "ASC"]],
+      transaction: t,
+    });
+    if (!canton) {
+      throw new Error(`[seed] Falta catalogo requerido: Canton para provincia ${provincia.id_provincia}`);
+    }
+
+    const distrito = await Distrito.findOne({
+      where: { id_canton: canton.id_canton },
+      order: [["id_distrito", "ASC"]],
+      transaction: t,
+    });
+    if (!distrito) {
+      throw new Error(`[seed] Falta catalogo requerido: Distrito para canton ${canton.id_canton}`);
+    }
 
     if (provincia && canton && distrito) {
       const [direccionPrincipal] = await Direccion.findOrCreate({
@@ -240,11 +245,31 @@ export async function seedSuperAdmin() {
       await horarioExistente.update(horarioPayload, { transaction: t });
     }
 
+    const [saldoVacaciones] = await SaldoVacaciones.findOrCreate({
+      where: { id_colaborador: colab.id_colaborador },
+      defaults: {
+        id_colaborador: colab.id_colaborador,
+        dias_ganados: "0.00",
+        dias_tomados: "0.00",
+      },
+      transaction: t,
+    });
+
+    if (Number(saldoVacaciones.dias_ganados) !== 0 || Number(saldoVacaciones.dias_tomados) !== 0) {
+      await saldoVacaciones.update(
+        {
+          dias_ganados: "0.00",
+          dias_tomados: "0.00",
+        },
+        { transaction: t }
+      );
+    }
+
     await t.commit();
-    console.log("[seed] Super admin OK");
+    console.log("[seed] Admin principal OK");
   } catch (err) {
     await t.rollback();
-    console.error("[seed] Error super admin:", err);
+    console.error("[seed] Error admin principal:", err);
     throw err;
   }
 }

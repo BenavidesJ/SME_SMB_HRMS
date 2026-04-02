@@ -33,7 +33,7 @@ const Perfil = () => {
   const navigate = useNavigate();
   const employeeId = user?.id;
 
-  const isAdmin = ["ADMINISTRADOR", "SUPER_ADMIN"].includes(
+  const isAdmin = ["ADMINISTRADOR"].includes(
     user?.usuario?.rol ?? ""
   );
 
@@ -299,7 +299,7 @@ const Perfil = () => {
               </GridItem>
             )}
 
-            {/* ── Link a gestión de colaborador (ADMINISTRADOR / SUPER_ADMIN) ── */}
+            {/* ── Link a gestión de colaborador (ADMINISTRADOR) ── */}
             {isAdmin && employeeId && (
               <GridItem colSpan={{ base: 1, md: 2 }}>
                 <Card.Root>

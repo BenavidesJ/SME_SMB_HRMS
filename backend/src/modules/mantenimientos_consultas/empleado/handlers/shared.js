@@ -6,6 +6,7 @@ import { requireNonEmptyString, requirePositiveInt, requireDateOnly } from "../.
 const {
   Colaborador,
   Usuario,
+  SaldoVacaciones,
   Rol,
   Estado,
   EstadoCivil,
@@ -260,6 +261,7 @@ export async function findUsuarioPorColaborador(idColaborador, transaction) {
 export const empleadoModels = {
   Colaborador,
   Usuario,
+  SaldoVacaciones,
   Rol,
   Estado,
   EstadoCivil,

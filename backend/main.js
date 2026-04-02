@@ -19,6 +19,7 @@ import liquidacionesRoutes from "./src/routes/liquidaciones.route.js"
 import reportesRoutes from "./src/routes/reportes.route.js"
 import calendarioRoutes from "./src/routes/calendario.route.js"
 import pendientesRoutes from "./src/routes/pendientes.route.js"
+import { syncSaldosVacacionesOnStartup } from "./src/modules/vacaciones/handlers/utils/saldoVacacionesSync.js";
 
 const { API_URL, PORT, API_VERSION, WEB_CONSUMER_URL, PROD } = process.env;
 
@@ -69,7 +70,18 @@ app.use(`/${API_VERSION}/pendientes`, pendientesRoutes);
 // Error handler middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  db_connection();
+app.listen(PORT, async () => {
+  await db_connection();
+
+  if (String(process.env.VAC_SYNC_ON_STARTUP).toLowerCase() === "true") {
+    void syncSaldosVacacionesOnStartup()
+      .then((summary) => {
+        console.log("[vac-sync] Resumen startup:", summary);
+      })
+      .catch((error) => {
+        console.error("[vac-sync] Error en sincronizacion startup:", error);
+      });
+  }
+
   console.log(`Servidor corriendo en ${API_URL}:${PORT}`);
 });

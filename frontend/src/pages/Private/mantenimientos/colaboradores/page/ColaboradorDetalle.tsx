@@ -53,7 +53,7 @@ import {
   getContractTemplateById,
 } from "../components/contractTemplates";
 
-const ADMIN_BOSS_ROLES = new Set(["ADMINISTRADOR", "SUPER_ADMIN"]);
+const ADMIN_BOSS_ROLES = new Set(["ADMINISTRADOR"]);
 
 const normalizeRoleName = (role?: string | null) =>
   String(role ?? "").trim().toUpperCase();
