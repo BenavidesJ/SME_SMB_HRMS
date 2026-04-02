@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ScrollArea, Stack } from "@chakra-ui/react";
+import { useEffect, useMemo, useState } from "react";
+import { ButtonGroup, IconButton, Pagination, SimpleGrid, Stack } from "@chakra-ui/react";
 import { useApiQuery } from "../../../../hooks/useApiQuery";
 import { type DataConsultaSolicitudes, type SolicitudHoraExtra } from "../../../../types/Overtime";
 import { SolicitudCard } from "./SolicitudCard";
@@ -10,6 +10,9 @@ import { useAuth } from "../../../../context/AuthContext";
 import { usePendientesAprobacion } from "../../../../context/PendientesAprobacionContext";
 import { showToast } from "../../../../services/toast/toastService";
 import { sortRequestsByAdminPriority } from "../../../../utils/requestStatus";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+
+const PAGE_SIZE = 6;
 
 interface ListaSolicitudesProps {
   estado?: string;
@@ -22,6 +25,7 @@ export function ListaSolicitudes({ estado, idColaborador }: ListaSolicitudesProp
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<SolicitudHoraExtra | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const currentCollaboratorId = Number(user?.id ?? 0);
   const url = useMemo(() => {
     const params = new URLSearchParams();
@@ -58,6 +62,24 @@ export function ListaSolicitudes({ estado, idColaborador }: ListaSolicitudesProp
     const items = res && "grupos" in res ? res.grupos.flatMap((group) => group.items) : res?.items ?? [];
     return sortRequestsByAdminPriority(items, (item) => item.estado.estado, (item) => item.fecha_solicitud);
   }, [res]);
+
+  const totalCount = flatItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return flatItems.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [flatItems, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [estado, idColaborador]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleOpenDetail = (item: SolicitudHoraExtra) => {
     setSelectedItem(item);
@@ -127,26 +149,55 @@ export function ListaSolicitudes({ estado, idColaborador }: ListaSolicitudesProp
       )}
 
       {!isLoading && flatItems.length > 0 && (
-        <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "calc(100vh - 17rem)" }}>
-          <ScrollArea.Viewport>
-            <Stack gap="4" pb="8">
-              <Stack gap="3">
-                {flatItems.map((item: SolicitudHoraExtra) => (
-                  <SolicitudCard
-                    key={item.id_solicitud_hx}
-                    item={item}
-                    canManageActions={canManageItem(item)}
-                    onApprove={canManageItem(item) ? handleApprove : undefined}
-                    onDecline={canManageItem(item) ? handleDecline : undefined}
-                    onViewDetail={canManageItem(item) ? handleOpenDetail : undefined}
-                    isSubmitting={submittingId === item.id_solicitud_hx}
-                  />
-                ))}
-              </Stack>
-            </Stack>
-          </ScrollArea.Viewport>
-          <ScrollArea.Scrollbar orientation="vertical" />
-        </ScrollArea.Root>
+        <Stack gap="5" pb="4">
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+            {paginatedItems.map((item: SolicitudHoraExtra) => (
+              <SolicitudCard
+                key={item.id_solicitud_hx}
+                item={item}
+                canManageActions={canManageItem(item)}
+                onApprove={canManageItem(item) ? handleApprove : undefined}
+                onDecline={canManageItem(item) ? handleDecline : undefined}
+                onViewDetail={canManageItem(item) ? handleOpenDetail : undefined}
+                isSubmitting={submittingId === item.id_solicitud_hx}
+              />
+            ))}
+          </SimpleGrid>
+
+          {totalCount > PAGE_SIZE && (
+            <Pagination.Root
+              count={totalCount}
+              pageSize={PAGE_SIZE}
+              page={currentPage}
+              onPageChange={(details) => setCurrentPage(details.page)}
+            >
+              <ButtonGroup variant="ghost" size="sm" wrap="wrap" justifyContent="center">
+                <Pagination.PrevTrigger asChild>
+                  <IconButton aria-label="Página anterior">
+                    <FiChevronLeft />
+                  </IconButton>
+                </Pagination.PrevTrigger>
+
+                <Pagination.Items
+                  render={(page) => (
+                    <IconButton
+                      aria-label={`Página ${page.value}`}
+                      variant={{ base: "ghost", _selected: "outline" }}
+                    >
+                      {page.value}
+                    </IconButton>
+                  )}
+                />
+
+                <Pagination.NextTrigger asChild>
+                  <IconButton aria-label="Página siguiente">
+                    <FiChevronRight />
+                  </IconButton>
+                </Pagination.NextTrigger>
+              </ButtonGroup>
+            </Pagination.Root>
+          )}
+        </Stack>
       )}
 
       <SolicitudDetalleModal

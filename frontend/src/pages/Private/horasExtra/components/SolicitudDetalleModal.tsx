@@ -12,8 +12,8 @@ import {
 } from "@chakra-ui/react";
 import { Modal } from "../../../../components/general";
 import { Button } from "../../../../components/general/button/Button";
+import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import type { SolicitudHoraExtra, TipoDia } from "../../../../types/Overtime";
-import { LuCheck, LuX } from "react-icons/lu";
 import { formatDateTimeUi, formatDateUiDefault } from "../../../../utils";
 
 export interface TipoHxCatalog {
@@ -77,12 +77,10 @@ export const SolicitudDetalleModal = ({
 
   const [selectedTipoHxId, setSelectedTipoHxId] = useState<string>("");
   const [isSavingTipo, setIsSavingTipo] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"aprobar" | "rechazar" | null>(null);
 
   useEffect(() => {
     if (item) {
       setSelectedTipoHxId(String(item.tipo_hx?.id ?? ""));
-      setConfirmAction(null);
     }
   }, [item]);
 
@@ -253,60 +251,12 @@ export const SolicitudDetalleModal = ({
                   <Separator />
 
                   {/* Aprobar / Rechazar */}
-                  {confirmAction === null ? (
-                    <HStack gap="2" justify="flex-end" wrap="wrap">
-                      <Button
-                        size="sm"
-                        appearance="danger"
-                        onClick={() => setConfirmAction("rechazar")}
-                        disabled={isSubmitting}
-                      >
-                        <LuX />
-                        Rechazar
-                      </Button>
-                      <Button
-                        size="sm"
-                        appearance="login"
-                        onClick={() => setConfirmAction("aprobar")}
-                        disabled={isSubmitting}
-                      >
-                        <LuCheck />
-                        Aprobar
-                      </Button>
-                    </HStack>
-                  ) : (
-                    <Stack gap="2">
-                      <Text fontWeight="semibold" color={confirmAction === "rechazar" ? "red.600" : "green.600"}>
-                        {confirmAction === "rechazar"
-                          ? "¿Confirmar rechazo de esta solicitud?"
-                          : "¿Confirmar aprobación de esta solicitud?"}
-                      </Text>
-                      <HStack gap="2" justify="flex-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setConfirmAction(null)}
-                          disabled={isSubmitting}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          size="sm"
-                          appearance={confirmAction === "rechazar" ? "danger" : "login"}
-                          onClick={
-                            confirmAction === "rechazar"
-                              ? handleConfirmDecline
-                              : handleConfirmApprove
-                          }
-                          disabled={isSubmitting}
-                          loading={isSubmitting}
-                          loadingText={confirmAction === "rechazar" ? "Rechazando" : "Aprobando"}
-                        >
-                          {confirmAction === "rechazar" ? "Sí, rechazar" : "Sí, aprobar"}
-                        </Button>
-                      </HStack>
-                    </Stack>
-                  )}
+                  <RequestActionButtons
+                    onApprove={handleConfirmApprove}
+                    onDecline={handleConfirmDecline}
+                    isSubmitting={isSubmitting}
+                    confirmSubject="esta solicitud"
+                  />
                 </Stack>
               </>
             )}

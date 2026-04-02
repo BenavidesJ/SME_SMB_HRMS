@@ -733,9 +733,9 @@ export const Planillas = () => {
   const actionColumn = useMemo<DataTableActionColumn<PeriodoPlanilla>>(
     () => ({
       header: "Acciones",
-      w: "auto",
-      textAlign: "left",
-      sticky: false,
+      w: "300px",
+      textAlign: "center",
+      sticky: true,
       cell: (period) => (
         <Stack direction="row" justifyContent="flex-start" gap="2" flexWrap="wrap">
           <Button

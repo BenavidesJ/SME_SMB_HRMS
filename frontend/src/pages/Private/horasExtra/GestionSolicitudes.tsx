@@ -1,11 +1,11 @@
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Layout } from "../../../components/layout";
 import { ListaSolicitudes } from './components';
 import { Stack } from '@chakra-ui/react';
 import { SolicitudesAdminFilters } from '../../../components/general/requests/SolicitudesAdminFilters';
 import { useApiQuery } from '../../../hooks/useApiQuery';
-import type { EmployeeRow } from '../../../types';
+import type { EmployeeRow, EmployeeUserInfo } from '../../../types';
 import { toTitleCase } from '../../../utils';
 
 export const GestionSolicitudes = () => {
@@ -13,9 +13,25 @@ export const GestionSolicitudes = () => {
   const [colaborador, setColaborador] = useState<string | undefined>(undefined);
   const { data: employees = [] } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
+  const isUsuarioActivo = useCallback((usuario?: EmployeeUserInfo | null) => {
+    if (!usuario) return false;
+    if (typeof usuario.estado === "string") return usuario.estado.toUpperCase() === "ACTIVO";
+    if (typeof usuario.estado === "number") return usuario.estado === 1;
+    return Boolean(usuario.estado);
+  }, []);
+
+  const colaboradoresActivos = useMemo(
+    () =>
+      (employees ?? []).filter((employee) => {
+        const estadoNombre = (employee.estado?.nombre ?? "").toUpperCase();
+        return estadoNombre === "ACTIVO" && isUsuarioActivo(employee.usuario);
+      }),
+    [employees, isUsuarioActivo],
+  );
+
   const collaboratorOptions = useMemo(
     () =>
-      (employees ?? []).map((employee) => {
+      colaboradoresActivos.map((employee) => {
         const baseName = [employee.nombre, employee.primer_apellido, employee.segundo_apellido]
           .filter(Boolean)
           .join(" ")
@@ -25,7 +41,7 @@ export const GestionSolicitudes = () => {
           value: String(employee.id),
         };
       }),
-    [employees],
+    [colaboradoresActivos],
   );
 
   return (

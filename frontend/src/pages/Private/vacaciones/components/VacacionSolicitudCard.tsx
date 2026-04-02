@@ -1,7 +1,9 @@
 /* eslint-disable no-unused-vars */
-import { Badge, Card, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Card, Grid, GridItem, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { toTitleCase, formatDateUiDefault } from "../../../../utils";
+import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
+import { toTitleCase, formatDateUiCompact } from "../../../../utils";
+import { LuEye } from "react-icons/lu";
 import type { VacacionListItem } from "../types";
 
 const estadoBadgeProps = (estado?: string) => {
@@ -42,10 +44,6 @@ const buildCollaboratorName = (item: VacacionListItem) => {
   return baseName ? toTitleCase(baseName) : `Colaborador ${item.id_colaborador}`;
 };
 
-const formatDisplayDate = (date: string) => {
-  return formatDateUiDefault(date);
-};
-
 interface VacacionSolicitudCardProps {
   item: VacacionListItem;
   showCollaborator?: boolean;
@@ -53,6 +51,7 @@ interface VacacionSolicitudCardProps {
   isSubmitting?: boolean;
   onApprove?: (...args: [number]) => void;
   onDecline?: (...args: [number]) => void;
+  onViewDetail?: (item: VacacionListItem) => void;
 }
 
 export function VacacionSolicitudCard({
@@ -62,36 +61,70 @@ export function VacacionSolicitudCard({
   isSubmitting = false,
   onApprove,
   onDecline,
+  onViewDetail,
 }: VacacionSolicitudCardProps) {
   const estado = item.estadoSolicitudVacaciones?.estado ?? "DESCONOCIDO";
+  const requestedDays = item.dias_solicitados ?? getDurationLabel(item.fecha_inicio, item.fecha_fin);
 
   if (isSubmitting) {
     return (
-      <Card.Root>
-        <Card.Body>
-          <Stack gap="2">
-            <Skeleton height="6" width="8rem" />
-            {showCollaborator && <Skeleton height="5" width="14rem" maxW="100%" />}
-            <Skeleton height="5" width="13rem" maxW="100%" />
-            <Skeleton height="5" width="13rem" maxW="100%" />
-            <HStack gap="2" wrap="wrap">
-              <Skeleton height="5" width="4rem" />
-              <Skeleton height="5" width="6rem" />
-            </HStack>
-            <Skeleton height="5" width="9rem" />
-            {item.dias_solicitados && <Skeleton height="5" width="8rem" />}
-            {item.dias_aprobados && <Skeleton height="5" width="8rem" />}
-            {!!item.dias_skipped_detalle?.length && <Skeleton height="5" width="12rem" maxW="100%" />}
-            {item.saldo_vacaciones && <Skeleton height="5" width="15rem" maxW="100%" />}
-            {item.observaciones && <Skeleton height="5" width="15rem" maxW="100%" />}
-          </Stack>
+      <Card.Root py={3} px={4} h="full">
+        <Card.Body pb={2} pt={0} px={0}>
+          <Grid templateColumns={{ base: "1fr" }} gap={{ base: 4, md: 3 }} alignItems="start">
+            <GridItem>
+              <Stack gap={2}>
+                <HStack justify="space-between" align="start" gap="3" wrap="wrap">
+                  <Stack gap="1" minW="0">
+                    <Skeleton height="4" width="7rem" />
+                    <Skeleton height="5" width="12rem" maxW="100%" />
+                    <Skeleton height="4" width="12rem" maxW="100%" />
+                  </Stack>
+                  <Stack align="flex-end" gap="1">
+                    <Skeleton height="4" width="7rem" />
+                    <Skeleton height="6" width="4rem" />
+                  </Stack>
+                </HStack>
+
+                <Grid templateColumns={{ base: "1fr", sm: "repeat(3, minmax(0, 1fr))" }} gap="3">
+                  <GridItem>
+                    <Stack gap="1">
+                      <Skeleton height="4" width="2.5rem" />
+                      <Skeleton height="5" width="5rem" />
+                    </Stack>
+                  </GridItem>
+                  <GridItem>
+                    <Stack gap="1">
+                      <Skeleton height="4" width="5rem" />
+                      <Skeleton height="5" width="6rem" />
+                    </Stack>
+                  </GridItem>
+                  <GridItem>
+                    <Stack gap="1">
+                      <Skeleton height="4" width="4rem" />
+                      <Skeleton height="5" width="6rem" />
+                    </Stack>
+                  </GridItem>
+                </Grid>
+              </Stack>
+            </GridItem>
+          </Grid>
         </Card.Body>
 
-        {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-          <Card.Footer pt="0">
-            <Stack direction={{ base: "column", sm: "row" }} gap="2" w="full">
-              <Skeleton height="9" flex="1" />
-              <Skeleton height="9" flex="1" />
+        {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
+          <Card.Footer pt={3} px={0}>
+            <Stack w="full" gap="2">
+              {onViewDetail && (
+                <HStack w="full" justify="end">
+                  <Skeleton height="9" width={{ base: "full", sm: "8rem" }} />
+                </HStack>
+              )}
+
+              {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
+                <HStack w="full" justify="end" gap="2">
+                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
+                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
+                </HStack>
+              )}
             </Stack>
           </Card.Footer>
         )}
@@ -100,56 +133,90 @@ export function VacacionSolicitudCard({
   }
 
   return (
-    <Card.Root>
-      <Card.Body>
-        <Stack gap="2">
-          <Text fontWeight="semibold">Vacaciones</Text>
-          {showCollaborator && <Text color="fg.muted">Solicitante: {buildCollaboratorName(item)}</Text>}
-          <Text color="fg.muted">Fecha Inicio: {formatDisplayDate(item.fecha_inicio)}</Text>
-          <Text color="fg.muted">Fecha Fin: {formatDisplayDate(item.fecha_fin)}</Text>
-          {showCollaborator && (
-            <Text>
-              Estado: <Badge {...estadoBadgeProps(estado)}>{toTitleCase(estado)}</Badge>
+    <Card.Root py={3} px={4} h="full">
+      <Card.Body pb={2} pt={0} px={0}>
+        <Stack gap="4">
+          <HStack justify="space-between" align="start" gap="3" wrap="wrap">
+            <Stack gap="0.5" minW="0">
+              <Text textStyle="xs" color="fg.muted">
+                {formatDateUiCompact(item.fecha_inicio)}
+              </Text>
+              <Text fontWeight="bold" textStyle="md" lineClamp={1}>
+                {showCollaborator ? buildCollaboratorName(item) : "Solicitud de vacaciones"}
+              </Text>
+              {showCollaborator && (
+                <Text textStyle="xs" color="fg.muted" lineClamp={1}>
+                  {item.colaborador?.correo_electronico ?? "Sin correo registrado"}
+                </Text>
+              )}
+            </Stack>
+
+            <Stack align="flex-end" gap="0.5" minW="fit-content">
+              <Text color="fg.muted" textStyle="xs">
+                Días solicitados
+              </Text>
+              <Text fontWeight="bold" textStyle="lg">
+                {requestedDays}
+              </Text>
+            </Stack>
+          </HStack>
+
+          <Grid templateColumns={{ base: "1fr", sm: "repeat(3, minmax(0, 1fr))" }} gap="3">
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">ID</Text>
+                <Text fontWeight="semibold" textStyle="sm">{item.id_solicitud_vacaciones}</Text>
+              </Stack>
+            </GridItem>
+
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">Fecha fin</Text>
+                <Text fontWeight="semibold" textStyle="sm">{formatDateUiCompact(item.fecha_fin)}</Text>
+              </Stack>
+            </GridItem>
+
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">Estado</Text>
+                <HStack gap="2" wrap="wrap">
+                  <Badge {...estadoBadgeProps(estado)}>{toTitleCase(estado)}</Badge>
+                </HStack>
+                <Text textStyle="xs" color="fg.muted" lineClamp={1}>
+                  {getDurationLabel(item.fecha_inicio, item.fecha_fin)}
+                </Text>
+              </Stack>
+            </GridItem>
+          </Grid>
+
+          {item.observaciones && (
+            <Text textStyle="xs" color="fg.muted" lineClamp={1}>
+              {item.observaciones}
             </Text>
           )}
-          <Text color="fg.muted">Duración: {getDurationLabel(item.fecha_inicio, item.fecha_fin)}</Text>
-          {item.dias_solicitados && <Text color="fg.muted">Días solicitados: {item.dias_solicitados}</Text>}
-          {item.dias_aprobados && <Text color="fg.muted">Días aprobados: {item.dias_aprobados}</Text>}
-          {!!item.dias_skipped_detalle?.length && <Text color="fg.muted">Días omitidos: {item.dias_skipped_detalle.map((skip) => skip.date).join(", ")}</Text>}
-          {item.saldo_vacaciones && (
-            <Text color="fg.muted">
-              Saldo al registrar: {item.saldo_vacaciones.dias_ganados - item.saldo_vacaciones.dias_tomados} días disponibles
-            </Text>
-          )}
-          {item.observaciones && <Text color="fg.muted">Observaciones: {item.observaciones}</Text>}
         </Stack>
       </Card.Body>
 
-      {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-        <Card.Footer pt="0">
-          <Stack direction={{ base: "column", sm: "row" }} gap="2" w="full">
-            <Button
-              type="button"
-              appearance="primary"
-              size="sm"
-              loading={isSubmitting}
-              loadingText="Actualizando"
-              disabled={isSubmitting}
-              onClick={() => onApprove?.(item.id_solicitud_vacaciones)}
-            >
-              Aprobar
-            </Button>
-            <Button
-              type="button"
-              appearance="danger"
-              size="sm"
-              loading={isSubmitting}
-              loadingText="Actualizando"
-              disabled={isSubmitting}
-              onClick={() => onDecline?.(item.id_solicitud_vacaciones)}
-            >
-              Rechazar
-            </Button>
+      {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
+        <Card.Footer pt={3} px={0}>
+          <Stack w="full" gap="2">
+            {onViewDetail && (
+              <HStack w="full" justify="end">
+                <Button appearance="primary" size="sm" onClick={() => onViewDetail(item)}>
+                  <LuEye />
+                  Ver detalle
+                </Button>
+              </HStack>
+            )}
+
+            {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
+              <RequestActionButtons
+                onApprove={() => onApprove?.(item.id_solicitud_vacaciones)}
+                onDecline={() => onDecline?.(item.id_solicitud_vacaciones)}
+                isSubmitting={isSubmitting}
+                confirmSubject="esta solicitud"
+              />
+            )}
           </Stack>
         </Card.Footer>
       )}

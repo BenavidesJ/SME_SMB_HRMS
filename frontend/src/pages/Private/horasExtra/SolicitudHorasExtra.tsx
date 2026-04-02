@@ -1,23 +1,33 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Badge,
   Box,
+  Button,
+  Select,
+  SimpleGrid,
   Stack,
+  Text,
   Wrap,
+  createListCollection,
 } from "@chakra-ui/react";
 import { Layout } from "../../../components/layout";
 import { Form, InputField } from "../../../components/forms";
-import { Button } from "../../../components/general/button/Button";
+import { Button as AppButton } from "../../../components/general/button/Button";
 import { Modal } from "../../../components/general";
+import { DataTable } from "../../../components/general/table/DataTable";
+import { SortHeader, type SortDir } from "../../../components/general/table/SortHeader";
+import type { DataTableActionColumn, DataTableColumn } from "../../../components/general/table/types";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useAuth } from "../../../context/AuthContext";
-import { getCostaRicaTodayDate, toTitleCase } from "../../../utils";
+import { MonthPickerBase } from "../../../components/forms/InputField/fields/MonthPickerFieldVariant";
+import { formatDateUiCompact, formatDateTimeUi, getCostaRicaTodayDate, parseUiDateSafe, toTitleCase } from "../../../utils";
 import type { Contrato, EmployeeRow } from "../../../types";
-import type { DataConsultaSolicitudes } from "../../../types/Overtime";
-import { SolicitudCard } from "./components";
-import { SolicitudesBoard } from "../../../components/general/requests/SolicitudesBoard";
-import { PERSONAL_REQUEST_COLUMNS } from "../../../utils/requestStatus";
+import type { DataConsultaSolicitudes, SolicitudHoraExtra, TipoDia } from "../../../types/Overtime";
+import { SolicitudDetalleModal } from "./components";
+import { ADMIN_REQUEST_STATUS_ORDER, normalizeRequestStatus } from "../../../utils/requestStatus";
+import { FiEye } from "react-icons/fi";
 
 interface TipoJornadaCatalog {
   id: number;
@@ -39,11 +49,100 @@ type CreateRequestFormValues = {
   horas_solicitadas: string;
 };
 
+type SortField = "id" | "colaborador" | "fecha_trabajo" | "fecha_solicitud" | "horas" | "tipo_dia" | "estado";
+
+const getDateParts = (value?: string | null) => {
+  if (!value) return { month: "", year: "" };
+
+  const normalized = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(normalized)) {
+    return {
+      month: normalized.slice(5, 7),
+      year: normalized.slice(0, 4),
+    };
+  }
+
+  const parsed = parseUiDateSafe(normalized);
+  if (!parsed) return { month: "", year: "" };
+
+  return {
+    month: String(parsed.getMonth() + 1).padStart(2, "0"),
+    year: String(parsed.getFullYear()),
+  };
+};
+
+const matchesMonthYear = (value: string | null | undefined, month: string, year: string) => {
+  const { month: valueMonth, year: valueYear } = getDateParts(value);
+  if (month && valueMonth !== month) return false;
+  if (year && valueYear !== year) return false;
+  return true;
+};
+
+const getMonthYearParts = (monthYearValue: string) => {
+  if (!/^\d{4}-\d{2}$/.test(monthYearValue)) {
+    return { month: "", year: "" };
+  }
+
+  return {
+    year: monthYearValue.slice(0, 4),
+    month: monthYearValue.slice(5, 7),
+  };
+};
+
+const toDateSortValue = (value?: string | null) => {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  const parsed = parseUiDateSafe(value);
+  return parsed ? parsed.getTime() : Number.NEGATIVE_INFINITY;
+};
+
+const estadoBadgeProps = (estado: string) => {
+  switch (normalizeRequestStatus(estado)) {
+    case "PENDIENTE":
+      return { colorPalette: "yellow", variant: "subtle" as const };
+    case "APROBADO":
+      return { colorPalette: "blue", variant: "subtle" as const };
+    case "CANCELADO":
+      return { colorPalette: "gray", variant: "subtle" as const };
+    case "RECHAZADO":
+      return { colorPalette: "red", variant: "subtle" as const };
+    default:
+      return { colorPalette: "gray", variant: "subtle" as const };
+  }
+};
+
+const tipoDiaBadgeProps = (tipo: TipoDia | undefined) => {
+  switch (tipo) {
+    case "FERIADO":
+      return { colorPalette: "orange", variant: "subtle" as const };
+    case "DESCANSO":
+      return { colorPalette: "purple", variant: "subtle" as const };
+    case "LABORAL":
+    default:
+      return { colorPalette: "green", variant: "subtle" as const };
+  }
+};
+
+const tipoDiaLabel: Record<NonNullable<TipoDia>, string> = {
+  FERIADO: "Feriado",
+  LABORAL: "Laboral",
+  DESCANSO: "Descanso",
+};
+
 export const SolicitudHorasExtra = () => {
   const { user } = useAuth();
   const userId = user?.id;
   const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
   const [openModal, setOpenModal] = useState(false);
+  const [detailItem, setDetailItem] = useState<SolicitudHoraExtra | null>(null);
+  const [estadoFilter, setEstadoFilter] = useState("");
+  const [trabajoMonthYearFilter, setTrabajoMonthYearFilter] = useState("");
+  const [solicitudMonthYearFilter, setSolicitudMonthYearFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({
+    field: "fecha_solicitud",
+    dir: "desc",
+  });
+  const pageSize = 10;
 
   const { data: tiposJornada = [] } = useApiQuery<TipoJornadaCatalog[]>({ url: "mantenimientos/tipos-jornada" });
   const { data: employees = [], isLoading: isLoadingEmployees } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
@@ -169,6 +268,241 @@ export const SolicitudHorasExtra = () => {
     [myRequestsResponse],
   );
 
+  const estadoCollection = useMemo(
+    () =>
+      createListCollection({
+        items: ADMIN_REQUEST_STATUS_ORDER.map((status) => ({
+          label: toTitleCase(status.toLowerCase()),
+          value: status,
+        })),
+      }),
+    [],
+  );
+
+  const handleSortChange = (field: SortField) => {
+    setPage(1);
+    setSort((currentSort) => {
+      if (currentSort.field === field) {
+        return {
+          field,
+          dir: currentSort.dir === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        field,
+        dir: "desc",
+      };
+    });
+  };
+
+  const filteredRequests = useMemo(
+    () => {
+      const trabajoParts = getMonthYearParts(trabajoMonthYearFilter);
+      const solicitudParts = getMonthYearParts(solicitudMonthYearFilter);
+
+      return myRequests.filter((item) => {
+        if (estadoFilter && normalizeRequestStatus(item.estado.estado) !== estadoFilter) return false;
+        if (!matchesMonthYear(item.fecha_trabajo, trabajoParts.month, trabajoParts.year)) return false;
+        if (!matchesMonthYear(item.fecha_solicitud, solicitudParts.month, solicitudParts.year)) return false;
+        return true;
+      });
+    },
+    [
+      estadoFilter,
+      myRequests,
+      solicitudMonthYearFilter,
+      trabajoMonthYearFilter,
+    ],
+  );
+
+  const sortedRequests = useMemo(() => {
+    const direction = sort.dir === "asc" ? 1 : -1;
+
+    return [...filteredRequests].sort((left, right) => {
+      if (sort.field === "id") {
+        const value = (left.id_solicitud_hx - right.id_solicitud_hx) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      if (sort.field === "colaborador") {
+        const value = left.colaborador.nombre_completo.localeCompare(right.colaborador.nombre_completo, "es", { sensitivity: "base" }) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      if (sort.field === "fecha_trabajo") {
+        const value = (toDateSortValue(left.fecha_trabajo) - toDateSortValue(right.fecha_trabajo)) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      if (sort.field === "fecha_solicitud") {
+        const value = (toDateSortValue(left.fecha_solicitud) - toDateSortValue(right.fecha_solicitud)) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      if (sort.field === "horas") {
+        const value = (Number(left.horas_solicitadas) - Number(right.horas_solicitadas)) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      if (sort.field === "tipo_dia") {
+        const value = String(left.tipo_dia ?? "").localeCompare(String(right.tipo_dia ?? ""), "es", { sensitivity: "base" }) * direction;
+        return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+      }
+
+      const value = normalizeRequestStatus(left.estado.estado).localeCompare(normalizeRequestStatus(right.estado.estado), "es", { sensitivity: "base" }) * direction;
+      return value === 0 ? right.id_solicitud_hx - left.id_solicitud_hx : value;
+    });
+  }, [filteredRequests, sort]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [estadoFilter, solicitudMonthYearFilter, trabajoMonthYearFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRequests.length / pageSize));
+
+  useEffect(() => {
+    setPage((currentPage) => (currentPage > totalPages ? totalPages : currentPage));
+  }, [totalPages]);
+
+  const paginatedRequests = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedRequests.slice(start, start + pageSize);
+  }, [page, sortedRequests]);
+
+  const columns = useMemo<DataTableColumn<SolicitudHoraExtra>[]>(
+    () => [
+      {
+        id: "id",
+        header: (
+          <SortHeader
+            label="Solicitud"
+            field="id"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "130px",
+        cell: (item) => `#${item.id_solicitud_hx}`,
+      },
+      {
+        id: "colaborador",
+        header: (
+          <SortHeader
+            label="Colaborador"
+            field="colaborador"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "220px",
+        cell: (item) => item.colaborador.nombre_completo,
+      },
+      {
+        id: "fecha_trabajo",
+        header: (
+          <SortHeader
+            label="Fecha trabajo"
+            field="fecha_trabajo"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "170px",
+        cell: (item) => formatDateUiCompact(item.fecha_trabajo),
+      },
+      {
+        id: "fecha_solicitud",
+        header: (
+          <SortHeader
+            label="Fecha solicitud"
+            field="fecha_solicitud"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "190px",
+        cell: (item) => formatDateTimeUi(item.fecha_solicitud),
+      },
+      {
+        id: "horas",
+        header: (
+          <SortHeader
+            label="Horas"
+            field="horas"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "100px",
+        cell: (item) => item.horas_solicitadas,
+      },
+      {
+        id: "tipo_dia",
+        header: (
+          <SortHeader
+            label="Tipo de día"
+            field="tipo_dia"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "100px",
+        cell: (item) => {
+          if (!item.tipo_dia) return "—";
+          return (
+            <Stack gap="1">
+              <Badge w="90px" alignContent="center" {...tipoDiaBadgeProps(item.tipo_dia)}>{tipoDiaLabel[item.tipo_dia]}</Badge>
+              {item.tipo_dia === "FERIADO" && item.nombre_feriado && (
+                <Text fontSize="xs" color="fg.muted">{item.nombre_feriado}</Text>
+              )}
+            </Stack>
+          );
+        },
+      },
+      {
+        id: "estado",
+        header: (
+          <SortHeader
+            label="Estado"
+            field="estado"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "100px",
+        cell: (item) => (
+          <Badge {...estadoBadgeProps(item.estado.estado)}>
+            {toTitleCase(item.estado.estado.toLowerCase())}
+          </Badge>
+        ),
+      },
+    ],
+    [sort.dir, sort.field],
+  );
+
+  const actionColumn = useMemo<DataTableActionColumn<SolicitudHoraExtra>>(
+    () => ({
+      header: "Acciones",
+      sticky: true,
+      textAlign: "left",
+      cell: (item) => (
+        <Button type="button" variant="ghost" size="xs" onClick={() => setDetailItem(item)}>
+          <FiEye />
+          Ver detalle
+        </Button>
+      ),
+    }),
+    [],
+  );
+
   const handleCreateRequest = async (solicitud: CreateRequestFormValues) => {
     const employeeId = user?.id;
     const approverId = Number(solicitud.id_aprobador);
@@ -205,18 +539,70 @@ export const SolicitudHorasExtra = () => {
     <Layout pageTitle="Solicitudes de horas extra">
       <Stack gap="5" pb="6">
         <Box>
-          <Button appearance="login" size="lg" onClick={() => setOpenModal(true)}>
+          <AppButton appearance="login" size="lg" onClick={() => setOpenModal(true)}>
             Crear Solicitud
-          </Button>
+          </AppButton>
         </Box>
 
-        <SolicitudesBoard
-          columns={PERSONAL_REQUEST_COLUMNS}
-          items={myRequests}
-          isLoading={isLoadingRequests}
-          getStatus={(item) => item.estado.estado}
-          getKey={(item) => item.id_solicitud_hx}
-          renderItem={(item) => <SolicitudCard item={item} view="personal" />}
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+          <Select.Root
+            collection={estadoCollection}
+            value={estadoFilter ? [estadoFilter] : []}
+            onValueChange={(event) => setEstadoFilter(event.value?.[0] ?? "")}
+            size="sm"
+          >
+            <Select.HiddenSelect />
+            <Select.Label>Estado</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Todos" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.ClearTrigger />
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Select.Positioner>
+              <Select.Content>
+                {estadoCollection.items.map((item) => (
+                  <Select.Item key={item.value} item={item}>
+                    {item.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+
+          <MonthPickerBase
+            value={trabajoMonthYearFilter}
+            onChange={setTrabajoMonthYearFilter}
+            placeholder="Todos"
+            label="Fecha Trabajo"
+            clearable
+          />
+
+          <MonthPickerBase
+            value={solicitudMonthYearFilter}
+            onChange={setSolicitudMonthYearFilter}
+            placeholder="Todos"
+            label="Fecha Solicitud"
+            clearable
+          />
+        </SimpleGrid>
+
+        <DataTable<SolicitudHoraExtra>
+          data={paginatedRequests}
+          columns={columns}
+          actionColumn={actionColumn}
+          isDataLoading={isLoadingRequests}
+          size="md"
+          pagination={{
+            enabled: true,
+            page,
+            pageSize,
+            totalCount: sortedRequests.length,
+            onPageChange: setPage,
+          }}
         />
       </Stack>
 
@@ -287,7 +673,7 @@ export const SolicitudHorasExtra = () => {
             )}
 
             <Box w={{ base: "100%", sm: "250px" }} mt={4}>
-              <Button
+              <AppButton
                 loading={isSubmitting}
                 loadingText="Enviando"
                 appearance="login"
@@ -297,10 +683,22 @@ export const SolicitudHorasExtra = () => {
                 disabled={!approverOptions.length || isOvertimeBlocked}
               >
                 Enviar solicitud
-              </Button>
+              </AppButton>
             </Box>
           </Form>
         }
+      />
+
+      <SolicitudDetalleModal
+        item={detailItem}
+        isOpen={Boolean(detailItem)}
+        onClose={() => setDetailItem(null)}
+        canManageActions={false}
+        tiposHoraExtra={[]}
+        onApprove={() => undefined}
+        onDecline={() => undefined}
+        onChangeTipoHx={() => undefined}
+        isSubmitting={false}
       />
     </Layout>
   );

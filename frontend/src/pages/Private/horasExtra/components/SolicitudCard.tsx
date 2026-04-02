@@ -58,10 +58,10 @@ export const SolicitudCard = ({
 
   if (isSubmitting) {
     return (
-      <Card.Root py={3} px={4}>
+      <Card.Root py={3} px={4} h="full">
         <Card.Body pb={2} pt={0} px={0}>
           <Grid
-            templateColumns={{ base: "1fr", md: "1fr auto" }}
+            templateColumns={{ base: "1fr" }}
             gap={{ base: 4, md: 3 }}
             alignItems="start"
           >
@@ -87,8 +87,8 @@ export const SolicitudCard = ({
               </Stack>
             </GridItem>
 
-            <GridItem w={{ base: "full", md: "auto" }}>
-              <Stack gap={1} align={{ base: "flex-start", md: "flex-end" }}>
+            <GridItem>
+              <Stack gap={1} align="flex-start">
                 <Skeleton height="4" width="7rem" />
                 <Skeleton height="4" width="9rem" />
               </Stack>
@@ -139,50 +139,58 @@ export const SolicitudCard = ({
   }
 
   return (
-    <Card.Root py={3} px={4}>
+    <Card.Root py={3} px={4} h="full">
       <Card.Body pb={2} pt={0} px={0}>
-        <Grid
-          templateColumns={{ base: "1fr", md: "auto 1fr auto" }}
-          gap={{ base: 4, md: 3 }}
-          alignItems="start"
-        >
-
-          <GridItem>
-            <Stack gap={2} fontSize="sm">
-              <HStack gap={2} wrap="wrap">
-                <Text color="fg.muted">Solicitante:</Text>
-                <Text fontWeight="semibold">{item.colaborador.nombre_completo}</Text>
-                <Badge {...estadoBadgeProps(estado)}>{estado}</Badge>
-              </HStack>
-
-              <HStack gap={2} wrap="wrap">
-                <Text color="fg.muted">Correo:</Text>
-                <Text>{item.colaborador.correo}</Text>
-              </HStack>
-
-              <HStack gap={2} wrap="wrap">
-                <Text color="fg.muted">Fecha de trabajo:</Text>
-                <Text fontWeight="semibold">{formatFecha(item.fecha_trabajo)}</Text>
-              </HStack>
-
-              <HStack gap={2} wrap="wrap">
-                <Text color="fg.muted">Horas solicitadas:</Text>
-                <Text fontWeight="semibold">{item.horas_solicitadas}</Text>
-              </HStack>
-            </Stack>
-          </GridItem>
-
-          <GridItem textAlign={{ base: "left", md: "right" }}>
-            <Stack gap={1} align={{ base: "flex-start", md: "flex-end" }}>
-              <Text color="fg.muted" fontWeight="semibold" textStyle="xs">
-                Solicitud #{item.id_solicitud_hx}
-              </Text>
+        <Stack gap="4">
+          <HStack justify="space-between" align="start" gap="3" wrap="wrap">
+            <Stack gap="0.5" minW="0">
               <Text textStyle="xs" color="fg.muted">
                 {formatFecha(item.fecha_solicitud)}
               </Text>
+              <Text fontWeight="bold" textStyle="md" lineClamp={1}>
+                {item.colaborador.nombre_completo}
+              </Text>
+              <Text textStyle="xs" color="fg.muted" lineClamp={1}>
+                {item.colaborador.correo}
+              </Text>
             </Stack>
-          </GridItem>
-        </Grid>
+
+            <Stack align="flex-end" gap="0.5" minW="fit-content">
+              <Text color="fg.muted" textStyle="xs">
+                Horas solicitadas
+              </Text>
+              <Text fontWeight="bold" textStyle="lg">
+                {item.horas_solicitadas}
+              </Text>
+            </Stack>
+          </HStack>
+
+          <Grid templateColumns={{ base: "1fr", sm: "repeat(3, minmax(0, 1fr))" }} gap="3">
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">ID</Text>
+                <Text fontWeight="semibold" textStyle="sm">{item.id_solicitud_hx}</Text>
+              </Stack>
+            </GridItem>
+
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">Fecha de trabajo</Text>
+                <Text fontWeight="semibold" textStyle="sm">{formatFecha(item.fecha_trabajo)}</Text>
+              </Stack>
+            </GridItem>
+
+            <GridItem>
+              <Stack gap="0.5">
+                <Text color="fg.muted" textStyle="xs">Estado</Text>
+                <HStack gap="2" wrap="wrap">
+                  <Badge {...estadoBadgeProps(estado)}>{estado}</Badge>
+                </HStack>
+                <Text textStyle="xs" color="fg.muted" lineClamp={1}>{item.tipo_hx.nombre}</Text>
+              </Stack>
+            </GridItem>
+          </Grid>
+        </Stack>
       </Card.Body>
 
       {onViewDetail && (
