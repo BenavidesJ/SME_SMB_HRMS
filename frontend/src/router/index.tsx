@@ -11,6 +11,7 @@ import { MarcasAsistenciaColaborador } from "../pages/Private/asistencias/Marcas
 import { SolicitudHorasExtra } from "../pages/Private/horasExtra/SolicitudHorasExtra";
 import { GestionSolicitudes } from "../pages/Private/horasExtra/GestionSolicitudes";
 import { RegistroIncapacidades } from "../pages/Private/incapacidades/RegistroIncapacidades";
+import { GestionIncapacidades } from "../pages/Private/incapacidades/GestionIncapacidades";
 import DetalleIncapacidad from "../pages/Private/incapacidades/DetalleIncapacidad";
 import Mantenimientos from "../pages/Private/mantenimientos/Mantenimientos";
 import GestionEmpleados from "../pages/Private/mantenimientos/colaboradores/page/GestionEmpleados";
@@ -167,18 +168,31 @@ export const router = createBrowserRouter([
 
       {
         path: "/incapacidades",
-        element: <RegistroIncapacidades />,
-        handle: { crumb: "Incapacidades" },
-      },
-      {
-        path: "/incapacidades/:numero_boleta",
-        element: <DetalleIncapacidad />,
-        handle: {
-          crumb: ({ params }: { params: Record<string, string> }) => [
-            { label: "Incapacidades", to: "/incapacidades" },
-            `Detalle (${params.numero_boleta ?? shortId(params.numero_boleta)})`,
-          ],
-        },
+        handle: { crumb: { label: "Incapacidades" } },
+        children: [
+          { index: true, element: <Navigate to="/incapacidades/registro" replace /> },
+
+          {
+            path: "solicitud",
+            element: <RegistroIncapacidades />,
+            handle: { crumb: "Registro de Incapacidades" },
+          },
+          {
+            path: "gestion",
+            element: <GestionIncapacidades />,
+            handle: { crumb: "Gestión de Incapacidades" },
+          },
+          {
+            path: ":numero_boleta",
+            element: <DetalleIncapacidad />,
+            handle: {
+              crumb: ({ params }: { params: Record<string, string> }) => [
+                { label: "Incapacidades", to: "/incapacidades/registro" },
+                `Detalle (${params.numero_boleta ?? shortId(params.numero_boleta)})`,
+              ],
+            },
+          },
+        ],
       },
 
       {

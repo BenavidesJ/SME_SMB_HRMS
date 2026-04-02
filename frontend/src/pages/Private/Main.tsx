@@ -16,7 +16,7 @@ const getEventLink = (eventType?: string | null) => {
     case "permiso":
       return "/permisos/solicitud";
     case "incapacidad":
-      return "/incapacidades";
+      return "/incapacidades/solicitud";
     default:
       return "/";
   }

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import { useMemo, useState } from "react";
 import {
   Badge,
@@ -22,6 +22,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { Layout } from "../../../components/layout";
 import { Button } from "../../../components/general/button/Button";
 import { extenderIncapacidad } from "../../../services/api/incapacidades";
+import type { IncapacidadGrupo } from "../../../types";
 
 const InfoBlock = ({
   label,
@@ -44,35 +45,27 @@ const formatDateLong = (iso?: string | null) => {
   return formatDateUiDefault(iso);
 };
 
-interface DiaIncapacidad {
-  id_jornada: number;
-  fecha: string;
-  id_incapacidad: number | null;
-  porcentaje_patrono: number;
-  porcentaje_ccss: number;
-}
-
-interface IncapacidadGrupo {
-  numero_boleta: string | null;
-  tipo_incapacidad: string | null;
-  fecha_inicio: string | null;
-  fecha_fin: string | null;
-  dias: DiaIncapacidad[];
-}
-
 export default function DetalleIncapacidad() {
   const { numero_boleta } = useParams<{ numero_boleta: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const userID = user?.id;
+  const userID = Number(user?.id ?? 0);
+  const origin = searchParams.get("origen") === "gestion" ? "gestion" : "solicitud";
+  const collaboratorParam = Number(searchParams.get("colaborador") ?? "");
+  const queryCollaboratorId = Number.isFinite(collaboratorParam) && collaboratorParam > 0
+    ? collaboratorParam
+    : null;
+  const targetCollaboratorId = queryCollaboratorId ?? userID;
+  const backPath = origin === "gestion" ? "/incapacidades/gestion" : "/incapacidades/solicitud";
 
   const {
     data: incapacidades = [],
     isLoading,
     refetch,
   } = useApiQuery<IncapacidadGrupo[]>({
-    url: `incapacidades/colaborador/${userID}`,
-    enabled: Boolean(userID),
+    url: `incapacidades/colaborador/${targetCollaboratorId}`,
+    enabled: Boolean(targetCollaboratorId),
   });
 
   const incapacidad = useMemo(
@@ -125,7 +118,7 @@ export default function DetalleIncapacidad() {
                 <Button
                   variant="ghost"
                   colorPalette="blue"
-                  onClick={() => navigate("/incapacidades")}
+                  onClick={() => navigate(backPath)}
                 >
                   <FiArrowLeft /> Volver a incapacidades
                 </Button>
@@ -138,7 +131,7 @@ export default function DetalleIncapacidad() {
                       <Button
                         variant="ghost"
                         size="xs"
-                        onClick={() => navigate("/incapacidades")}
+                        onClick={() => navigate(backPath)}
                       >
                         <FiArrowLeft />
                       </Button>

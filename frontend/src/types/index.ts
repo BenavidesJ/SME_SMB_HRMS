@@ -6,3 +6,4 @@ export * from "./Genders";
 export * from "./Evaluacion";
 export * from "./Calendar";
 export * from "./Pendientes";
+export * from "./Incapacidades";

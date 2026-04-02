@@ -119,6 +119,16 @@ export const NAV_MAIN: NavItem[] = [
     icon: <PiHospital />,
     path: "/incapacidades",
     roles: rolesForPath("/incapacidades"),
+    children: [
+      { label: "Registro de Incapacidades", path: "/incapacidades/registro", roles: rolesForPath("/incapacidades/registro") },
+      { label: "Gestión de Incapacidades", path: "/incapacidades/gestion", roles: rolesForPath("/incapacidades/gestion") },
+    ],
+    childrenRoles: rolesForPath("/incapacidades/gestion"),
+    parentClickBehavior: {
+      defaultChildPathForRoles: {
+        EMPLEADO: "/incapacidades/solicitud",
+      },
+    },
   },
   {
     label: "Planillas",

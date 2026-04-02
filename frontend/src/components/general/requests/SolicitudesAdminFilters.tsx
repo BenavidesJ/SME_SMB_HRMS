@@ -10,7 +10,9 @@ interface SelectOption {
 interface SolicitudesAdminFiltersProps {
   estado?: string;
   colaborador?: string;
+  // eslint-disable-next-line no-unused-vars
   onEstadoChange: (value?: string) => void;
+  // eslint-disable-next-line no-unused-vars
   onColaboradorChange: (value?: string) => void;
   collaboratorOptions: SelectOption[];
 }

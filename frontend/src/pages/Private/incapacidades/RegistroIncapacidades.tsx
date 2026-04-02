@@ -1,72 +1,104 @@
-import { Box, Wrap, Grid, GridItem, Heading, Stack, Text, ScrollArea, Tabs, Badge, HStack } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Select,
+  SimpleGrid,
+  Stack,
+  Wrap,
+  createListCollection,
+} from "@chakra-ui/react";
 import { Form, InputField } from "../../../components/forms";
 import { Layout } from "../../../components/layout";
-import { Button } from "../../../components/general/button/Button";
 import { useAuth } from "../../../context/AuthContext";
+import { Button as AppButton } from "../../../components/general/button/Button";
 import { useApiQuery } from "../../../hooks/useApiQuery";
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { addDaysToDateInput, formatDateUiDefault, getCostaRicaTodayDate, toTitleCase } from "../../../utils";
+import {
+  addDaysToDateInput,
+  formatDateUiCompact,
+  getCostaRicaTodayDate,
+  parseUiDateSafe,
+  toTitleCase,
+} from "../../../utils";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { EmptyStateIndicator } from "../../../components/general";
-import { AppLoader } from "../../../components/layout/loading";
-import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
-import { LuUser, LuUsers } from "react-icons/lu";
+import type {
+  CrearIncapacidadFormValues,
+  CrearIncapacidadPayload,
+  EmployeeRow,
+  EmployeeUserInfo,
+  IncapacidadGrupo,
+  TipoIncapacidad,
+} from "../../../types";
 import { DateRangeField } from "../../../components/forms/InputField/fields";
+import { DataTable } from "../../../components/general/table/DataTable";
+import { SortHeader, type SortDir } from "../../../components/general/table/SortHeader";
+import type { DataTableActionColumn, DataTableColumn } from "../../../components/general/table/types";
+import { Modal } from "../../../components/general";
+import { FiEye } from "react-icons/fi";
 
-interface TipoIncapacidad {
-  id: number;
-  nombre: string;
-  descripcion: string;
+type SortField = "numero_boleta" | "tipo" | "fecha_inicio" | "fecha_fin" | "dias";
+
+interface IncapacidadRow extends IncapacidadGrupo {
+  id: string;
+  tipo_label: string;
+  tipo_key: string;
+  dias_totales: number;
 }
 
-interface CrearIncapacidadPayload {
-  id_colaborador: number;
-  fecha_inicio: string;
-  fecha_fin: string;
-  tipo_incap: string;
-  numero_boleta: string;
-}
+const ADMIN_ROLES = new Set(["ADMIN", "ADMINISTRADOR", "SUPER_ADMIN"]);
+const normalizeTipo = (value?: string | null) => String(value ?? "").replace(/_/g, " ").trim().toUpperCase();
 
-// type CrearIncapacidadFormValues = CrearIncapacidadPayload;
-
-interface DiaIncapacidad {
-  id_jornada: number;
-  fecha: string;
-  id_incapacidad: number | null;
-  porcentaje_patrono: number;
-  porcentaje_ccss: number;
-}
-
-interface IncapacidadGrupo {
-  numero_boleta: string | null;
-  tipo_incapacidad: string | null;
-  fecha_inicio: string | null;
-  fecha_fin: string | null;
-  dias: DiaIncapacidad[];
-}
-
-const formatDateLong = (iso?: string | null) => {
-  return formatDateUiDefault(iso);
+const getTipoLabel = (tipo: string | null | undefined) => {
+  const raw = String(tipo ?? "").replace(/_/g, " ").trim();
+  if (!raw) return "Tipo no definido";
+  return raw.toUpperCase() === raw ? raw : toTitleCase(raw);
 };
 
+const toDateSortValue = (value?: string | null) => {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  const parsed = parseUiDateSafe(value);
+  return parsed ? parsed.getTime() : Number.NEGATIVE_INFINITY;
+};
 
+const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
+  if (!usuario) return false;
+  if (typeof usuario.estado === "string") {
+    return usuario.estado.toUpperCase() === "ACTIVO";
+  }
+  if (typeof usuario.estado === "number") {
+    return usuario.estado === 1;
+  }
+  return Boolean(usuario.estado);
+};
 
 export const RegistroIncapacidades = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const userID = user?.id;
+  const userID = Number(user?.id ?? 0);
   const loggedUserRole = user?.usuario?.rol;
   const todayInCostaRica = useMemo(() => getCostaRicaTodayDate(), []);
   const minFechaInicio = useMemo(() => addDaysToDateInput(todayInCostaRica, -2), [todayInCostaRica]);
+  const [openModal, setOpenModal] = useState(false);
+  const [tipoFilter, setTipoFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({
+    field: "fecha_inicio",
+    dir: "desc",
+  });
+  const pageSize = 10;
 
   const hasAdminPermission = useMemo(
-    () => (loggedUserRole ? ["ADMIN", "SUPER_ADMIN"].includes(loggedUserRole) : false),
+    () => (loggedUserRole ? ADMIN_ROLES.has(loggedUserRole) : false),
     [loggedUserRole],
   );
 
   const { data: tipoIncapacidad = [] } = useApiQuery<TipoIncapacidad[]>({ url: "mantenimientos/tipos-incapacidad" });
-  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<CrearIncapacidadPayload, void>({ url: "/incapacidades", method: "POST" });
+  const { mutate: createIncapacidad, isLoading: isSubmitting } = useApiMutation<CrearIncapacidadPayload, void>({
+    url: "/incapacidades",
+    method: "POST",
+  });
+
   const { data: incapacidades = [], isLoading: isLoadingList, refetch: refetchIncapacidades } = useApiQuery<IncapacidadGrupo[]>({
     url: `incapacidades/colaborador/${userID}`,
     enabled: Boolean(userID),
@@ -75,22 +107,11 @@ export const RegistroIncapacidades = () => {
   const { data: employees = [], isLoading: isEmployeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
 
-  const isUsuarioActivo = (usuario?: EmployeeUserInfo | null) => {
-    if (!usuario) return false;
-    if (typeof usuario.estado === "string") {
-      return usuario.estado.toUpperCase() === "ACTIVO";
-    }
-    if (typeof usuario.estado === "number") {
-      return usuario.estado === 1;
-    }
-    return Boolean(usuario.estado);
-  };
-
   const colaboradoresActivos = useMemo(
     () =>
       (employees ?? []).filter((colaborador) => {
         const estadoNombre = (colaborador.estado?.nombre ?? "").toUpperCase();
-        return isUsuarioActivo(colaborador.usuario) ? estadoNombre === "ACTIVO" : true;
+        return estadoNombre === "ACTIVO" && isUsuarioActivo(colaborador.usuario);
       }),
     [employees],
   );
@@ -104,7 +125,7 @@ export const RegistroIncapacidades = () => {
 
   const colaboradorOptions = useMemo(() => {
     return colaboradoresVisibles.map((colaborador) => {
-      const collaboratorId = colaborador.id;
+      const collaboratorId = Number(colaborador.id);
       const baseName = [colaborador.nombre, colaborador.primer_apellido, colaborador.segundo_apellido]
         .filter(Boolean)
         .join(" ")
@@ -120,104 +141,217 @@ export const RegistroIncapacidades = () => {
     });
   }, [colaboradoresVisibles, userID]);
 
-  const tipoToOptions = useCallback(
-    (items: TipoIncapacidad[]) => items.map((v) => ({ label: toTitleCase(v.nombre), value: v.nombre })),
-    [],
+  const incapacidadOptions = useMemo(
+    () => tipoIncapacidad.map((item) => ({ label: toTitleCase(item.nombre), value: item.nombre })),
+    [tipoIncapacidad],
   );
 
-  const IncapacidadOptions = useMemo(
-    () => tipoToOptions(tipoIncapacidad),
-    [tipoIncapacidad, tipoToOptions],
+  const tipoFilterCollection = useMemo(
+    () =>
+      createListCollection({
+        items: tipoIncapacidad.map((item) => ({
+          label: toTitleCase(item.nombre),
+          value: normalizeTipo(item.nombre),
+        })),
+      }),
+    [tipoIncapacidad],
   );
 
-  const [selectedCollaboratorId, setSelectedCollaboratorId] = useState<string>("");
+  const rows = useMemo<IncapacidadRow[]>(
+    () =>
+      incapacidades.map((item, index) => ({
+        ...item,
+        id: item.numero_boleta ?? `${item.fecha_inicio ?? "sin-fecha"}-${index}`,
+        tipo_label: getTipoLabel(item.tipo_incapacidad),
+        tipo_key: normalizeTipo(item.tipo_incapacidad),
+        dias_totales: item.dias.length,
+      })),
+    [incapacidades],
+  );
 
-  const {
-    data: otherIncapacidades = [],
-    isLoading: isLoadingOtherIncapacidades,
-    refetch: refetchOtherIncapacidades,
-  } = useApiQuery<IncapacidadGrupo[]>({
-    url: `incapacidades/colaborador/${selectedCollaboratorId}`,
-    enabled: hasAdminPermission && Boolean(selectedCollaboratorId),
-  });
+  const handleSortChange = (field: SortField) => {
+    setPage(1);
+    setSort((currentSort) => {
+      if (currentSort.field === field) {
+        return {
+          field,
+          dir: currentSort.dir === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        field,
+        dir: "desc",
+      };
+    });
+  };
+
+  const filteredRows = useMemo(() => {
+    if (!tipoFilter) return rows;
+    return rows.filter((item) => item.tipo_key === tipoFilter);
+  }, [rows, tipoFilter]);
+
+  const sortedRows = useMemo(() => {
+    const direction = sort.dir === "asc" ? 1 : -1;
+
+    return [...filteredRows].sort((left, right) => {
+      if (sort.field === "numero_boleta") {
+        return String(left.numero_boleta ?? "").localeCompare(String(right.numero_boleta ?? ""), "es", { sensitivity: "base" }) * direction;
+      }
+
+      if (sort.field === "tipo") {
+        return left.tipo_label.localeCompare(right.tipo_label, "es", { sensitivity: "base" }) * direction;
+      }
+
+      if (sort.field === "fecha_inicio") {
+        return (toDateSortValue(left.fecha_inicio) - toDateSortValue(right.fecha_inicio)) * direction;
+      }
+
+      if (sort.field === "fecha_fin") {
+        return (toDateSortValue(left.fecha_fin) - toDateSortValue(right.fecha_fin)) * direction;
+      }
+
+      return (left.dias_totales - right.dias_totales) * direction;
+    });
+  }, [filteredRows, sort]);
 
   useEffect(() => {
-    if (!hasAdminPermission) {
-      setSelectedCollaboratorId("");
-    }
-  }, [hasAdminPermission]);
+    setPage(1);
+  }, [tipoFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
 
   useEffect(() => {
-    if (hasAdminPermission && selectedCollaboratorId) {
-      refetchOtherIncapacidades();
-    }
-  }, [hasAdminPermission, selectedCollaboratorId, refetchOtherIncapacidades]);
+    setPage((currentPage) => (currentPage > totalPages ? totalPages : currentPage));
+  }, [totalPages]);
 
-  const renderIncapacidadesList = useCallback(
-    (items: IncapacidadGrupo[], isLoading: boolean, emptyMessage: string) => (
-      <ScrollArea.Root variant="hover" maxH={{ base: "none", lg: "28rem" }}>
-        <ScrollArea.Viewport>
-          <Stack gap={4}>
-            {isLoading && <AppLoader />}
-            {!isLoading && items.length === 0 && <EmptyStateIndicator title={emptyMessage} />}
-            {items.map((item) => {
-              const tipoRaw = item.tipo_incapacidad?.replace(/_/g, " ") ?? "";
-              const tipoLabel = tipoRaw
-                ? tipoRaw.toUpperCase() === tipoRaw
-                  ? tipoRaw
-                  : toTitleCase(tipoRaw)
-                : "Tipo no definido";
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedRows.slice(start, start + pageSize);
+  }, [page, sortedRows]);
 
-              const titulo = `Incapacidad - ${formatDateLong(item.fecha_inicio)} hasta ${formatDateLong(item.fecha_fin)}`;
+  const columns = useMemo<DataTableColumn<IncapacidadRow>[]>(
+    () => [
+      {
+        id: "numero_boleta",
+        header: (
+          <SortHeader
+            label="Boleta"
+            field="numero_boleta"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "200px",
+        cell: (item) => item.numero_boleta ?? "No definida",
+      },
+      {
+        id: "tipo",
+        header: (
+          <SortHeader
+            label="Tipo"
+            field="tipo"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "200px",
+        cell: (item) => item.tipo_label,
+      },
+      {
+        id: "fecha_inicio",
+        header: (
+          <SortHeader
+            label="Fecha inicio"
+            field="fecha_inicio"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "160px",
+        cell: (item) => formatDateUiCompact(item.fecha_inicio),
+      },
+      {
+        id: "fecha_fin",
+        header: (
+          <SortHeader
+            label="Fecha fin"
+            field="fecha_fin"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "160px",
+        cell: (item) => formatDateUiCompact(item.fecha_fin),
+      },
+      {
+        id: "dias",
+        header: (
+          <SortHeader
+            label="Días"
+            field="dias"
+            currentSortBy={sort.field}
+            currentSortDir={sort.dir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "120px",
+        cell: (item) => item.dias_totales,
+      },
+    ],
+    [sort.dir, sort.field],
+  );
 
-              return (
-                <Box
-                  key={item.numero_boleta ?? `${item.fecha_inicio}-${item.fecha_fin}`}
-                  p={4}
-                  borderRadius="lg"
-                  bg="gray.50"
-                  _hover={{ bg: "gray.100", cursor: "pointer" }}
-                  onClick={() => item.numero_boleta && navigate(`/incapacidades/${encodeURIComponent(item.numero_boleta)}`)}
-                  transition="background 0.15s"
-                >
-                  <Text fontWeight="semibold" fontSize="sm">{titulo}</Text>
-                  <Text fontSize="xs" color="gray.600" mt="1">
-                    {tipoLabel}
-                  </Text>
-                  <Text fontSize="xs" color="gray.600" mt="1">
-                    Boleta: {item.numero_boleta ?? "No definida"}
-                  </Text>
-                  <HStack gap="1" mt="3" wrap="wrap">
-                    {item.dias.map((dia) => (
-                      <Badge key={dia.id_jornada} variant="surface" colorPalette="blue" size="sm">
-                        {formatDateLong(dia.fecha)}
-                      </Badge>
-                    ))}
-                  </HStack>
-                </Box>
-              );
-            })}
-          </Stack>
-        </ScrollArea.Viewport>
-        <ScrollArea.Scrollbar orientation="vertical" />
-      </ScrollArea.Root>
-    ),
+  const actionColumn = useMemo<DataTableActionColumn<IncapacidadRow>>(
+    () => ({
+      header: "Acciones",
+      sticky: true,
+      textAlign: "left",
+      cell: (item) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          disabled={!item.numero_boleta}
+          onClick={() => {
+            if (!item.numero_boleta) return;
+            const params = new URLSearchParams({ origen: "solicitud" });
+            navigate(`/incapacidades/${encodeURIComponent(item.numero_boleta)}?${params.toString()}`);
+          }}
+        >
+          <FiEye />
+          Ver detalle
+        </Button>
+      ),
+    }),
     [navigate],
   );
 
-  const handleOtherCollaboratorSubmit = useCallback(
-    async (values: { id_colaborador: string | number }) => {
-      const nextValue = typeof values.id_colaborador === "number" ? String(values.id_colaborador) : values.id_colaborador ?? "";
-      setSelectedCollaboratorId(nextValue);
-      return true;
-    },
-    [],
-  );
+  const handleCreateRequest = async (values: CrearIncapacidadFormValues) => {
+    const collaboratorId = hasAdminPermission
+      ? Number(values.id_colaborador)
+      : Number(userID);
 
-  const handleCreateRequest = async (incapacidad: CrearIncapacidadPayload) => {
+    if (!Number.isFinite(collaboratorId) || collaboratorId <= 0) {
+      return false;
+    }
+
+    const incapacidad: CrearIncapacidadPayload = {
+      id_colaborador: collaboratorId,
+      fecha_inicio: values.fecha_inicio,
+      fecha_fin: values.fecha_fin,
+      tipo_incap: String(values.tipo_incap ?? "").trim(),
+      numero_boleta: String(values.numero_boleta ?? "").trim().toUpperCase(),
+    };
+
     try {
       await createIncapacidad(incapacidad);
       await refetchIncapacidades();
+      setOpenModal(false);
       return true;
     } catch (error) {
       console.log(error);
@@ -226,128 +360,127 @@ export const RegistroIncapacidades = () => {
   };
 
   return (
-    <Layout pageTitle="Registro Incapacidades">
-      <Grid templateColumns={{ base: "1fr", lg: "750px 1fr" }} gap={{ base: 4, lg: 6 }}>
-        <GridItem>
-          <Box bg="white" borderRadius="xl" boxShadow="md" p={6} h={{ base: "auto", lg: "full" }}>
-            <Heading size="sm" mb={4}>
-              Incapacidades registradas
-            </Heading>
-            <Tabs.Root variant="line" defaultValue="member">
-              <Tabs.List>
-                <Tabs.Trigger value="member">
-                  <LuUser />
-                  Mis incapacidades
-                </Tabs.Trigger>
-                {hasAdminPermission && (
-                  <Tabs.Trigger value="members">
-                    <LuUsers />
-                    Otros colaboradores
-                  </Tabs.Trigger>
-                )}
-              </Tabs.List>
+    <Layout pageTitle="Registro de Incapacidades">
+      <Stack gap="5" pb="6">
+        <Box>
+          <AppButton appearance="login" size="lg" onClick={() => setOpenModal(true)}>
+            Registrar incapacidad
+          </AppButton>
+        </Box>
 
-              <Tabs.Content value="member">
-                {renderIncapacidadesList(incapacidades, isLoadingList, "No hay incapacidades registradas")}
-              </Tabs.Content>
+        <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+          <Select.Root
+            collection={tipoFilterCollection}
+            value={tipoFilter ? [tipoFilter] : []}
+            onValueChange={(event) => setTipoFilter(event.value?.[0] ?? "")}
+            size="sm"
+          >
+            <Select.HiddenSelect />
+            <Select.Label>Tipo de incapacidad</Select.Label>
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Todos" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.ClearTrigger />
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Select.Positioner>
+              <Select.Content>
+                {tipoFilterCollection.items.map((item) => (
+                  <Select.Item key={item.value} item={item}>
+                    {item.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Positioner>
+          </Select.Root>
+        </SimpleGrid>
+
+        <DataTable<IncapacidadRow>
+          data={paginatedRows}
+          columns={columns}
+          actionColumn={actionColumn}
+          isDataLoading={isLoadingList}
+          size="md"
+          pagination={{
+            enabled: true,
+            page,
+            pageSize,
+            totalCount: sortedRows.length,
+            onPageChange: setPage,
+          }}
+        />
+      </Stack>
+
+      <Modal
+        title="Registrar incapacidad"
+        isOpen={openModal}
+        onOpenChange={(event) => setOpenModal(event.open)}
+        size="lg"
+        content={
+          <Form<CrearIncapacidadFormValues>
+            onSubmit={handleCreateRequest}
+            resetOnSuccess
+            defaultValues={{
+              id_colaborador: hasAdminPermission ? "" : userID,
+            }}
+          >
+            <Wrap maxW="600px">
+              <InputField
+                fieldType="text"
+                label="Número de Boleta"
+                name="numero_boleta"
+                required
+                maxLength={50}
+                rules={{
+                  required: "El campo es obligatorio",
+                  setValueAs: (value) => String(value ?? "").trim().toUpperCase(),
+                  validate: (value) => {
+                    const boleta = String(value ?? "").trim();
+
+                    if (!boleta) return "El campo es obligatorio";
+                    if (boleta.length > 50) return "La boleta no puede exceder 50 caracteres.";
+                    if (boleta.includes("/")) return "La boleta no puede contener '/'.";
+
+                    return true;
+                  },
+                }}
+                helperText="Use el número legal de boleta emitido por la entidad correspondiente."
+              />
+
+              <DateRangeField
+                startName="fecha_inicio"
+                endName="fecha_fin"
+                label="Período de incapacidad"
+                required
+                min={minFechaInicio}
+                allowSameDay
+                startRules={{
+                  validate: (value: string) => {
+                    if (!value) return true;
+                    return value >= minFechaInicio || "La fecha de inicio no puede ser anterior a 2 días atrás.";
+                  },
+                }}
+              />
+
+              <InputField
+                fieldType="select"
+                label="Tipo de Incapacidad"
+                name="tipo_incap"
+                required
+                disableSelectPortal
+                placeholder={tipoIncapacidad.length ? "Seleccione una opción" : "Cargando..."}
+                options={incapacidadOptions}
+                rules={{
+                  required: "El campo es obligatorio",
+                  setValueAs: (value) => String(value ?? "").trim(),
+                }}
+                selectRootProps={{ disabled: tipoIncapacidad.length === 0 }}
+              />
 
               {hasAdminPermission && (
-                <Tabs.Content value="members">
-                  <Form
-                    onSubmit={handleOtherCollaboratorSubmit}
-                    resetOnSuccess={false}
-                    defaultValues={{ id_colaborador: selectedCollaboratorId }}
-                  >
-                    <Wrap maxW="600px">
-                      <InputField
-                        fieldType="select"
-                        label="Colaborador"
-                        name="id_colaborador"
-                        required
-                        disableSelectPortal
-                        placeholder={
-                          isEmployeesLoading ? "Cargando colaboradores..." : "Seleccione un colaborador"
-                        }
-                        options={colaboradorOptions}
-                        selectRootProps={{ disabled: isEmployeesLoading || colaboradorOptions.length === 0 }}
-                        rules={{ required: "El campo es obligatorio" }}
-                      />
-                    </Wrap>
-
-                    <Box w={{ base: "100%", sm: "250px" }} mt={4}>
-                      <Button appearance="login" type="submit" size="lg" w="100%">
-                        Consultar colaborador
-                      </Button>
-                    </Box>
-                  </Form>
-
-                  <Box mt={6}>
-                    {selectedCollaboratorId ? (
-                      renderIncapacidadesList(
-                        otherIncapacidades,
-                        isLoadingOtherIncapacidades,
-                        "No hay incapacidades registradas",
-                      )
-                    ) : (
-                      <EmptyStateIndicator title="Seleccione un colaborador para consultar" />
-                    )}
-                  </Box>
-                </Tabs.Content>
-              )}
-            </Tabs.Root>
-          </Box>
-        </GridItem>
-
-        <GridItem>
-          <Box bg="white" borderRadius="xl" boxShadow="md" p={6}>
-            <Form onSubmit={handleCreateRequest} resetOnSuccess>
-              <Wrap maxW="600px">
-                <InputField
-                  fieldType="text"
-                  label="Número de Boleta"
-                  name="numero_boleta"
-                  required
-                  maxLength={50}
-                  rules={{
-                    required: "El campo es obligatorio",
-                    setValueAs: (value) => String(value ?? "").trim().toUpperCase(),
-                    validate: (value) => {
-                      const boleta = String(value ?? "").trim();
-
-                      if (!boleta) return "El campo es obligatorio";
-                      if (boleta.length > 50) return "La boleta no puede exceder 50 caracteres.";
-                      if (boleta.includes("/")) return "La boleta no puede contener '/'.";
-
-                      return true;
-                    },
-                  }}
-                  helperText="Use el número legal de boleta emitido por la entidad correspondiente."
-                />
-                <DateRangeField
-                  startName="fecha_inicio"
-                  endName="fecha_fin"
-                  label="Período de incapacidad"
-                  required
-                  min={minFechaInicio}
-                  allowSameDay
-                  startRules={{
-                    validate: (value: string) => {
-                      if (!value) return true;
-                      return value >= minFechaInicio || "La fecha de inicio no puede ser anterior a 2 días atrás.";
-                    },
-                  }}
-                />
-                <InputField
-                  fieldType="select"
-                  label="Tipo de Incapacidad"
-                  name="tipo_incap"
-                  required
-                  disableSelectPortal
-                  placeholder={tipoIncapacidad.length ? "Seleccione una opción" : "Cargando..."}
-                  options={IncapacidadOptions}
-                  rules={{ required: "El campo es obligatorio", setValueAs: (v) => String(v ?? "").trim(), }}
-                  selectRootProps={{ disabled: tipoIncapacidad.length === 0 }}
-                />
                 <InputField
                   fieldType="select"
                   label="Colaborador"
@@ -358,30 +491,33 @@ export const RegistroIncapacidades = () => {
                   options={colaboradorOptions}
                   rules={{
                     required: "El campo es obligatorio",
-                    setValueAs: (v) => (v !== undefined && v !== null && v !== "" ? Number(v) : undefined),
+                    setValueAs: (value) => (value !== undefined && value !== null && value !== "" ? Number(value) : undefined),
                   }}
                   selectRootProps={{ disabled: isEmployeesLoading || colaboradorOptions.length === 0 }}
                 />
-              </Wrap>
+              )}
+            </Wrap>
 
-              <Box w="250px" alignContent="center">
-                <Button
-                  loading={isSubmitting}
-                  loadingText="Enviando"
-                  appearance="login"
-                  type="submit"
-                  mt="4"
-                  size="lg"
-                  w="100%"
-                  marginBottom="5"
-                >
-                  Registrar Incapacidad
-                </Button>
-              </Box>
-            </Form>
-          </Box>
-        </GridItem>
-      </Grid>
+            <Box w={{ base: "100%", sm: "250px" }} mt={4}>
+              <AppButton
+                loading={isSubmitting}
+                loadingText="Enviando"
+                appearance="login"
+                type="submit"
+                size="lg"
+                w="100%"
+                disabled={
+                  !userID
+                  || !tipoIncapacidad.length
+                  || (hasAdminPermission && (!colaboradorOptions.length || isEmployeesLoading))
+                }
+              >
+                Registrar incapacidad
+              </AppButton>
+            </Box>
+          </Form>
+        }
+      />
     </Layout>
   );
 }

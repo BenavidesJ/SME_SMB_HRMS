@@ -48,6 +48,7 @@ export const ACCESS_RULES: AccessRule[] = [
 
   // Incapacidades
   { path: "/incapacidades", roles: ["SUPER_ADMIN", "ADMINISTRADOR", "EMPLEADO"], match: "prefix" },
+  { path: "/incapacidades/gestion", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
 
   // Otras secciones
   { path: "/aguinaldos", roles: ["SUPER_ADMIN", "ADMINISTRADOR"], match: "prefix" },
