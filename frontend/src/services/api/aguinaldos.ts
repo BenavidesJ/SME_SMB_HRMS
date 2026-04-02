@@ -70,6 +70,19 @@ export interface AguinaldoRegistro {
   registrado_por_nombre: string;
 }
 
+export interface AguinaldoPeriodo {
+  periodo_key: string;
+  anio: number;
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_pago: string;
+  cantidad_registros: number;
+  total_colaboradores: number;
+  monto_total: number;
+  ultimo_registro_id: number;
+  registrado_por_nombre: string;
+}
+
 export interface AguinaldoElegible {
   id_colaborador: number;
   id_contrato: number;
@@ -112,6 +125,15 @@ export interface AguinaldoDetalleResponse {
   generado_en?: string;
 }
 
+export function buildAguinaldoPeriodoKey(periodo: {
+  anio: number;
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_pago: string;
+}) {
+  return `${periodo.anio}|${periodo.periodo_desde}|${periodo.periodo_hasta}|${periodo.fecha_pago}`;
+}
+
 // ── API calls ──
 
 export const calcularLoteAguinaldo = (payload: {
@@ -146,8 +168,37 @@ export const recalcularAguinaldos = (payload: { ids: number[] }) => {
 export const listarAguinaldos = (params?: {
   anio?: number;
   id_colaborador?: number;
+  periodo_desde?: string;
+  periodo_hasta?: string;
+  fecha_pago?: string;
 }) => {
   return api.get<{ data: AguinaldoRegistro[] }>("aguinaldos", { params });
+};
+
+export const listarPeriodosAguinaldo = () => {
+  return api.get<{ data: AguinaldoPeriodo[] }>("aguinaldos/periodos");
+};
+
+export const editarPeriodoAguinaldo = (
+  periodoKey: string,
+  payload: {
+    anio: number;
+    periodo_desde: string;
+    periodo_hasta: string;
+    fecha_pago: string;
+  },
+) => {
+  return api.patch<{ data: AguinaldoPeriodo }>(`aguinaldos/periodos/${encodeURIComponent(periodoKey)}`, payload);
+};
+
+export const eliminarPeriodoAguinaldo = (periodoKey: string) => {
+  return api.delete<{
+    data: {
+      periodo_key: string;
+      eliminados: number;
+      monto_total: number;
+    };
+  }>(`aguinaldos/periodos/${encodeURIComponent(periodoKey)}`);
 };
 
 export const listarAguinaldoElegibles = (params: {

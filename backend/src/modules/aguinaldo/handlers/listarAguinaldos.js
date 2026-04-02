@@ -1,12 +1,19 @@
 import { Aguinaldo, Colaborador } from "../../../models/index.js";
+import { normalizeDateOnly } from "../utils/periodoKey.js";
 
 /**
  * Lista los registros de aguinaldo con filtros opcionales.
  *
- * @param {{ anio?: number, id_colaborador?: number }} params
+ * @param {{ anio?: number, id_colaborador?: number, periodo_desde?: string, periodo_hasta?: string, fecha_pago?: string }} params
  * @returns {Promise<object[]>}
  */
-export async function listarAguinaldos({ anio, id_colaborador } = {}) {
+export async function listarAguinaldos({
+  anio,
+  id_colaborador,
+  periodo_desde,
+  periodo_hasta,
+  fecha_pago,
+} = {}) {
   const where = {};
 
   if (anio) {
@@ -14,6 +21,15 @@ export async function listarAguinaldos({ anio, id_colaborador } = {}) {
   }
   if (id_colaborador) {
     where.id_colaborador = id_colaborador;
+  }
+  if (periodo_desde) {
+    where.periodo_desde = normalizeDateOnly(periodo_desde, "periodo_desde");
+  }
+  if (periodo_hasta) {
+    where.periodo_hasta = normalizeDateOnly(periodo_hasta, "periodo_hasta");
+  }
+  if (fecha_pago) {
+    where.fecha_pago = normalizeDateOnly(fecha_pago, "fecha_pago");
   }
 
   const registros = await Aguinaldo.findAll({

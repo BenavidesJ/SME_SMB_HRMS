@@ -42,7 +42,8 @@ import { DetallePlanilla } from "../pages/Private/planillas/DetallePlanilla";
 import { MiPlanilla } from "../pages/Private/planillas/MiPlanilla";
 import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/TiposJornada";
 import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
-import { Aguinaldos } from "../pages/Private/aguinaldos/Aguinaldos";
+import { AguinaldosPeriodos } from "../pages/Private/aguinaldos/AguinaldosPeriodos";
+import { DetalleAguinaldo } from "../pages/Private/aguinaldos/DetalleAguinaldo";
 import { Liquidaciones } from "../pages/Private/liquidaciones/Liquidaciones";
 import { Reportes } from "../pages/Private/reportes/Reportes";
 
@@ -235,8 +236,18 @@ export const router = createBrowserRouter([
 
       {
         path: "/aguinaldos",
-        element: <Aguinaldos />,
+        element: <AguinaldosPeriodos />,
         handle: { crumb: "Aguinaldos" },
+      },
+      {
+        path: "/aguinaldos/:periodoKey",
+        element: <DetalleAguinaldo />,
+        handle: {
+          crumb: ({ params }: { params: Record<string, string> }) => [
+            { label: "Aguinaldos", to: "/aguinaldos" },
+            `Periodo (${shortId(params.periodoKey)})`,
+          ],
+        },
       },
 
       {

@@ -5,4 +5,7 @@ export {
   listarAguinaldosController,
   listarColaboradoresElegiblesAguinaldoController,
   obtenerDetalleAguinaldoController,
+  listarPeriodosAguinaldoController,
+  editarPeriodoAguinaldoController,
+  eliminarPeriodoAguinaldoController,
 } from "./controllers/aguinaldo.controller.js";
