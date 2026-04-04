@@ -3,9 +3,10 @@ set -euo pipefail
 
 if [ "$#" -lt 8 ]; then
   echo "Uso:"
-  echo "API_BASE IDENTIFICACION FECHA_INICIO FECHA_FIN HORA_INICIO HORA_FIN USERNAME PASSWORD [TZ_OFFSET]"
+  echo "API_BASE IDENTIFICACION FECHA_INICIO FECHA_FIN HORA_INICIO HORA_FIN USERNAME PASSWORD [TZ_OFFSET] [MARCAR_FERIADOS]"
   echo "Ejemplo:"
-  echo "http://localhost:3000/v1 123456789 2026-03-01 2026-03-31 08:00 17:00 admin 1234 -06:00"
+  echo "http://localhost:3000/v1 123456789 2026-03-01 2026-03-31 08:00 17:00 admin 1234 -06:00 true"
+  echo "http://localhost:3000/v1 123456789 2026-03-01 2026-03-31 08:00 17:00 admin 1234 -06:00 false"
   exit 1
 fi
 
@@ -18,9 +19,21 @@ HORA_FIN="$6"          # HH:MM
 USERNAME="$7"
 PASSWORD="$8"
 TZ_OFFSET="${9:--06:00}"
+MARCAR_FERIADOS_RAW="${10:-true}"
+MARCAR_FERIADOS_NORMALIZED="$(printf "%s" "$MARCAR_FERIADOS_RAW" | tr '[:upper:]' '[:lower:]')"
 
-# Para evitar rate limit en dev (10 req/min aprox)
-SLEEP_SECONDS=7
+case "$MARCAR_FERIADOS_NORMALIZED" in
+  true|1|yes|si|y) MARCAR_FERIADOS="true" ;;
+  false|0|no|n) MARCAR_FERIADOS="false" ;;
+  *)
+    echo "Valor invalido para MARCAR_FERIADOS: $MARCAR_FERIADOS_RAW"
+    echo "Use: true o false"
+    exit 1
+    ;;
+esac
+
+# Throttling opcional: por defecto sin delay. Override con SLEEP_SECONDS si se requiere.
+SLEEP_SECONDS="${SLEEP_SECONDS:-0}"
 
 req() {
   curl -sS "$@"
@@ -73,6 +86,17 @@ contains_char() {
     *"$c"*) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+is_holiday_date() {
+  local d="$1"
+  local holiday_dates="$2"
+
+  if [ -z "$holiday_dates" ]; then
+    return 1
+  fi
+
+  printf "%s\n" "$holiday_dates" | grep -Fxq "$d"
 }
 
 api_msg() {
@@ -130,7 +154,28 @@ fi
 echo "dias_laborales=$DIAS_LABORALES"
 echo "dias_libres=$DIAS_LIBRES"
 
-echo "4) Crear marcas por cada día laboral..."
+echo "4) Obtener feriados dentro del rango..."
+FERIADOS_JSON="$(req -X GET "$API_BASE/mantenimientos/feriados" -H "$AUTH_HEADER")"
+FERIADOS_OK="$(echo "$FERIADOS_JSON" | jq -r '.success // false')"
+
+if [ "$FERIADOS_OK" != "true" ]; then
+  echo "No se pudieron obtener feriados. Respuesta:"
+  echo "$FERIADOS_JSON"
+  exit 1
+fi
+
+FERIADOS_RANGO="$(echo "$FERIADOS_JSON" | jq -r --arg fi "$FECHA_INICIO" --arg ff "$FECHA_FIN" '
+  (.data // [])
+  | map(.fecha | tostring)
+  | map(select(. >= $fi and . <= $ff))
+  | .[]
+')"
+
+FERIADOS_CANTIDAD="$(printf "%s\n" "$FERIADOS_RANGO" | grep -cve '^$')"
+echo "feriados_en_rango=$FERIADOS_CANTIDAD"
+echo "marcar_feriados=$MARCAR_FERIADOS"
+
+echo "5) Crear marcas por cada día laboral..."
 current="$FECHA_INICIO"
 end_epoch="$(date_epoch "$FECHA_FIN")"
 
@@ -139,6 +184,12 @@ while [ "$(date_epoch "$current")" -le "$end_epoch" ]; do
 
   # Trabaja si el día está en dias_laborales y no está en dias_libres
   if contains_char "$DIAS_LABORALES" "$code" && ! contains_char "$DIAS_LIBRES" "$code"; then
+    if [ "$MARCAR_FERIADOS" = "false" ] && is_holiday_date "$current" "$FERIADOS_RANGO"; then
+      echo "[$current][$code] Feriado, se omite por configuración."
+      current="$(date_add_one "$current")"
+      continue
+    fi
+
     ts_entrada="$(iso_ts "$current" "$HORA_INICIO")"
     ts_salida="$(iso_ts "$current" "$HORA_FIN")"
 

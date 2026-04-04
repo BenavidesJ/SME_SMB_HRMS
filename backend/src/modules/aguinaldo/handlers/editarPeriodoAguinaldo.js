@@ -1,9 +1,7 @@
 import { Op } from "sequelize";
 import { Aguinaldo, Colaborador, sequelize } from "../../../models/index.js";
 import {
-  assertValidDateRange,
-  normalizeDateOnly,
-  normalizeYear,
+  assertLegalAguinaldoPeriodo,
   parseAguinaldoPeriodoKey,
 } from "../utils/periodoKey.js";
 import { summarizePeriodoRecords } from "./shared/periodos.js";
@@ -55,22 +53,20 @@ export async function editarPeriodoAguinaldo({ periodoKey, patch } = {}) {
       throw new Error("No existe el periodo de aguinaldo seleccionado");
     }
 
-    const nextPeriodo = {
+    const nextPeriodo = assertLegalAguinaldoPeriodo({
       anio: cleanPatch.anio !== undefined
-        ? normalizeYear(cleanPatch.anio)
+        ? cleanPatch.anio
         : currentPeriodo.anio,
       periodo_desde: cleanPatch.periodo_desde !== undefined
-        ? normalizeDateOnly(cleanPatch.periodo_desde, "periodo_desde")
+        ? cleanPatch.periodo_desde
         : currentPeriodo.periodo_desde,
       periodo_hasta: cleanPatch.periodo_hasta !== undefined
-        ? normalizeDateOnly(cleanPatch.periodo_hasta, "periodo_hasta")
+        ? cleanPatch.periodo_hasta
         : currentPeriodo.periodo_hasta,
       fecha_pago: cleanPatch.fecha_pago !== undefined
-        ? normalizeDateOnly(cleanPatch.fecha_pago, "fecha_pago")
+        ? cleanPatch.fecha_pago
         : currentPeriodo.fecha_pago,
-    };
-
-    assertValidDateRange(nextPeriodo.periodo_desde, nextPeriodo.periodo_hasta);
+    });
 
     const recordIds = periodRecords.map((record) => Number(record.id_aguinaldo));
     const collaboratorIds = Array.from(

@@ -3,6 +3,7 @@ import {
   calcularMontoPorColaborador,
   buscarAguinaldoExistente,
 } from "../utils/aguinaldoCalculator.js";
+import { assertLegalAguinaldoPeriodo } from "../utils/periodoKey.js";
 
 /**
  * Crea registros de aguinaldo para un lote de colaboradores.
@@ -35,6 +36,13 @@ export async function crearLoteAguinaldo({
     throw new Error("Debe proporcionar el usuario que registra el aguinaldo.");
   }
 
+  const legalPeriodo = assertLegalAguinaldoPeriodo({
+    anio,
+    periodo_desde,
+    periodo_hasta,
+    fecha_pago,
+  });
+
   // Obtener nombres para el reporte
   const empleados = await Colaborador.findAll({
     attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
@@ -51,7 +59,7 @@ export async function crearLoteAguinaldo({
   try {
     for (const idCol of colaboradores) {
       // Verificar si ya existe
-      const existente = await buscarAguinaldoExistente(idCol, anio, transaction);
+      const existente = await buscarAguinaldoExistente(idCol, legalPeriodo.anio, transaction);
 
       const empleado = empleadosMap.get(idCol);
       const nombreCompleto = empleado
@@ -73,8 +81,8 @@ export async function crearLoteAguinaldo({
       // Calcular monto
       const { montoAguinaldo } = await calcularMontoPorColaborador(
         idCol,
-        periodo_desde,
-        periodo_hasta,
+        legalPeriodo.periodo_desde,
+        legalPeriodo.periodo_hasta,
         transaction,
       );
 
@@ -82,11 +90,11 @@ export async function crearLoteAguinaldo({
       const nuevoAguinaldo = await Aguinaldo.create(
         {
           id_colaborador: idCol,
-          anio,
-          periodo_desde,
-          periodo_hasta,
+          anio: legalPeriodo.anio,
+          periodo_desde: legalPeriodo.periodo_desde,
+          periodo_hasta: legalPeriodo.periodo_hasta,
           monto_calculado: montoAguinaldo,
-          fecha_pago,
+          fecha_pago: legalPeriodo.fecha_pago,
           registrado_por,
         },
         { transaction },
@@ -118,7 +126,7 @@ export async function crearLoteAguinaldo({
       duplicados,
       mensaje:
         duplicados.length > 0
-          ? `Se crearon ${creados.length} aguinaldos. ${duplicados.length} colaborador(es) ya tenían registro para el año ${anio}.`
+          ? `Se crearon ${creados.length} aguinaldos. ${duplicados.length} colaborador(es) ya tenían registro para el año ${legalPeriodo.anio}.`
           : `Se crearon ${creados.length} aguinaldos exitosamente.`,
     };
   } catch (error) {

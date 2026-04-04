@@ -57,3 +57,49 @@ export function assertValidDateRange(periodoDesde, periodoHasta) {
     throw new Error("El periodo desde no puede ser posterior al periodo hasta");
   }
 }
+
+export function buildLegalAguinaldoPeriodoByYear(anio) {
+  const normalizedYear = normalizeYear(anio);
+
+  return {
+    anio: normalizedYear,
+    periodo_desde: `${normalizedYear - 1}-12-01`,
+    periodo_hasta: `${normalizedYear}-11-30`,
+    fecha_pago_min: `${normalizedYear}-12-01`,
+    fecha_pago_max: `${normalizedYear}-12-20`,
+    fecha_pago_sugerida: `${normalizedYear}-12-15`,
+  };
+}
+
+export function assertLegalAguinaldoPeriodo({ anio, periodo_desde, periodo_hasta, fecha_pago }) {
+  const normalizedYear = normalizeYear(anio, "anio");
+  const normalizedDesde = normalizeDateOnly(periodo_desde, "periodo_desde");
+  const normalizedHasta = normalizeDateOnly(periodo_hasta, "periodo_hasta");
+  const normalizedPago = normalizeDateOnly(fecha_pago, "fecha_pago");
+
+  assertValidDateRange(normalizedDesde, normalizedHasta);
+
+  const legalPeriodo = buildLegalAguinaldoPeriodoByYear(normalizedYear);
+
+  if (
+    normalizedDesde !== legalPeriodo.periodo_desde
+    || normalizedHasta !== legalPeriodo.periodo_hasta
+  ) {
+    throw new Error(
+      `El periodo legal del aguinaldo ${normalizedYear} debe ser del ${legalPeriodo.periodo_desde} al ${legalPeriodo.periodo_hasta}`,
+    );
+  }
+
+  if (normalizedPago < legalPeriodo.fecha_pago_min || normalizedPago > legalPeriodo.fecha_pago_max) {
+    throw new Error(
+      `La fecha de pago del aguinaldo ${normalizedYear} debe estar entre ${legalPeriodo.fecha_pago_min} y ${legalPeriodo.fecha_pago_max}`,
+    );
+  }
+
+  return {
+    anio: normalizedYear,
+    periodo_desde: normalizedDesde,
+    periodo_hasta: normalizedHasta,
+    fecha_pago: normalizedPago,
+  };
+}

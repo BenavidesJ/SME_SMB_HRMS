@@ -5,6 +5,46 @@ import {
   Aguinaldo,
 } from "../../../models/index.js";
 
+function buildMonthRange(periodoDesde, periodoHasta) {
+  const [fromYearRaw, fromMonthRaw] = String(periodoDesde).split("-");
+  const [toYearRaw, toMonthRaw] = String(periodoHasta).split("-");
+
+  const fromYear = Number(fromYearRaw);
+  const fromMonth = Number(fromMonthRaw);
+  const toYear = Number(toYearRaw);
+  const toMonth = Number(toMonthRaw);
+
+  if (
+    !Number.isInteger(fromYear)
+    || !Number.isInteger(fromMonth)
+    || !Number.isInteger(toYear)
+    || !Number.isInteger(toMonth)
+    || fromMonth < 1
+    || fromMonth > 12
+    || toMonth < 1
+    || toMonth > 12
+  ) {
+    throw new Error("No se pudo construir el rango de meses del periodo");
+  }
+
+  const startIndex = fromYear * 12 + (fromMonth - 1);
+  const endIndex = toYear * 12 + (toMonth - 1);
+
+  if (startIndex > endIndex) {
+    throw new Error("El periodo desde no puede ser posterior al periodo hasta");
+  }
+
+  const months = [];
+
+  for (let index = startIndex; index <= endIndex; index += 1) {
+    const anio = Math.floor(index / 12);
+    const mes = (index % 12) + 1;
+    months.push({ anio, mes });
+  }
+
+  return months;
+}
+
 /**
  * Obtiene la suma de salarios brutos agrupados por mes para un colaborador
  * dentro de un rango de fechas.
@@ -57,10 +97,20 @@ export async function obtenerSalariosPorMes(
     ...(transaction ? { transaction } : {}),
   });
 
-  return rows.map((r) => ({
+  const groupedRows = rows.map((r) => ({
     mes: Number(r.mes),
     anio: Number(r.anio),
     total: Number(r.total) || 0,
+  }));
+
+  const monthlyTotals = new Map(
+    groupedRows.map((row) => [`${row.anio}-${row.mes}`, row.total]),
+  );
+
+  return buildMonthRange(periodoDesde, periodoHasta).map(({ anio, mes }) => ({
+    mes,
+    anio,
+    total: monthlyTotals.get(`${anio}-${mes}`) ?? 0,
   }));
 }
 

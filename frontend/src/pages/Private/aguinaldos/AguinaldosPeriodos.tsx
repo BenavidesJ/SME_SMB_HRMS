@@ -9,6 +9,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FiArrowDown, FiArrowUp, FiEdit2, FiEye, FiFilePlus, FiTrash2 } from "react-icons/fi";
 import { useNavigate } from "react-router";
 import { Form } from "../../../components/forms/Form/Form";
@@ -33,16 +34,38 @@ type PeriodFormValues = {
   fecha_pago: string;
 };
 
+type LegalPeriodo = {
+  anio: string;
+  periodo_desde: string;
+  periodo_hasta: string;
+  fecha_pago_sugerida: string;
+  fecha_pago_min: string;
+  fecha_pago_max: string;
+};
+
+function buildLegalPeriodoByYear(year: number): LegalPeriodo {
+  return {
+    anio: String(year),
+    periodo_desde: `${year - 1}-12-01`,
+    periodo_hasta: `${year}-11-30`,
+    fecha_pago_sugerida: `${year}-12-15`,
+    fecha_pago_min: `${year}-12-01`,
+    fecha_pago_max: `${year}-12-20`,
+  };
+}
+
+function isFechaPagoWithinLegalWindow(fechaPago: string, legalPeriodo: LegalPeriodo) {
+  if (!isValidDateOnly(fechaPago)) return false;
+
+  return (
+    fechaPago >= legalPeriodo.fecha_pago_min
+    && fechaPago <= legalPeriodo.fecha_pago_max
+  );
+}
+
 function getDefaultPeriodo() {
   const now = new Date();
-  const currentYear = now.getFullYear();
-
-  return {
-    periodo_desde: `${currentYear - 1}-12-01`,
-    periodo_hasta: `${currentYear}-11-30`,
-    anio: String(currentYear),
-    fecha_pago: `${currentYear}-12-15`,
-  };
+  return buildLegalPeriodoByYear(now.getFullYear());
 }
 
 function toDateSortValue(value: string) {
@@ -53,6 +76,81 @@ function toDateSortValue(value: string) {
 
 function isValidDateOnly(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""));
+}
+
+function PeriodFormFields({ isEditing }: { isEditing: boolean }) {
+  const { control, setValue } = useFormContext<PeriodFormValues>();
+  const selectedYearRaw = useWatch({ control, name: "anio" });
+  const fechaPago = useWatch({ control, name: "fecha_pago" });
+  const parsedYear = Number(selectedYearRaw);
+
+  const legalPeriodo = useMemo(
+    () => (Number.isInteger(parsedYear) && parsedYear > 0 ? buildLegalPeriodoByYear(parsedYear) : null),
+    [parsedYear],
+  );
+
+  useEffect(() => {
+    if (isEditing || !legalPeriodo) return;
+
+    setValue("periodo_desde", legalPeriodo.periodo_desde, { shouldValidate: true });
+    setValue("periodo_hasta", legalPeriodo.periodo_hasta, { shouldValidate: true });
+
+    if (!isFechaPagoWithinLegalWindow(String(fechaPago ?? ""), legalPeriodo)) {
+      setValue("fecha_pago", legalPeriodo.fecha_pago_sugerida, { shouldValidate: true });
+    }
+  }, [isEditing, legalPeriodo, fechaPago, setValue]);
+
+  return (
+    <>
+      <InputField
+        name="anio"
+        label="Año"
+        fieldType="year"
+        required
+        rules={{
+          validate: (value: string) => {
+            const year = Number(value);
+            return Number.isInteger(year) && year > 0
+              ? true
+              : "El año del periodo es inválido.";
+          },
+        }}
+      />
+
+      <InputField
+        name="periodo_desde"
+        label="Periodo desde"
+        fieldType="date"
+        required
+        readOnly={!isEditing}
+      />
+
+      <InputField
+        name="periodo_hasta"
+        label="Periodo hasta"
+        fieldType="date"
+        required
+        readOnly={!isEditing}
+      />
+
+      <InputField
+        name="fecha_pago"
+        label="Fecha de pago"
+        fieldType="date"
+        required
+        min={legalPeriodo?.fecha_pago_min}
+        max={legalPeriodo?.fecha_pago_max}
+        rules={{
+          validate: (value: string) => {
+            if (!legalPeriodo) return "Seleccione un año válido.";
+            return isFechaPagoWithinLegalWindow(value, legalPeriodo)
+              ? true
+              : `La fecha de pago debe estar entre ${formatDateUiCompact(legalPeriodo.fecha_pago_min)} y ${formatDateUiCompact(legalPeriodo.fecha_pago_max)}.`;
+          },
+        }}
+      />
+    </>
+  );
 }
 
 export const AguinaldosPeriodos = () => {
@@ -114,7 +212,7 @@ export const AguinaldosPeriodos = () => {
       anio: defaults.anio,
       periodo_desde: defaults.periodo_desde,
       periodo_hasta: defaults.periodo_hasta,
-      fecha_pago: defaults.fecha_pago,
+      fecha_pago: defaults.fecha_pago_sugerida,
     };
   }, [editingPeriod, defaults]);
 
@@ -206,6 +304,27 @@ export const AguinaldosPeriodos = () => {
       return false;
     }
 
+    const legalPeriodo = buildLegalPeriodoByYear(anio);
+
+    if (
+      values.periodo_desde !== legalPeriodo.periodo_desde
+      || values.periodo_hasta !== legalPeriodo.periodo_hasta
+    ) {
+      showToast(
+        `El periodo legal para ${anio} debe ser del ${formatDateUiCompact(legalPeriodo.periodo_desde)} al ${formatDateUiCompact(legalPeriodo.periodo_hasta)}.`,
+        "error",
+      );
+      return false;
+    }
+
+    if (!isFechaPagoWithinLegalWindow(values.fecha_pago, legalPeriodo)) {
+      showToast(
+        `La fecha de pago debe estar entre ${formatDateUiCompact(legalPeriodo.fecha_pago_min)} y ${formatDateUiCompact(legalPeriodo.fecha_pago_max)}.`,
+        "error",
+      );
+      return false;
+    }
+
     const desdeMs = new Date(`${values.periodo_desde}T00:00:00`).getTime();
     const hastaMs = new Date(`${values.periodo_hasta}T00:00:00`).getTime();
 
@@ -218,8 +337,8 @@ export const AguinaldosPeriodos = () => {
       if (editingPeriod) {
         await updatePeriodo(editingPeriod.periodo_key, {
           anio,
-          periodo_desde: values.periodo_desde,
-          periodo_hasta: values.periodo_hasta,
+          periodo_desde: legalPeriodo.periodo_desde,
+          periodo_hasta: legalPeriodo.periodo_hasta,
           fecha_pago: values.fecha_pago,
         });
 
@@ -228,8 +347,8 @@ export const AguinaldosPeriodos = () => {
       } else {
         const params = new URLSearchParams({
           anio: String(anio),
-          periodo_desde: values.periodo_desde,
-          periodo_hasta: values.periodo_hasta,
+          periodo_desde: legalPeriodo.periodo_desde,
+          periodo_hasta: legalPeriodo.periodo_hasta,
           fecha_pago: values.fecha_pago,
         });
 
@@ -375,33 +494,7 @@ export const AguinaldosPeriodos = () => {
                 formOptions={{ mode: "onChange" }}
               >
                 <Stack gap="4">
-                  <InputField
-                    name="anio"
-                    label="Año"
-                    fieldType="year"
-                    required
-                  />
-
-                  <InputField
-                    name="periodo_desde"
-                    label="Periodo desde"
-                    fieldType="date"
-                    required
-                  />
-
-                  <InputField
-                    name="periodo_hasta"
-                    label="Periodo hasta"
-                    fieldType="date"
-                    required
-                  />
-
-                  <InputField
-                    name="fecha_pago"
-                    label="Fecha de pago"
-                    fieldType="date"
-                    required
-                  />
+                  <PeriodFormFields isEditing={Boolean(editingPeriod)} />
 
                   <Stack direction="row" justifyContent="flex-end" gap="3">
                     <Button

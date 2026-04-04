@@ -42,7 +42,7 @@ describe("aguinaldoCalculator", () => {
   });
 
   describe("obtenerSalariosPorMes", () => {
-    it("agrupa resultados correctamente", async () => {
+    it("agrupa resultados correctamente y completa el resto del rango con 0", async () => {
       mockPlanillaFindAll.mockResolvedValue([
         { mes: 12, anio: 2024, total: "500000.00" },
         { mes: 1, anio: 2025, total: "550000.00" },
@@ -51,17 +51,22 @@ describe("aguinaldoCalculator", () => {
 
       const result = await obtenerSalariosPorMes(1, "2024-12-01", "2025-11-30");
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(12);
       expect(result[0]).toEqual({ mes: 12, anio: 2024, total: 500000 });
       expect(result[1]).toEqual({ mes: 1, anio: 2025, total: 550000 });
       expect(result[2]).toEqual({ mes: 2, anio: 2025, total: 550000 });
+      expect(result[11]).toEqual({ mes: 11, anio: 2025, total: 0 });
       expect(mockPlanillaFindAll).toHaveBeenCalledTimes(1);
     });
 
-    it("retorna array vacio si no hay planillas", async () => {
+    it("retorna meses del rango con total 0 si no hay planillas", async () => {
       mockPlanillaFindAll.mockResolvedValue([]);
       const result = await obtenerSalariosPorMes(99, "2024-12-01", "2025-11-30");
-      expect(result).toEqual([]);
+
+      expect(result).toHaveLength(12);
+      expect(result[0]).toEqual({ mes: 12, anio: 2024, total: 0 });
+      expect(result[11]).toEqual({ mes: 11, anio: 2025, total: 0 });
+      expect(result.every((item) => item.total === 0)).toBe(true);
     });
 
     it("convierte strings a numeros", async () => {
@@ -70,9 +75,31 @@ describe("aguinaldoCalculator", () => {
       ]);
 
       const result = await obtenerSalariosPorMes(1, "2025-01-01", "2025-11-30");
-      expect(result[0].mes).toBe(3);
-      expect(result[0].anio).toBe(2025);
-      expect(result[0].total).toBe(750000.5);
+
+      const march = result.find((item) => item.mes === 3 && item.anio === 2025);
+      expect(result).toHaveLength(11);
+      expect(march).toEqual({ mes: 3, anio: 2025, total: 750000.5 });
+      expect(result.find((item) => item.mes === 1)?.total).toBe(0);
+      expect(result.find((item) => item.mes === 11)?.total).toBe(0);
+    });
+
+    it("completa meses faltantes intermedios con 0", async () => {
+      mockPlanillaFindAll.mockResolvedValue([
+        { mes: 12, anio: 2024, total: "600000.00" },
+        { mes: 2, anio: 2025, total: "550000.00" },
+        { mes: 5, anio: 2025, total: "500000.00" },
+      ]);
+
+      const result = await obtenerSalariosPorMes(1, "2024-12-01", "2025-05-31");
+
+      expect(result).toEqual([
+        { mes: 12, anio: 2024, total: 600000 },
+        { mes: 1, anio: 2025, total: 0 },
+        { mes: 2, anio: 2025, total: 550000 },
+        { mes: 3, anio: 2025, total: 0 },
+        { mes: 4, anio: 2025, total: 0 },
+        { mes: 5, anio: 2025, total: 500000 },
+      ]);
     });
   });
 
@@ -102,7 +129,7 @@ describe("aguinaldoCalculator", () => {
 
       expect(result.totalBruto).toBe(3000000);
       expect(result.montoAguinaldo).toBe(250000);
-      expect(result.desglose).toHaveLength(6);
+      expect(result.desglose).toHaveLength(12);
     });
 
     it("retorna 0 si no hay planillas registradas", async () => {
@@ -112,7 +139,8 @@ describe("aguinaldoCalculator", () => {
 
       expect(result.totalBruto).toBe(0);
       expect(result.montoAguinaldo).toBe(0);
-      expect(result.desglose).toEqual([]);
+      expect(result.desglose).toHaveLength(12);
+      expect(result.desglose.every((item) => item.total === 0)).toBe(true);
     });
 
     it("maneja correctamente salarios variables por mes", async () => {
