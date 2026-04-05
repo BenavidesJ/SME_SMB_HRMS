@@ -567,6 +567,7 @@ export const SolicitudPermisosPage = () => {
                 endName="fecha_fin"
                 label="Período del permiso"
                 required
+                allowSameDay
                 min={todayInCostaRica}
                 startRules={{
                   validate: (value: string) => {

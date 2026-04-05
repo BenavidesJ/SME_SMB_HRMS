@@ -578,6 +578,7 @@ export const SolicitudVacacionesPage = () => {
                 endName="fecha_fin"
                 label="Período de vacaciones"
                 required
+                allowSameDay
                 min={todayInCostaRica}
                 startRules={{
                   validate: (value: string) => {
