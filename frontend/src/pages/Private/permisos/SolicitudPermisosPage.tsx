@@ -9,6 +9,7 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { useEffect, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Form, InputField } from "../../../components/forms";
 import { MonthPickerBase } from "../../../components/forms/InputField/fields/MonthPickerFieldVariant";
 import { Modal } from "../../../components/general";
@@ -27,6 +28,7 @@ import { ADMIN_REQUEST_STATUS_ORDER, normalizeRequestStatus } from "../../../uti
 import { FiEye } from "react-icons/fi";
 import type {
   CreatePermisoFormValues,
+  PermisoDuracionTipo,
   PermisoCreateResponse,
   PermisoListItem,
   PermisoPayload,
@@ -38,6 +40,11 @@ import { PermisoDetalleModal } from "./components/PermisoDetalleModal";
 const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
   { code: "GOCE", label: "Permiso con goce salarial" },
   { code: "SIN_GOCE", label: "Permiso sin goce salarial" },
+];
+
+const PERMISO_DURACION_TIPOS: Array<{ code: PermisoDuracionTipo; label: string }> = [
+  { code: "DIAS", label: "Por días" },
+  { code: "HORAS", label: "Por horas (mismo día)" },
 ];
 
 type SortField = "id" | "fecha_inicio" | "fecha_fin" | "tipo_permiso" | "dias_solicitados" | "estado";
@@ -100,6 +107,164 @@ const getPermisoTipoLabel = (item: PermisoListItem) => {
 
   return fromCatalog ?? "Tipo no disponible";
 };
+
+const parsePositiveNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const resolvePermisoMode = (item: PermisoListItem): PermisoDuracionTipo => {
+  if (item.tipo_permiso_modo === "HORAS" || item.tipo_permiso_modo === "DIAS") {
+    return item.tipo_permiso_modo;
+  }
+
+  const isSameDay = String(item.fecha_inicio ?? "") === String(item.fecha_fin ?? "");
+  const totalDias = parsePositiveNumber(item.cantidad_dias);
+  if (isSameDay && totalDias !== null && totalDias < 1) {
+    return "HORAS";
+  }
+
+  return "DIAS";
+};
+
+const getPermisoQuantityValue = (item: PermisoListItem) => {
+  if (resolvePermisoMode(item) === "HORAS") {
+    return parsePositiveNumber(item.horas_solicitadas ?? item.cantidad_horas ?? 0) ?? 0;
+  }
+
+  return parsePositiveNumber(item.dias_solicitados ?? item.cantidad_dias ?? 0) ?? 0;
+};
+
+const getPermisoQuantityLabel = (item: PermisoListItem) => {
+  if (resolvePermisoMode(item) === "HORAS") {
+    const horas = parsePositiveNumber(item.horas_solicitadas ?? item.cantidad_horas ?? 0);
+    return horas !== null ? `${horas} h` : "—";
+  }
+
+  return item.dias_solicitados ?? item.cantidad_dias ?? "—";
+};
+
+const normalizeTimeValue = (value: string) => String(value ?? "").slice(0, 5);
+
+function PermisoModalFields({
+  todayInCostaRica,
+  approverOptions,
+  isLoadingEmployees,
+  tipoPermisoOptions,
+}: {
+  todayInCostaRica: string;
+  approverOptions: Array<{ label: string; value: string }>;
+  isLoadingEmployees: boolean;
+  tipoPermisoOptions: Array<{ label: string; value: string }>;
+}) {
+  const { control, getValues } = useFormContext<CreatePermisoFormValues>();
+  const tipoDuracion = useWatch({ control, name: "tipo_duracion" });
+  const isHourlyMode = tipoDuracion === "HORAS";
+
+  return (
+    <>
+      <InputField
+        fieldType="select"
+        label="Aprobador"
+        name="id_aprobador"
+        required
+        disableSelectPortal
+        placeholder={isLoadingEmployees ? "Cargando jefe directo..." : "Jefe directo no disponible"}
+        options={approverOptions}
+        selectRootProps={{ disabled: true }}
+        rules={{ required: "El campo es obligatorio" }}
+      />
+      <InputField
+        fieldType="select"
+        label="Tipo de permiso"
+        name="tipo_permiso"
+        required
+        disableSelectPortal
+        placeholder={tipoPermisoOptions.length ? "Seleccione un tipo" : "Cargando..."}
+        options={tipoPermisoOptions}
+        rules={{ required: "El campo es obligatorio" }}
+        selectRootProps={{ disabled: tipoPermisoOptions.length === 0 }}
+      />
+      <InputField
+        fieldType="select"
+        label="Modalidad"
+        name="tipo_duracion"
+        required
+        disableSelectPortal
+        placeholder="Seleccione modalidad"
+        options={PERMISO_DURACION_TIPOS.map((item) => ({ label: item.label, value: item.code }))}
+        rules={{ required: "El campo es obligatorio" }}
+      />
+
+      {isHourlyMode ? (
+        <>
+          <InputField
+            fieldType="date"
+            label="Fecha del permiso"
+            name="fecha_unica"
+            required
+            min={todayInCostaRica}
+            rules={{
+              required: "El campo es obligatorio",
+              validate: (value: string) => {
+                if (!value) return true;
+                return value >= todayInCostaRica || "La fecha no puede ser anterior a hoy.";
+              },
+            }}
+          />
+          <InputField
+            fieldType="time"
+            label="Hora inicio"
+            name="hora_inicio"
+            required
+            rules={{ required: "El campo es obligatorio" }}
+          />
+          <InputField
+            fieldType="time"
+            label="Hora fin"
+            name="hora_fin"
+            required
+            rules={{
+              required: "El campo es obligatorio",
+              validate: (value: string) => {
+                const start = normalizeTimeValue(String(getValues("hora_inicio") ?? ""));
+                const end = normalizeTimeValue(String(value ?? ""));
+                if (!start || !end) return true;
+                return end > start || "La hora fin debe ser mayor que la hora inicio.";
+              },
+            }}
+          />
+        </>
+      ) : (
+        <DateRangeField
+          startName="fecha_inicio"
+          endName="fecha_fin"
+          label="Período del permiso"
+          required
+          allowSameDay
+          min={todayInCostaRica}
+          startRules={{
+            validate: (value: string) => {
+              if (!value) return true;
+              return value >= todayInCostaRica || "La fecha de inicio no puede ser anterior a hoy.";
+            },
+          }}
+        />
+      )}
+
+      <InputField
+        fieldType="text"
+        label="Observaciones"
+        name="observaciones"
+        placeholder="Detalle adicional (opcional)"
+        rules={{
+          setValueAs: (v) => (typeof v === "string" ? v.trim() || undefined : undefined),
+        }}
+        required={false}
+      />
+    </>
+  );
+}
 
 const estadoBadgeProps = (estado: string) => {
   switch (normalizeRequestStatus(estado)) {
@@ -247,9 +412,9 @@ export const SolicitudPermisosPage = () => {
       }
 
       if (sort.field === "dias_solicitados") {
-        const leftDays = Number(left.dias_solicitados ?? left.cantidad_dias ?? 0);
-        const rightDays = Number(right.dias_solicitados ?? right.cantidad_dias ?? 0);
-        const value = (leftDays - rightDays) * direction;
+        const leftQuantity = getPermisoQuantityValue(left);
+        const rightQuantity = getPermisoQuantityValue(right);
+        const value = (leftQuantity - rightQuantity) * direction;
         return value === 0 ? right.id_solicitud - left.id_solicitud : value;
       }
 
@@ -343,7 +508,7 @@ export const SolicitudPermisosPage = () => {
           />
         ),
         minW: "100px",
-        cell: (item) => item.dias_solicitados ?? item.cantidad_dias ?? "—",
+        cell: (item) => getPermisoQuantityLabel(item),
       },
       {
         id: "estado",
@@ -420,17 +585,62 @@ export const SolicitudPermisosPage = () => {
       return false;
     }
 
-    const payload: PermisoPayload = {
-      id_colaborador: Number(userID),
-      id_aprobador: expectedApproverId,
-      fecha_inicio: formValues.fecha_inicio,
-      fecha_fin: formValues.fecha_fin,
-      tipo_permiso: selectedTipo.code,
-      ...(formValues.observaciones ? { observaciones: formValues.observaciones } : {}),
-    };
+    const durationType: PermisoDuracionTipo = formValues.tipo_duracion === "HORAS" ? "HORAS" : "DIAS";
+
+    if (durationType === "HORAS") {
+      const fechaUnica = String(formValues.fecha_unica ?? "").trim();
+      const horaInicio = normalizeTimeValue(String(formValues.hora_inicio ?? ""));
+      const horaFin = normalizeTimeValue(String(formValues.hora_fin ?? ""));
+
+      if (!fechaUnica) {
+        showToast("Seleccione una fecha para el permiso por horas.", "error", "Solicitud de permisos");
+        return false;
+      }
+
+      if (!horaInicio || !horaFin) {
+        showToast("Seleccione hora de inicio y hora de fin.", "error", "Solicitud de permisos");
+        return false;
+      }
+
+      if (horaFin <= horaInicio) {
+        showToast("La hora fin debe ser mayor que la hora inicio.", "error", "Solicitud de permisos");
+        return false;
+      }
+    }
+
+    const payload: PermisoPayload =
+      durationType === "HORAS"
+        ? {
+          id_colaborador: Number(userID),
+          id_aprobador: expectedApproverId,
+          fecha_inicio: formValues.fecha_unica,
+          fecha_fin: formValues.fecha_unica,
+          tipo_permiso: selectedTipo.code,
+          tipo_duracion: "HORAS",
+          hora_inicio: normalizeTimeValue(formValues.hora_inicio),
+          hora_fin: normalizeTimeValue(formValues.hora_fin),
+          ...(formValues.observaciones ? { observaciones: formValues.observaciones } : {}),
+        }
+        : {
+          id_colaborador: Number(userID),
+          id_aprobador: expectedApproverId,
+          fecha_inicio: formValues.fecha_inicio,
+          fecha_fin: formValues.fecha_fin,
+          tipo_permiso: selectedTipo.code,
+          tipo_duracion: "DIAS",
+          ...(formValues.observaciones ? { observaciones: formValues.observaciones } : {}),
+        };
 
     try {
       const result = await createPermiso(payload);
+
+      if (payload.tipo_duracion === "HORAS" && typeof result?.cantidad_horas === "number") {
+        showToast(
+          `Esta solicitud cubre ${result.cantidad_horas} hora${result.cantidad_horas === 1 ? "" : "s"}.`,
+          "info",
+          "Cálculo de permisos",
+        );
+      }
 
       if (payload.tipo_permiso === "GOCE" && typeof result?.cantidad_dias === "number") {
         showToast(
@@ -537,54 +747,23 @@ export const SolicitudPermisosPage = () => {
             key={formKey}
             onSubmit={handleCreatePermiso}
             resetOnSuccess
-            defaultValues={{ id_aprobador: defaultApproverId }}
+            defaultValues={{
+              id_aprobador: defaultApproverId,
+              tipo_duracion: "DIAS",
+              tipo_permiso: "",
+              fecha_inicio: "",
+              fecha_fin: "",
+              fecha_unica: "",
+              hora_inicio: "",
+              hora_fin: "",
+            }}
           >
             <Wrap maxW="600px">
-              <InputField
-                fieldType="select"
-                label="Aprobador"
-                name="id_aprobador"
-                required
-                disableSelectPortal
-                placeholder={isLoadingEmployees ? "Cargando jefe directo..." : "Jefe directo no disponible"}
-                options={approverOptions}
-                selectRootProps={{ disabled: true }}
-                rules={{ required: "El campo es obligatorio" }}
-              />
-              <InputField
-                fieldType="select"
-                label="Tipo de permiso"
-                name="tipo_permiso"
-                required
-                disableSelectPortal
-                placeholder={tipoPermisoOptions.length ? "Seleccione un tipo" : "Cargando..."}
-                options={tipoPermisoOptions}
-                rules={{ required: "El campo es obligatorio" }}
-                selectRootProps={{ disabled: tipoPermisoOptions.length === 0 }}
-              />
-              <DateRangeField
-                startName="fecha_inicio"
-                endName="fecha_fin"
-                label="Período del permiso"
-                required
-                allowSameDay
-                min={todayInCostaRica}
-                startRules={{
-                  validate: (value: string) => {
-                    if (!value) return true;
-                    return value >= todayInCostaRica || "La fecha de inicio no puede ser anterior a hoy.";
-                  },
-                }}
-              />
-              <InputField
-                fieldType="text"
-                label="Observaciones"
-                name="observaciones"
-                placeholder="Detalle adicional (opcional)"
-                rules={{
-                  setValueAs: (v) => (typeof v === "string" ? v.trim() || undefined : undefined),
-                }}
-                required={false}
+              <PermisoModalFields
+                todayInCostaRica={todayInCostaRica}
+                approverOptions={approverOptions}
+                isLoadingEmployees={isLoadingEmployees}
+                tipoPermisoOptions={tipoPermisoOptions}
               />
             </Wrap>
 

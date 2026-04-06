@@ -22,6 +22,13 @@ import {
 
 const ESTADOS_VALIDOS = new Set(["APROBADO", "RECHAZADO"]);
 
+function isHourlyPermisoRecord(solicitud) {
+  const start = String(solicitud?.fecha_inicio ?? "");
+  const end = String(solicitud?.fecha_fin ?? "");
+  const dias = Number(solicitud?.cantidad_dias ?? 0);
+  return start === end && Number.isFinite(dias) && dias > 0 && dias < 1;
+}
+
 function buildNombreCompleto({ nombre, primer_apellido, segundo_apellido }) {
   return [nombre, primer_apellido, segundo_apellido].filter(Boolean).join(" ").trim();
 }
@@ -128,6 +135,7 @@ export async function actualizarEstadoSolicitudPermiso({
     const endDate = assertDate(solicitud.fecha_fin, "fecha_fin");
     const startStr = startDate.format("YYYY-MM-DD");
     const endStr = endDate.format("YYYY-MM-DD");
+    const isHourlyMode = isHourlyPermisoRecord(solicitud);
 
     if (estadoDestino === "RECHAZADO") {
       await solicitud.update({ estado_solicitud: estadoRechazadoId }, { transaction: tx });
@@ -255,30 +263,32 @@ export async function actualizarEstadoSolicitudPermiso({
       );
     }
 
-    for (const date of workingDates) {
-      const existente = jornadasPorFecha.get(date);
-      if (existente) {
-        await existente.update(
-          {
-            horas_ordinarias: 0,
-            horas_extra: 0,
-            horas_nocturnas: 0,
-            permiso: solicitudId,
-          },
-          { transaction: tx },
-        );
-      } else {
-        await JornadaDiaria.create(
-          {
-            id_colaborador: solicitud.id_colaborador,
-            fecha: date,
-            horas_ordinarias: 0,
-            horas_extra: 0,
-            horas_nocturnas: 0,
-            permiso: solicitudId,
-          },
-          { transaction: tx },
-        );
+    if (!isHourlyMode) {
+      for (const date of workingDates) {
+        const existente = jornadasPorFecha.get(date);
+        if (existente) {
+          await existente.update(
+            {
+              horas_ordinarias: 0,
+              horas_extra: 0,
+              horas_nocturnas: 0,
+              permiso: solicitudId,
+            },
+            { transaction: tx },
+          );
+        } else {
+          await JornadaDiaria.create(
+            {
+              id_colaborador: solicitud.id_colaborador,
+              fecha: date,
+              horas_ordinarias: 0,
+              horas_extra: 0,
+              horas_nocturnas: 0,
+              permiso: solicitudId,
+            },
+            { transaction: tx },
+          );
+        }
       }
     }
 
@@ -296,6 +306,7 @@ export async function actualizarEstadoSolicitudPermiso({
     return {
       id_solicitud: solicitudId,
       estado_solicitud: estadoDestino,
+      tipo_permiso_modo: isHourlyMode ? "HORAS" : "DIAS",
       fechas_registradas: workingDates,
     };
   } catch (error) {

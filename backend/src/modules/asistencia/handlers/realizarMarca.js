@@ -17,6 +17,13 @@ import { getDayInitial } from "./helpers/obtenerInicialDia.js";
 
 const MAX_HORAS_LEGALES = 12;
 
+function isHourlyPermisoRecord(permiso) {
+  const start = String(permiso?.fecha_inicio ?? "");
+  const end = String(permiso?.fecha_fin ?? "");
+  const dias = Number(permiso?.cantidad_dias ?? 0);
+  return start === end && Number.isFinite(dias) && dias > 0 && dias < 1;
+}
+
 /**
  * Registrar marca de asistencia
  *
@@ -159,18 +166,38 @@ export const registrarMarcaAsistencia = async ({
         throw new Error(bloqueoMensaje);
       }
 
-      const permisoAprobado = await SolicitudPermisos.findOne({
-        where: {
-          id_colaborador: colaborador.id_colaborador,
-          estado_solicitud: ESTADO_APROBADO_ID,
-          fecha_inicio: { [Op.lte]: fechaDia },
-          fecha_fin: { [Op.gte]: fechaDia },
-        },
-        transaction: tx,
-        lock: tx.LOCK.UPDATE,
-      });
+      const permisosAprobados = await (
+        typeof SolicitudPermisos.findAll === "function"
+          ? SolicitudPermisos.findAll({
+              where: {
+                id_colaborador: colaborador.id_colaborador,
+                estado_solicitud: ESTADO_APROBADO_ID,
+                fecha_inicio: { [Op.lte]: fechaDia },
+                fecha_fin: { [Op.gte]: fechaDia },
+              },
+              attributes: ["id_solicitud", "fecha_inicio", "fecha_fin", "cantidad_dias"],
+              transaction: tx,
+              lock: tx.LOCK.UPDATE,
+            })
+          : (() => {
+              if (typeof SolicitudPermisos.findOne !== "function") return Promise.resolve([]);
+              return SolicitudPermisos.findOne({
+                where: {
+                  id_colaborador: colaborador.id_colaborador,
+                  estado_solicitud: ESTADO_APROBADO_ID,
+                  fecha_inicio: { [Op.lte]: fechaDia },
+                  fecha_fin: { [Op.gte]: fechaDia },
+                },
+                attributes: ["id_solicitud", "fecha_inicio", "fecha_fin", "cantidad_dias"],
+                transaction: tx,
+                lock: tx.LOCK.UPDATE,
+              }).then((item) => (item ? [item] : []));
+            })()
+      );
 
-      if (permisoAprobado) {
+      const hasBlockingPermiso = permisosAprobados.some((permiso) => !isHourlyPermisoRecord(permiso));
+
+      if (hasBlockingPermiso) {
         throw new Error(bloqueoMensaje);
       }
     }

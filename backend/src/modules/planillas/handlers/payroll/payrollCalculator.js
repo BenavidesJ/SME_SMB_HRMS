@@ -108,12 +108,18 @@ async function obtenerVacacionesAprobadas({ colaboradorId, fechaInicio, fechaFin
   });
 }
 
-async function obtenerPermisosConGoce({ colaboradorId, fechaInicio, fechaFin, transaction }) {
+async function obtenerPermisosAprobados({ colaboradorId, fechaInicio, fechaFin, transaction }) {
   return models.SolicitudPermisos.findAll({
-    attributes: ["id_solicitud", "fecha_inicio", "fecha_fin", "cantidad_dias"],
+    attributes: [
+      "id_solicitud",
+      "fecha_inicio",
+      "fecha_fin",
+      "cantidad_dias",
+      "cantidad_horas",
+      "con_goce_salarial",
+    ],
     where: {
       id_colaborador: colaboradorId,
-      con_goce_salarial: true,
       fecha_inicio: { [Op.lte]: fechaFin },
       fecha_fin: { [Op.gte]: fechaInicio },
       "$estadoSolicitud.estado$": "APROBADO",
@@ -123,6 +129,96 @@ async function obtenerPermisosConGoce({ colaboradorId, fechaInicio, fechaFin, tr
     ],
     transaction,
   });
+}
+
+function buildPermisoImpactMaps(permisos = []) {
+  const permisosConGoceFechas = new Set();
+  const permisosSinGoceFechas = new Set();
+  const horasPermisoConGoceByDate = new Map();
+  const horasPermisoSinGoceByDate = new Map();
+
+  for (const permiso of permisos) {
+    const inicio = dayjs(permiso.fecha_inicio);
+    const fin = dayjs(permiso.fecha_fin);
+    if (!inicio.isValid() || !fin.isValid() || inicio.isAfter(fin)) {
+      continue;
+    }
+
+    const fechaInicio = inicio.format("YYYY-MM-DD");
+    const fechaFin = fin.format("YYYY-MM-DD");
+    const esMismoDia = fechaInicio === fechaFin;
+
+    const cantidadDias = Number(permiso.cantidad_dias ?? 0);
+    const cantidadHoras = Number(permiso.cantidad_horas ?? 0);
+    const esPermisoPorHoras =
+      esMismoDia &&
+      Number.isFinite(cantidadDias) &&
+      cantidadDias > 0 &&
+      cantidadDias < 1 &&
+      Number.isFinite(cantidadHoras) &&
+      cantidadHoras > 0;
+
+    const esConGoce = Boolean(permiso.con_goce_salarial);
+
+    if (esPermisoPorHoras) {
+      const targetMap = esConGoce ? horasPermisoConGoceByDate : horasPermisoSinGoceByDate;
+      const prev = Number(targetMap.get(fechaInicio) ?? 0);
+      targetMap.set(fechaInicio, roundDecimal(prev + cantidadHoras));
+      continue;
+    }
+
+    let cursor = inicio.clone();
+    while (cursor.isSame(fin) || cursor.isBefore(fin)) {
+      const dateStr = cursor.format("YYYY-MM-DD");
+      if (esConGoce) {
+        permisosConGoceFechas.add(dateStr);
+      } else {
+        permisosSinGoceFechas.add(dateStr);
+      }
+      cursor = cursor.add(1, "day");
+    }
+  }
+
+  return {
+    permisosConGoceFechas,
+    permisosSinGoceFechas,
+    horasPermisoConGoceByDate,
+    horasPermisoSinGoceByDate,
+  };
+}
+
+function resolvePermissionHoursForDay({
+  horasProgramadasDia,
+  horasTrabajadasDia,
+  permisoConGoceDiaCompleto,
+  permisoSinGoceDiaCompleto,
+  horasPermisoConGoceDia,
+  horasPermisoSinGoceDia,
+}) {
+  const horasProgramadas = Math.max(Number(horasProgramadasDia ?? 0), 0);
+  const horasTrabajadas = Math.min(Math.max(Number(horasTrabajadasDia ?? 0), 0), horasProgramadas);
+
+  let horasPendientes = Math.max(horasProgramadas - horasTrabajadas, 0);
+
+  const horasConGoceSolicitadas = permisoConGoceDiaCompleto
+    ? horasProgramadas
+    : Math.max(Number(horasPermisoConGoceDia ?? 0), 0);
+  const horasConGoceAplicadas = Math.min(horasConGoceSolicitadas, horasPendientes);
+  horasPendientes = Math.max(horasPendientes - horasConGoceAplicadas, 0);
+
+  const horasSinGoceSolicitadas = permisoSinGoceDiaCompleto
+    ? horasProgramadas
+    : Math.max(Number(horasPermisoSinGoceDia ?? 0), 0);
+  const horasSinGoceAplicadas = Math.min(horasSinGoceSolicitadas, horasPendientes);
+  horasPendientes = Math.max(horasPendientes - horasSinGoceAplicadas, 0);
+
+  return {
+    horasTrabajadas,
+    horasConGoceAplicadas,
+    horasSinGoceAplicadas,
+    horasAusenciaInjustificada: horasPendientes,
+    horasPagadas: horasTrabajadas + horasConGoceAplicadas,
+  };
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -168,12 +264,18 @@ function procesarDiasPeriodo({
   jornadas,
   feriadosFechas,
   vacacionesFechas,
-  permisosConGoceFechas,
+  permisoImpact,
   diasLaboralesSet,
   duracionTurno,
   tarifaHora,
 }) {
   const jornadaMap = new Map(jornadas.map((j) => [j.fecha, j]));
+  const {
+    permisosConGoceFechas,
+    permisosSinGoceFechas,
+    horasPermisoConGoceByDate,
+    horasPermisoSinGoceByDate,
+  } = permisoImpact;
 
   let totalHorasOrdinariasProgramadas = 0;
   let totalHorasOrdinariasPagadas = 0;
@@ -226,8 +328,10 @@ function procesarDiasPeriodo({
     totalHorasOrdinariasProgramadas += horasProgramadasDia;
 
     const tieneVacaciones = vacacionesFechas.has(fechaStr) || Boolean(jornada?.id_vacaciones);
-    const tienePermisoConGoce =
-      permisosConGoceFechas.has(fechaStr) || Boolean(jornada?.id_permiso);
+    const permisoConGoceDiaCompleto = permisosConGoceFechas.has(fechaStr);
+    const permisoSinGoceDiaCompleto = permisosSinGoceFechas.has(fechaStr);
+    const horasPermisoConGoceDia = Number(horasPermisoConGoceByDate.get(fechaStr) ?? 0);
+    const horasPermisoSinGoceDia = Number(horasPermisoSinGoceByDate.get(fechaStr) ?? 0);
     const tieneIncapacidad = Boolean(jornada?.id_incapacidad && jornada?.incapacidad_data);
 
     if (feriadosFechas.has(fechaStr)) {
@@ -251,13 +355,28 @@ function procesarDiasPeriodo({
         diasVacaciones++;
         totalHorasOrdinariasPagadas += horasProgramadasDia;
         totalHorasVacacionesPagadas += horasProgramadasDia;
-      } else if (tienePermisoConGoce) {
-        diasPermisosConGoce++;
-        totalHorasOrdinariasPagadas += horasProgramadasDia;
-        totalHorasPermisosConGocePagadas += horasProgramadasDia;
       } else {
-        diasAusencias++;
-        totalHorasAusenciaInjustificada += horasProgramadasDia;
+        const distribucion = resolvePermissionHoursForDay({
+          horasProgramadasDia,
+          horasTrabajadasDia: 0,
+          permisoConGoceDiaCompleto,
+          permisoSinGoceDiaCompleto,
+          horasPermisoConGoceDia,
+          horasPermisoSinGoceDia,
+        });
+
+        if (distribucion.horasConGoceAplicadas > 0) {
+          diasPermisosConGoce++;
+          totalHorasPermisosConGocePagadas += distribucion.horasConGoceAplicadas;
+        }
+
+        totalHorasOrdinariasPagadas += distribucion.horasPagadas;
+
+        if (distribucion.horasAusenciaInjustificada > 0 || distribucion.horasSinGoceAplicadas > 0) {
+          diasAusencias++;
+          totalHorasAusenciaInjustificada +=
+            distribucion.horasAusenciaInjustificada + distribucion.horasSinGoceAplicadas;
+        }
       }
 
       actual = actual.add(1, "day");
@@ -268,14 +387,6 @@ function procesarDiasPeriodo({
       diasVacaciones++;
       totalHorasOrdinariasPagadas += horasProgramadasDia;
       totalHorasVacacionesPagadas += horasProgramadasDia;
-      actual = actual.add(1, "day");
-      continue;
-    }
-
-    if (tienePermisoConGoce) {
-      diasPermisosConGoce++;
-      totalHorasOrdinariasPagadas += horasProgramadasDia;
-      totalHorasPermisosConGocePagadas += horasProgramadasDia;
       actual = actual.add(1, "day");
       continue;
     }
@@ -305,19 +416,31 @@ function procesarDiasPeriodo({
       continue;
     }
 
-    if (horasTrabajadasDia > 0) {
-      diasTrabajados++;
-      totalHorasOrdinariasTrabajadas += horasTrabajadasDia;
-      totalHorasOrdinariasPagadas += horasTrabajadasDia;
+    const distribucion = resolvePermissionHoursForDay({
+      horasProgramadasDia,
+      horasTrabajadasDia,
+      permisoConGoceDiaCompleto,
+      permisoSinGoceDiaCompleto,
+      horasPermisoConGoceDia,
+      horasPermisoSinGoceDia,
+    });
 
-      const horasAusentesDia = Math.max(horasProgramadasDia - horasTrabajadasDia, 0);
-      if (horasAusentesDia > 0) {
-        diasAusencias++;
-        totalHorasAusenciaInjustificada += horasAusentesDia;
-      }
-    } else {
+    if (distribucion.horasTrabajadas > 0) {
+      diasTrabajados++;
+      totalHorasOrdinariasTrabajadas += distribucion.horasTrabajadas;
+    }
+
+    if (distribucion.horasConGoceAplicadas > 0) {
+      diasPermisosConGoce++;
+      totalHorasPermisosConGocePagadas += distribucion.horasConGoceAplicadas;
+    }
+
+    totalHorasOrdinariasPagadas += distribucion.horasPagadas;
+
+    if (distribucion.horasAusenciaInjustificada > 0 || distribucion.horasSinGoceAplicadas > 0) {
       diasAusencias++;
-      totalHorasAusenciaInjustificada += horasProgramadasDia;
+      totalHorasAusenciaInjustificada +=
+        distribucion.horasAusenciaInjustificada + distribucion.horasSinGoceAplicadas;
     }
 
     actual = actual.add(1, "day");
@@ -672,12 +795,12 @@ export async function calcularPlanillaColaborador({
   const vacaciones = await obtenerVacacionesAprobadas({
     colaboradorId, fechaInicio, fechaFin, transaction,
   });
-  const permisos = await obtenerPermisosConGoce({
+  const permisos = await obtenerPermisosAprobados({
     colaboradorId, fechaInicio, fechaFin, transaction,
   });
 
   const vacacionesFechas = expandirRangoFechas(vacaciones);
-  const permisosConGoceFechas = expandirRangoFechas(permisos);
+  const permisoImpact = buildPermisoImpactMaps(permisos);
 
   // 7. Procesar todos los días del período
   const resumenDias = procesarDiasPeriodo({
@@ -686,7 +809,7 @@ export async function calcularPlanillaColaborador({
     jornadas,
     feriadosFechas,
     vacacionesFechas,
-    permisosConGoceFechas,
+    permisoImpact,
     diasLaboralesSet,
     duracionTurno,
     tarifaHora,

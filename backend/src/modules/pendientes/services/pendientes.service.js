@@ -1,9 +1,9 @@
 import { Colaborador, Estado, SolicitudHoraExtra, SolicitudPermisos, SolicitudVacaciones, TipoHoraExtra } from "../../../models/index.js";
 
 const RUTAS_DESTINO = {
-  HORA_EXTRA: "/horas-extra/solicitud",
-  VACACIONES: "/vacaciones/solicitud",
-  PERMISO: "/permisos/solicitud",
+  HORA_EXTRA: "/horas-extra/gestion",
+  VACACIONES: "/vacaciones/gestion",
+  PERMISO: "/permisos/gestion",
 };
 
 const ETIQUETAS_TIPO = {

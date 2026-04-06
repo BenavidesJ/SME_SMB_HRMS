@@ -3,7 +3,7 @@ import { Badge, Card, Grid, GridItem, HStack, Skeleton, Stack, Text } from "@cha
 import { Button } from "../../../../components/general/button/Button";
 import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import { toTitleCase, formatDateUiCompact } from "../../../../utils";
-import type { PermisoListItem, PermisoTipo } from "../types";
+import type { PermisoDuracionTipo, PermisoListItem, PermisoTipo } from "../types";
 import { LuEye } from "react-icons/lu";
 
 const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
@@ -35,6 +35,21 @@ const buildCollaboratorName = (item: PermisoListItem) => {
   return baseName ? toTitleCase(baseName) : `Colaborador ${item.id_colaborador}`;
 };
 
+const parsePositiveNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const resolvePermisoMode = (item: PermisoListItem): PermisoDuracionTipo => {
+  if (item.tipo_permiso_modo === "HORAS" || item.tipo_permiso_modo === "DIAS") {
+    return item.tipo_permiso_modo;
+  }
+
+  const isSameDay = String(item.fecha_inicio ?? "") === String(item.fecha_fin ?? "");
+  const totalDias = parsePositiveNumber(item.cantidad_dias);
+  return isSameDay && totalDias !== null && totalDias < 1 ? "HORAS" : "DIAS";
+};
+
 interface PermisoSolicitudCardProps {
   item: PermisoListItem;
   showCollaborator?: boolean;
@@ -55,6 +70,11 @@ export function PermisoSolicitudCard({
   onViewDetail,
 }: PermisoSolicitudCardProps) {
   const estado = item.estadoSolicitudPermisos?.estado ?? item.estado_solicitud ?? "DESCONOCIDO";
+  const mode = resolvePermisoMode(item);
+  const quantityLabel =
+    mode === "HORAS"
+      ? `${item.horas_solicitadas ?? item.cantidad_horas ?? "—"} h`
+      : item.dias_solicitados ?? item.cantidad_dias ?? "—";
   const tipoFromCatalog = PERMISO_TIPOS.find(
     (tipo) => tipo.code === String(item.tipo_permiso ?? "").toUpperCase(),
   )?.label;
@@ -141,10 +161,10 @@ export function PermisoSolicitudCard({
 
             <Stack align="flex-end" gap="0.5" minW="fit-content">
               <Text color="fg.muted" textStyle="xs">
-                Días solicitados
+                {mode === "HORAS" ? "Horas solicitadas" : "Días solicitados"}
               </Text>
               <Text fontWeight="bold" textStyle="lg">
-                {item.dias_solicitados ?? item.cantidad_dias ?? "—"}
+                {quantityLabel}
               </Text>
             </Stack>
           </HStack>
@@ -171,7 +191,7 @@ export function PermisoSolicitudCard({
                   <Badge {...estadoBadgeProps(estado)}>{toTitleCase(estado)}</Badge>
                 </HStack>
                 <Text textStyle="xs" color="fg.muted" lineClamp={1}>
-                  {showCollaborator ? tipoLabel : ""}
+                  {showCollaborator ? `${tipoLabel} • ${mode === "HORAS" ? "Por horas" : "Por días"}` : ""}
                 </Text>
               </Stack>
             </GridItem>

@@ -27,6 +27,19 @@ function toColaboradorResumen(row) {
   };
 }
 
+function isHourlyPermisoFromPlain(plain) {
+  const start = String(plain?.fecha_inicio ?? "");
+  const end = String(plain?.fecha_fin ?? "");
+  const dias = Number(plain?.cantidad_dias ?? 0);
+
+  return start === end && Number.isFinite(dias) && dias > 0 && dias < 1;
+}
+
+function parsePositiveNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export async function listarPermisosPorColaborador({ id_colaborador, aprobador_filter }) {
   const idColaborador = assertId(id_colaborador, "id_colaborador");
   const aprobadorFilter = aprobador_filter ? assertId(aprobador_filter, "aprobador_filter") : null;
@@ -114,6 +127,7 @@ export async function listarPermisosPorColaborador({ id_colaborador, aprobador_f
     const plain = row.get({ plain: true });
     const estado = plain.estadoSolicitud ?? null;
     const estadoNombre = estado?.estado ? String(estado.estado).toUpperCase() : null;
+    const isHourlyMode = isHourlyPermisoFromPlain(plain);
 
     const startDate = assertDate(plain.fecha_inicio, "fecha_inicio");
     const endDate = assertDate(plain.fecha_fin, "fecha_fin");
@@ -128,14 +142,21 @@ export async function listarPermisosPorColaborador({ id_colaborador, aprobador_f
     }
 
     const jornadasAsignadas = jornadasPorSolicitud.get(Number(plain.id_solicitud)) ?? [];
-    const chargeableDates = estadoNombre === "APROBADO" ? jornadasAsignadas : workingDates;
+    const chargeableDates =
+      estadoNombre === "APROBADO"
+        ? jornadasAsignadas.length > 0
+          ? jornadasAsignadas
+          : workingDates
+        : workingDates;
 
     const skippedDetails = restDates
       .map((date) => ({ date, reason: "DESCANSO", holiday: null }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const tipoPermiso = plain.con_goce_salarial ? "GOCE" : "SIN_GOCE";
-    const diasSolicitadosStr = String(chargeableDates.length);
+    const cantidadDiasNumeric = parsePositiveNumber(plain.cantidad_dias);
+    const cantidadHorasNumeric = parsePositiveNumber(plain.cantidad_horas);
+    const diasSolicitadosStr = String(cantidadDiasNumeric ?? chargeableDates.length);
     const isAprobado = estadoNombre === "APROBADO";
 
     return {
@@ -154,6 +175,7 @@ export async function listarPermisosPorColaborador({ id_colaborador, aprobador_f
       con_goce_salarial: Boolean(plain.con_goce_salarial),
       cantidad_dias: plain.cantidad_dias != null ? String(plain.cantidad_dias) : diasSolicitadosStr,
       cantidad_horas: plain.cantidad_horas != null ? String(plain.cantidad_horas) : null,
+      tipo_permiso_modo: isHourlyMode ? "HORAS" : "DIAS",
       tipo_permiso: tipoPermiso,
       tiposSolicitud: {
         id_tipo_solicitud: null,
@@ -163,6 +185,7 @@ export async function listarPermisosPorColaborador({ id_colaborador, aprobador_f
       },
       dias_solicitados: diasSolicitadosStr,
       dias_aprobados: isAprobado ? diasSolicitadosStr : null,
+      horas_solicitadas: cantidadHorasNumeric != null ? String(cantidadHorasNumeric) : null,
       dias_solicitados_detalle: chargeableDates,
       dias_skipped_detalle: skippedDetails,
       colaborador: toColaboradorResumen(plain.colaborador),

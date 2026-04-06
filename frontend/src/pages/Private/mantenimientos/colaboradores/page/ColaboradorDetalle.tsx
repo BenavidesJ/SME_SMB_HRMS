@@ -375,11 +375,12 @@ export default function ColaboradorDetalle() {
   const editContractDefaults = useMemo(() => {
     if (!activeContract) return undefined;
     const h = getLastHorario(activeContract);
+    const tipoContrato = String(activeContract.tipo_contrato ?? "").trim() || "INDEFINIDO";
     return {
       template_id: "",
       id_jefe_directo: activeContract.id_jefe_directo ? String(activeContract.id_jefe_directo) : "",
       puesto: activeContract.puesto,
-      tipo_contrato: activeContract.tipo_contrato,
+      tipo_contrato: tipoContrato,
       tipo_jornada: activeContract.tipo_jornada,
       salario_base: formatCurrencyInputValue(activeContract.salario_base),
       fecha_inicio: activeContract.fecha_inicio,
@@ -819,7 +820,13 @@ export default function ColaboradorDetalle() {
         size="lg"
         onOpenChange={handleOpenCreateContractModal}
         content={
-          <Form<CreateContractFormValues> onSubmit={handleCreateContract}>
+          <Form<CreateContractFormValues>
+            onSubmit={handleCreateContract}
+            defaultValues={{
+              template_id: "",
+              tipo_contrato: "INDEFINIDO",
+            }}
+          >
             <SimpleGrid columns={2} gapX="1rem">
               <InputField
                 fieldType="select"

@@ -1,4 +1,5 @@
 export type PermisoTipo = "GOCE" | "SIN_GOCE";
+export type PermisoDuracionTipo = "DIAS" | "HORAS";
 
 export interface PermisoPayload {
   id_colaborador: number;
@@ -6,6 +7,9 @@ export interface PermisoPayload {
   fecha_inicio: string;
   fecha_fin: string;
   tipo_permiso: PermisoTipo;
+  tipo_duracion?: PermisoDuracionTipo;
+  hora_inicio?: string;
+  hora_fin?: string;
   observaciones?: string;
 }
 
@@ -19,6 +23,8 @@ export interface PermisoListItem {
   con_goce_salarial: boolean;
   cantidad_dias?: string | null;
   cantidad_horas?: string | null;
+  horas_solicitadas?: string | null;
+  tipo_permiso_modo?: PermisoDuracionTipo | null;
   tipo_permiso?: string | null;
   tiposSolicitud?: {
     id_tipo_solicitud: number | null;
@@ -74,19 +80,28 @@ export interface PermisoCreateResponse {
   cantidad_dias: number;
   cantidad_horas: number;
   tipo_permiso: PermisoTipo;
+  tipo_duracion?: PermisoDuracionTipo;
+  hora_inicio?: string;
+  hora_fin?: string;
+  horas_solicitadas?: number;
   warnings?: string[];
 }
 
 export interface PermisoUpdateResponse {
   id_solicitud: number;
   estado_solicitud: string;
+  tipo_permiso_modo?: PermisoDuracionTipo;
   fechas_registradas?: string[];
 }
 
 export type CreatePermisoFormValues = {
   id_aprobador: string;
   tipo_permiso: PermisoTipo | "";
+  tipo_duracion: PermisoDuracionTipo;
   fecha_inicio: string;
   fecha_fin: string;
+  fecha_unica: string;
+  hora_inicio: string;
+  hora_fin: string;
   observaciones?: string;
 };

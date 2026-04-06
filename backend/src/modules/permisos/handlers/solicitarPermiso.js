@@ -19,10 +19,17 @@ import {
   splitDatesBySchedule,
   normalizeDayChars,
 } from "../../vacaciones/handlers/utils/vacacionesUtils.js";
+import { buildScheduleTemplateFromHorario } from "../../../services/scheduleEngine/templateFromSchedule.js";
+import { validateLeaveRequest } from "../../../services/scheduleEngine/leavePolicy.js";
 
 const SUPPORTED_TYPES = Object.freeze({
   GOCE: "GOCE",
   SIN_GOCE: "SIN_GOCE",
+});
+
+const SUPPORTED_DURATIONS = Object.freeze({
+  DIAS: "DIAS",
+  HORAS: "HORAS",
 });
 
 function normalizeTipoPermiso(value) {
@@ -34,6 +41,52 @@ function normalizeTipoPermiso(value) {
     throw new Error(`tipo_permiso inválido. Valores permitidos: ${Object.values(SUPPORTED_TYPES).join(", ")}`);
   }
   return raw;
+}
+
+function normalizeTipoDuracion(value) {
+  const raw = String(value ?? SUPPORTED_DURATIONS.DIAS)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toUpperCase();
+
+  if (!raw) return SUPPORTED_DURATIONS.DIAS;
+
+  if (!Object.values(SUPPORTED_DURATIONS).includes(raw)) {
+    throw new Error(
+      `tipo_duracion inválido. Valores permitidos: ${Object.values(SUPPORTED_DURATIONS).join(
+        ", ",
+      )}`,
+    );
+  }
+
+  return raw;
+}
+
+function normalizeTimeInput(value, fieldName) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    throw new Error(`${fieldName} es requerido`);
+  }
+
+  const match = raw.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!match) {
+    throw new Error(`${fieldName} debe tener formato HH:mm`);
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours > 23 || minutes > 59) {
+    throw new Error(`${fieldName} tiene un valor inválido`);
+  }
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function toMinutes(timeHHmm) {
+  const [h, m] = String(timeHHmm).split(":").map(Number);
+  return h * 60 + m;
 }
 
 function computeHorasPorDia({ contrato, horario }) {
@@ -50,12 +103,16 @@ function computeHorasPorDia({ contrato, horario }) {
 export async function solicitarPermiso({
   id_colaborador,
   tipo_permiso,
+  tipo_duracion,
   fecha_inicio,
   fecha_fin,
+  hora_inicio,
+  hora_fin,
   id_aprobador,
 }) {
   const idColaborador = assertId(id_colaborador, "id_colaborador");
   const tipo = normalizeTipoPermiso(tipo_permiso);
+  const durationType = normalizeTipoDuracion(tipo_duracion);
   const startDate = assertDate(fecha_inicio, "fecha_inicio");
   const endDate = assertDate(fecha_fin, "fecha_fin");
 
@@ -216,8 +273,58 @@ export async function solicitarPermiso({
     }
 
     const horasPorDia = computeHorasPorDia({ contrato: contratoActivo, horario: horarioActivo });
-    const totalDias = workingDates.length;
-    const totalHoras = Number((horasPorDia * totalDias).toFixed(2));
+    if (!Number.isFinite(horasPorDia) || horasPorDia <= 0) {
+      throw new Error("No se pudo calcular la duración diaria de la jornada activa del colaborador");
+    }
+
+    let totalDias = workingDates.length;
+    let totalHoras = Number((horasPorDia * totalDias).toFixed(2));
+    let horaInicioNormalized = null;
+    let horaFinNormalized = null;
+
+    if (durationType === SUPPORTED_DURATIONS.HORAS) {
+      if (!startDate.isSame(endDate)) {
+        throw new Error("Los permisos por horas solo permiten una fecha");
+      }
+
+      horaInicioNormalized = normalizeTimeInput(hora_inicio, "hora_inicio");
+      horaFinNormalized = normalizeTimeInput(hora_fin, "hora_fin");
+
+      if (toMinutes(horaFinNormalized) <= toMinutes(horaInicioNormalized)) {
+        throw new Error("hora_fin debe ser mayor que hora_inicio");
+      }
+
+      const scheduleTemplate = buildScheduleTemplateFromHorario({
+        hora_inicio: horarioActivo.hora_inicio,
+        hora_fin: horarioActivo.hora_fin,
+        dias_laborales: horarioActivo.dias_laborales,
+        dias_libres: horarioActivo.dias_libres,
+        id_tipo_jornada: horarioActivo.id_tipo_jornada,
+        timezone: "America/Costa_Rica",
+      });
+
+      const leaveValidation = validateLeaveRequest({
+        fecha_inicio: `${startStr} ${horaInicioNormalized}:00`,
+        fecha_fin: `${endStr} ${horaFinNormalized}:00`,
+        template: scheduleTemplate,
+        holidaysMap: new Map(),
+      });
+
+      if (!leaveValidation.allowed) {
+        const firstViolation = leaveValidation.violations?.[0];
+        throw new Error(firstViolation?.message || "El permiso por horas no es válido para el horario laboral");
+      }
+
+      totalHoras = Number(Number(leaveValidation.cantidad_horas ?? 0).toFixed(2));
+      if (!Number.isFinite(totalHoras) || totalHoras <= 0) {
+        throw new Error("La cantidad de horas del permiso debe ser mayor que cero");
+      }
+
+      totalDias = Number((totalHoras / horasPorDia).toFixed(2));
+      if (!Number.isFinite(totalDias) || totalDias <= 0) {
+        throw new Error("No se pudo calcular la proporción de días para el permiso por horas");
+      }
+    }
 
     const warnings = [];
     if (restDates.length > 0) {
@@ -284,6 +391,14 @@ export async function solicitarPermiso({
       cantidad_dias: totalDias,
       cantidad_horas: totalHoras,
       tipo_permiso: tipo,
+      tipo_duracion: durationType,
+      ...(durationType === SUPPORTED_DURATIONS.HORAS
+        ? {
+            hora_inicio: horaInicioNormalized,
+            hora_fin: horaFinNormalized,
+            horas_solicitadas: totalHoras,
+          }
+        : {}),
       warnings,
     };
   } catch (error) {

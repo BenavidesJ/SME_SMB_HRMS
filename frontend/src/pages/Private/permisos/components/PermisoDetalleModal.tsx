@@ -2,7 +2,7 @@ import { Badge, HStack, Separator, Stack, Text } from "@chakra-ui/react";
 import { Modal } from "../../../../components/general";
 import { formatDateUiCompact, toTitleCase } from "../../../../utils";
 import { normalizeRequestStatus } from "../../../../utils/requestStatus";
-import type { PermisoListItem, PermisoTipo } from "../types";
+import type { PermisoDuracionTipo, PermisoListItem, PermisoTipo } from "../types";
 
 const PERMISO_TIPOS: Array<{ code: PermisoTipo; label: string }> = [
   { code: "GOCE", label: "Permiso con goce salarial" },
@@ -61,8 +61,24 @@ const getPermisoTipoLabel = (item: PermisoListItem) => {
   return fromCatalog ?? "Tipo no disponible";
 };
 
+const parsePositiveNumber = (value: unknown) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const resolvePermisoMode = (item: PermisoListItem): PermisoDuracionTipo => {
+  if (item.tipo_permiso_modo === "HORAS" || item.tipo_permiso_modo === "DIAS") {
+    return item.tipo_permiso_modo;
+  }
+
+  const isSameDay = String(item.fecha_inicio ?? "") === String(item.fecha_fin ?? "");
+  const totalDias = parsePositiveNumber(item.cantidad_dias);
+  return isSameDay && totalDias !== null && totalDias < 1 ? "HORAS" : "DIAS";
+};
+
 export function PermisoDetalleModal({ item, isOpen, onClose }: PermisoDetalleModalProps) {
   const status = normalizeRequestStatus(item?.estadoSolicitudPermisos?.estado ?? item?.estado_solicitud);
+  const mode = item ? resolvePermisoMode(item) : "DIAS";
 
   return (
     <Modal
@@ -113,6 +129,12 @@ export function PermisoDetalleModal({ item, isOpen, onClose }: PermisoDetalleMod
                 <Text>{getPermisoTipoLabel(item)}</Text>
               </HStack>
               <HStack gap="2" wrap="wrap">
+                <Text color="fg.muted">Modalidad:</Text>
+                <Badge colorPalette={mode === "HORAS" ? "orange" : "teal"} variant="subtle">
+                  {mode === "HORAS" ? "Por horas" : "Por días"}
+                </Badge>
+              </HStack>
+              <HStack gap="2" wrap="wrap">
                 <Text color="fg.muted">Fecha inicio:</Text>
                 <Text fontWeight="semibold">{formatDateUiCompact(item.fecha_inicio)}</Text>
               </HStack>
@@ -127,8 +149,12 @@ export function PermisoDetalleModal({ item, isOpen, onClose }: PermisoDetalleMod
                 </Badge>
               </HStack>
               <HStack gap="2" wrap="wrap">
-                <Text color="fg.muted">Días solicitados:</Text>
-                <Text>{item.dias_solicitados ?? item.cantidad_dias ?? "—"}</Text>
+                <Text color="fg.muted">{mode === "HORAS" ? "Horas solicitadas:" : "Días solicitados:"}</Text>
+                <Text>
+                  {mode === "HORAS"
+                    ? `${item.horas_solicitadas ?? item.cantidad_horas ?? "—"} h`
+                    : item.dias_solicitados ?? item.cantidad_dias ?? "—"}
+                </Text>
               </HStack>
               <HStack gap="2" wrap="wrap">
                 <Text color="fg.muted">Días aprobados:</Text>
