@@ -7,7 +7,36 @@ import {
   SaldoVacaciones,
 } from "../../../models/index.js";
 
-function normalizarTexto(value) {
+const PREAVISO_CONDICION_PAGO = Object.freeze({
+  SI_REALIZO: "SI_REALIZO",
+  SI_NO_REALIZO: "SI_NO_REALIZO",
+  NUNCA: "NUNCA",
+});
+
+const POLITICA_CAUSA = Object.freeze({
+  RENUNCIA: {
+    pagaAguinaldo: true,
+    pagaCesantia: false,
+    condicionPagoPreaviso: PREAVISO_CONDICION_PAGO.SI_REALIZO,
+  },
+  DESPIDO_CON_RESPONSABILIDAD: {
+    pagaAguinaldo: true,
+    pagaCesantia: true,
+    condicionPagoPreaviso: PREAVISO_CONDICION_PAGO.SI_REALIZO,
+  },
+  DESPIDO_SIN_RESPONSABILIDAD: {
+    pagaAguinaldo: true,
+    pagaCesantia: false,
+    condicionPagoPreaviso: PREAVISO_CONDICION_PAGO.NUNCA,
+  },
+  OTRA: {
+    pagaAguinaldo: true,
+    pagaCesantia: false,
+    condicionPagoPreaviso: PREAVISO_CONDICION_PAGO.NUNCA,
+  },
+});
+
+export function normalizarTexto(value) {
   return String(value ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -15,7 +44,7 @@ function normalizarTexto(value) {
     .toUpperCase();
 }
 
-function resolverTipoCausa(causa) {
+export function resolverTipoCausa(causa) {
   if (causa && typeof causa === "object" && causa.tipo) {
     return String(causa.tipo);
   }
@@ -35,6 +64,44 @@ function resolverTipoCausa(causa) {
   }
 
   return "OTRA";
+}
+
+function obtenerPoliticaCausa(causa) {
+  const tipoCausa = resolverTipoCausa(causa);
+  return {
+    tipoCausa,
+    ...(POLITICA_CAUSA[tipoCausa] ?? POLITICA_CAUSA.OTRA),
+  };
+}
+
+export function contarDiasLaboralesSemana(diasLaborales) {
+  const texto = normalizarTexto(diasLaborales);
+  if (!texto) return 0;
+
+  const diasValidos = new Set(["L", "K", "M", "J", "V", "S", "D"]);
+  const dias = new Set();
+
+  for (const ch of texto) {
+    if (diasValidos.has(ch)) dias.add(ch);
+  }
+
+  return dias.size;
+}
+
+export function resolverPeriodoAguinaldo(fechaTerminacion) {
+  const fechaTerm = dayjs(fechaTerminacion).startOf("day");
+  if (!fechaTerm.isValid()) {
+    return { desde: null, hasta: null };
+  }
+
+  // El período vigente inicia el 1 de diciembre. Si termina en diciembre,
+  // el período inició el 1-dic del mismo año; de lo contrario, el 1-dic del año previo.
+  const anioInicio = fechaTerm.month() === 11 ? fechaTerm.year() : fechaTerm.year() - 1;
+
+  return {
+    desde: `${anioInicio}-12-01`,
+    hasta: fechaTerm.format("YYYY-MM-DD"),
+  };
 }
 
 function calcularDiasPendientesDesdeUltimoPago(fechaUltimoPago, fechaTerminacion) {
@@ -332,22 +399,29 @@ export async function calcularAguinaldoProporcional(
   causa,
   transaction
 ) {
-  const tipoCausa = resolverTipoCausa(causa);
+  const { tipoCausa, pagaAguinaldo } = obtenerPoliticaCausa(causa);
 
-  // Despido sin responsabilidad no paga aguinaldo
-  if (tipoCausa === "DESPIDO_SIN_RESPONSABILIDAD") {
+  if (!pagaAguinaldo) {
     return {
       montoAguinaldo: 0,
       diasCalculados: 0,
       periodo: { desde: null, hasta: null },
-      detalles: { razon: "No aplica para despido sin responsabilidad" },
+      detalles: { razon: `No aplica para ${tipoCausa}` },
     };
   }
 
-  const fechaTerm = new Date(fechaTerminacion);
-  const anioActual = fechaTerm.getFullYear();
-  const periodoDesde = `${anioActual - 1}-12-01`;
-  const periodoHasta = fechaTerminacion;
+  const { desde: periodoDesde, hasta: periodoHasta } = resolverPeriodoAguinaldo(
+    fechaTerminacion
+  );
+
+  if (!periodoDesde || !periodoHasta) {
+    return {
+      montoAguinaldo: 0,
+      diasCalculados: 0,
+      periodo: { desde: null, hasta: null },
+      detalles: { razon: "Fecha de terminación inválida" },
+    };
+  }
 
   const desglose = await obtenerSalariosPorMes(
     idColaborador,
@@ -451,10 +525,10 @@ export async function calcularVacacionesProporcionales(
  * @returns {{diasCesantia: number, montoCesantia: number, formula: string}}
  */
 export function calcularCesantia(diasAntiguedad, salarioDiario, causa) {
-  const tipoCausa = resolverTipoCausa(causa);
+  const { pagaCesantia } = obtenerPoliticaCausa(causa);
 
-  // Solo se paga cesantía si es despido con responsabilidad
-  if (tipoCausa !== "DESPIDO_CON_RESPONSABILIDAD") {
+  // Solo se paga cesantía cuando la política de causa lo permite.
+  if (!pagaCesantia) {
     return {
       diasCesantia: 0,
       montoCesantia: 0,
@@ -507,46 +581,53 @@ export function calcularCesantia(diasAntiguedad, salarioDiario, causa) {
  * @param {number} salarioDiario
  * @param {boolean} realizoPreaviso - Si se realizó preaviso o no
  * @param {string} causa - 'Renuncia', 'Despido con responsabilidad', 'Despido sin responsabilidad'
+ * @param {{ diasLaboralesSemana?: number }} [opciones]
  * @returns {{diasPreaviso: number, montoPreaviso: number, formula: string}}
  */
 export function calcularPreaviso(
   diasAntiguedad,
   salarioDiario,
   realizoPreaviso,
-  causa
+  causa,
+  opciones = {}
 ) {
-  const tipoCausa = resolverTipoCausa(causa);
+  const { tipoCausa, condicionPagoPreaviso } = obtenerPoliticaCausa(causa);
+  const diasLaboralesSemana =
+    Number.isFinite(Number(opciones.diasLaboralesSemana))
+      ? Math.max(0, Number(opciones.diasLaboralesSemana))
+      : 7;
 
-  // Si ya realizó preaviso, no se paga indemnización
-  if (realizoPreaviso) {
-    return {
-      diasPreaviso: 0,
-      montoPreaviso: 0,
-      formula: "Preaviso ya fue realizado",
-      detalles: { realizoPreaviso: true },
-    };
+  let debePagar = false;
+
+  if (condicionPagoPreaviso === PREAVISO_CONDICION_PAGO.SI_REALIZO) {
+    debePagar = Boolean(realizoPreaviso);
+  } else if (condicionPagoPreaviso === PREAVISO_CONDICION_PAGO.SI_NO_REALIZO) {
+    debePagar = !Boolean(realizoPreaviso);
   }
 
-  // Solo aplica para despido con responsabilidad
-  if (tipoCausa !== "DESPIDO_CON_RESPONSABILIDAD") {
+  if (!debePagar) {
     return {
       diasPreaviso: 0,
       montoPreaviso: 0,
-      formula: `No aplica para ${causa}`,
-      detalles: { causa },
+      formula: `No corresponde pago de preaviso para ${tipoCausa} con realizoPreaviso=${Boolean(realizoPreaviso)}`,
+      detalles: {
+        causa,
+        tipoCausa,
+        realizoPreaviso: Boolean(realizoPreaviso),
+        condicionPagoPreaviso,
+      },
     };
   }
 
   let diasPreaviso = 0;
 
-  if (diasAntiguedad < 180) {
-    // Menos de 6 meses
-    diasPreaviso = 7;
+  if (diasAntiguedad < 90) {
+    diasPreaviso = 0;
+  } else if (diasAntiguedad < 180) {
+    diasPreaviso = diasLaboralesSemana;
   } else if (diasAntiguedad < 365) {
-    // 6 meses a menos de 1 año
     diasPreaviso = 15;
   } else {
-    // 1 año o más
     diasPreaviso = 30;
   }
 
@@ -558,7 +639,9 @@ export function calcularPreaviso(
     formula: "Días según antigüedad × Salario diario",
     detalles: {
       diasTotales: diasAntiguedad,
-      regla: `${diasAntiguedad < 180 ? "Menos de 6 meses" : diasAntiguedad < 365 ? "6 meses a 1 año" : "1 año o más"}`,
+      condicionPagoPreaviso,
+      diasLaboralesSemana,
+      regla: `${diasAntiguedad < 90 ? "Menos de 3 meses" : diasAntiguedad < 180 ? "3 a 6 meses" : diasAntiguedad < 365 ? "6 meses a 1 año" : "1 año o más"}`,
     },
   };
 }

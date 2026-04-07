@@ -12,7 +12,8 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FiFilePlus, FiScissors } from "react-icons/fi";
 import { Layout } from "../../../components/layout";
 import { Form } from "../../../components/forms/Form/Form";
@@ -31,7 +32,7 @@ import type { EmployeeRow } from "../../../types";
 
 type SimularFormValues = {
   idColaborador: string;
-  causa: string;
+  causaId: string;
   fechaTerminacion: string;
   realizo_preaviso: string;
 };
@@ -75,6 +76,39 @@ function getCausaBadgeColor(causa: string | null | undefined) {
   return "gray";
 }
 
+function normalizarTexto(value: string | null | undefined) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function esDespidoSinResponsabilidad(
+  causaId: string | number | null | undefined,
+  causas: CausaLiquidacion[],
+) {
+  if (!causaId) return false;
+
+  const causaSeleccionada = causas.find((c) => Number(c.id) === Number(causaId));
+  return normalizarTexto(causaSeleccionada?.causa_liquidacion).includes("SIN RESPONSABILIDAD");
+}
+
+function esDespidoConResponsabilidad(
+  causaId: string | number | null | undefined,
+  causas: CausaLiquidacion[],
+) {
+  if (!causaId) return false;
+
+  const causaSeleccionada = causas.find((c) => Number(c.id) === Number(causaId));
+  const causaNormalizada = normalizarTexto(causaSeleccionada?.causa_liquidacion);
+
+  return (
+    causaNormalizada.includes("CON RESPONSABILIDAD")
+    && !causaNormalizada.includes("SIN RESPONSABILIDAD")
+  );
+}
+
 export const Liquidaciones = () => {
   const { data: employees = [], isLoading: employeesLoading } =
     useApiQuery<EmployeeRow[]>({ url: "/empleados" });
@@ -97,7 +131,7 @@ export const Liquidaciones = () => {
     () =>
       causasData.map((c) => ({
         label: c.causa_liquidacion,
-        value: c.causa_liquidacion,
+        value: String(c.id),
       })),
     [causasData],
   );
@@ -106,7 +140,13 @@ export const Liquidaciones = () => {
     mutate: simularCalculo,
     isLoading: isSimulating,
   } = useApiMutation<
-    { idColaborador: number; causa: string; fechaTerminacion: string; realizo_preaviso: boolean },
+    {
+      idColaborador: number;
+      causaId: number;
+      causa?: string;
+      fechaTerminacion: string;
+      realizo_preaviso: boolean;
+    },
     any
   >({ url: "liquidaciones/simular", method: "POST" });
 
@@ -128,20 +168,88 @@ export const Liquidaciones = () => {
 
   const [showForm, setShowForm] = useState(false);
 
+  const CamposTerminacionYPreaviso = () => {
+    const { control, setValue } = useFormContext<SimularFormValues>();
+    const causaIdSeleccionada = useWatch({ control, name: "causaId" });
+
+    const causaSinResponsabilidad = esDespidoSinResponsabilidad(causaIdSeleccionada, causasData);
+    const causaConResponsabilidad = esDespidoConResponsabilidad(causaIdSeleccionada, causasData);
+    const ocultarPreaviso = causaSinResponsabilidad || causaConResponsabilidad;
+
+    useEffect(() => {
+      if (causaSinResponsabilidad) {
+        setValue("realizo_preaviso", "false", { shouldValidate: false, shouldDirty: true });
+        return;
+      }
+
+      if (causaConResponsabilidad) {
+        setValue("realizo_preaviso", "true", { shouldValidate: false, shouldDirty: true });
+      }
+    }, [causaConResponsabilidad, causaSinResponsabilidad, setValue]);
+
+    return (
+      <Stack gap="2">
+        <SimpleGrid columns={{ base: 1, md: ocultarPreaviso ? 1 : 2 }} gap="3">
+          <InputField
+            fieldType="date"
+            name="fechaTerminacion"
+            label="Fecha de terminación"
+            required
+          />
+          {!ocultarPreaviso && (
+            <InputField
+              fieldType="select"
+              name="realizo_preaviso"
+              label="¿Realizó preaviso? (En renuncia, si marcás Sí se paga)"
+              disableSelectPortal
+              required
+              options={[
+                { label: "No", value: "false" },
+                { label: "Sí", value: "true" },
+              ]}
+            />
+          )}
+        </SimpleGrid>
+
+        {ocultarPreaviso && (
+          <Text textStyle="xs" color="fg.muted">
+            {causaSinResponsabilidad
+              ? 'Para despido sin responsabilidad el preaviso no aplica y se fija en "No".'
+              : 'Para despido con responsabilidad el preaviso se paga por defecto y se fija en "Sí".'}
+          </Text>
+        )}
+      </Stack>
+    );
+  };
+
   const handleSimular = async (values: SimularFormValues) => {
     const idColaborador = Number(values.idColaborador);
+    const causaId = Number(values.causaId);
+    const causaSeleccionada = causasData.find((c) => Number(c.id) === causaId);
+    const causaSinResponsabilidad = esDespidoSinResponsabilidad(causaId, causasData);
+    const causaConResponsabilidad = esDespidoConResponsabilidad(causaId, causasData);
 
     if (!idColaborador || idColaborador <= 0) {
       showToast("Seleccione un colaborador.", "error");
       return false;
     }
 
+    if (!causaId || causaId <= 0) {
+      showToast("Seleccione una causa de liquidación.", "error");
+      return false;
+    }
+
     try {
       const response = await simularCalculo({
         idColaborador,
-        causa: values.causa,
+        causaId,
+        ...(causaSeleccionada ? { causa: causaSeleccionada.causa_liquidacion } : {}),
         fechaTerminacion: values.fechaTerminacion,
-        realizo_preaviso: values.realizo_preaviso === "true",
+        realizo_preaviso: causaSinResponsabilidad
+          ? false
+          : causaConResponsabilidad
+            ? true
+            : values.realizo_preaviso === "true",
       });
 
       const data = (response as any)?.data ?? (response as any) ?? null;
@@ -206,7 +314,7 @@ export const Liquidaciones = () => {
                 onSubmit={handleSimular}
                 defaultValues={{
                   idColaborador: "",
-                  causa: "",
+                  causaId: "",
                   fechaTerminacion: "",
                   realizo_preaviso: "false",
                 }}
@@ -240,7 +348,7 @@ export const Liquidaciones = () => {
 
                     <InputField
                       fieldType="select"
-                      name="causa"
+                      name="causaId"
                       label="Causa de liquidación"
                       required
                       disableSelectPortal
@@ -257,25 +365,7 @@ export const Liquidaciones = () => {
                       }}
                     />
 
-                    <SimpleGrid columns={2} gap="3">
-                      <InputField
-                        fieldType="date"
-                        name="fechaTerminacion"
-                        label="Fecha de terminación"
-                        required
-                      />
-                      <InputField
-                        fieldType="select"
-                        name="realizo_preaviso"
-                        label="¿Realizó preaviso?"
-                        disableSelectPortal
-                        required
-                        options={[
-                          { label: "No", value: "false" },
-                          { label: "Sí", value: "true" },
-                        ]}
-                      />
-                    </SimpleGrid>
+                    <CamposTerminacionYPreaviso />
                   </Stack>
 
                   <Stack direction="row" justifyContent="flex-end" gap="3">

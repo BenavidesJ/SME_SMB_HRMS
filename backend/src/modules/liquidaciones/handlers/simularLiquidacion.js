@@ -9,43 +9,12 @@ import {
   calcularSalarioPendiente,
   obtenerPromedioBases,
   obtenerDiasPendientesSalario,
+  normalizarTexto,
+  resolverTipoCausa,
+  contarDiasLaboralesSemana,
   validarDatosLiquidacion,
 } from "../utils/liquidacionCalculator.js";
-import { fn, col, where } from "sequelize";
-import { Colaborador, Contrato, CausaLiquidacion } from "../../../models/index.js";
-
-function normalizarTexto(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toUpperCase();
-}
-
-function clasificarTipoCausa(causaSeleccionada, catalogo) {
-  const idSeleccionado = Number(causaSeleccionada.id_causa_liquidacion);
-
-  const idsConResponsabilidad = new Set(
-    catalogo
-      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("CON RESPONSABILIDAD"))
-      .map((row) => Number(row.id_causa_liquidacion))
-  );
-  const idsSinResponsabilidad = new Set(
-    catalogo
-      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("SIN RESPONSABILIDAD"))
-      .map((row) => Number(row.id_causa_liquidacion))
-  );
-  const idsRenuncia = new Set(
-    catalogo
-      .filter((row) => normalizarTexto(row.causa_liquidacion).includes("RENUNCIA"))
-      .map((row) => Number(row.id_causa_liquidacion))
-  );
-
-  if (idsSinResponsabilidad.has(idSeleccionado)) return "DESPIDO_SIN_RESPONSABILIDAD";
-  if (idsConResponsabilidad.has(idSeleccionado)) return "DESPIDO_CON_RESPONSABILIDAD";
-  if (idsRenuncia.has(idSeleccionado)) return "RENUNCIA";
-  return "OTRA";
-}
+import { Colaborador, Contrato, HorarioLaboral, CausaLiquidacion } from "../../../models/index.js";
 
 /**
  * Simula el cálculo de liquidación sin guardar en BD
@@ -84,11 +53,17 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
     throw error;
   }
 
+  const horario = await HorarioLaboral.findOne({
+    where: { id_contrato: contrato.id_contrato },
+    order: [["fecha_actualizacion", "DESC"]],
+    ...(transaction ? { transaction } : {}),
+  });
+
   const {
     causa,
     causaId,
     fechaTerminacion,
-    realizo_preaviso = false,
+    realizo_preaviso: realizoPreavisoRaw = false,
     salarioDiario: salarioDiarioInput = null,
   } = datosEntrada;
 
@@ -105,13 +80,10 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
   }
 
   if (!causaSeleccionada && causa) {
-    causaSeleccionada = await CausaLiquidacion.findOne({
-      where: where(
-        fn("LOWER", col("causa_liquidacion")),
-        String(causa).trim().toLowerCase()
-      ),
-      ...(transaction ? { transaction } : {}),
-    });
+    const causaNormalizada = normalizarTexto(causa);
+    causaSeleccionada = causaCatalogo.find(
+      (row) => normalizarTexto(row.causa_liquidacion) === causaNormalizada
+    );
   }
 
   if (!causaSeleccionada) {
@@ -123,8 +95,18 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
   const causaRegla = {
     id: Number(causaSeleccionada.id_causa_liquidacion),
     nombre: String(causaSeleccionada.causa_liquidacion),
-    tipo: clasificarTipoCausa(causaSeleccionada, causaCatalogo),
+    tipo: resolverTipoCausa(String(causaSeleccionada.causa_liquidacion)),
   };
+
+  const realizoPreaviso =
+    causaRegla.tipo === "DESPIDO_SIN_RESPONSABILIDAD"
+      ? false
+      : causaRegla.tipo === "DESPIDO_CON_RESPONSABILIDAD"
+        ? true
+        : Boolean(realizoPreavisoRaw);
+
+  const diasLaboralesDesdeHorario = contarDiasLaboralesSemana(horario?.dias_laborales);
+  const diasLaboralesSemana = diasLaboralesDesdeHorario > 0 ? diasLaboralesDesdeHorario : 5;
 
   // Validaciones iniciales
   const validacion = validarDatosLiquidacion({
@@ -183,8 +165,9 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
   const preaviso = calcularPreaviso(
     diasTotales,
     salarioDiario,
-    realizo_preaviso,
-    causaRegla
+    realizoPreaviso,
+    causaRegla,
+    { diasLaboralesSemana }
   );
 
   // Salarios pendientes: días posteriores al último período de planilla aprobado.
@@ -206,6 +189,26 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
     preaviso.montoPreaviso +
     salarioPendiente.montoSalarioPendiente;
 
+  const advertencias = [...validacion.advertencias];
+
+  if (!horario) {
+    advertencias.push(
+      "No se encontró horario laboral activo; preaviso de semana laboral se calculó con 5 días"
+    );
+  }
+
+  if (causaRegla.tipo === "DESPIDO_SIN_RESPONSABILIDAD" && Boolean(realizoPreavisoRaw)) {
+    advertencias.push(
+      "Preaviso se ajustó a NO porque no aplica para despido sin responsabilidad"
+    );
+  }
+
+  if (causaRegla.tipo === "DESPIDO_CON_RESPONSABILIDAD" && !Boolean(realizoPreavisoRaw)) {
+    advertencias.push(
+      "Preaviso se ajustó a SI porque aplica por defecto para despido con responsabilidad"
+    );
+  }
+
   const simulacion = {
     colaborador: {
       id: colaborador.id_colaborador,
@@ -216,7 +219,7 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
     causa: causaRegla.nombre,
     causaId: causaRegla.id,
     fechaTerminacion,
-    realizoPreaviso: realizo_preaviso,
+    realizoPreaviso,
     antiguedad: {
       diasTotales,
       meses,
@@ -263,7 +266,7 @@ export async function simularLiquidacion(idColaborador, datosEntrada, transactio
     validaciones: {
       esValido: true,
       errores: [],
-      advertencias: validacion.advertencias,
+      advertencias,
     },
   };
 

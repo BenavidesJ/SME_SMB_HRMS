@@ -57,10 +57,10 @@ export async function listarLiquidaciones(filtros = {}, transaction) {
       causa: r.causaRef?.causa_liquidacion || "N/A",
       fechaTerminacion: r.fecha_terminacion,
       montoTotal:
-        (r.aguinaldo_proporcional || 0) +
-        (r.monto_cesantia || 0) +
-        (r.monto_preaviso || 0) +
-        (r.otros_montos || 0),
+        Number(r.aguinaldo_proporcional || 0) +
+        Number(r.monto_cesantia || 0) +
+        Number(r.monto_preaviso || 0) +
+        Number(r.otros_montos || 0),
       aprobador: r.id_aprobador,
       fechaAprobacion: r.fecha_aprobacion,
     })),

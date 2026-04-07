@@ -21,6 +21,7 @@ export async function crearLiquidacion(
   transaction
 ) {
   return runInTransaction(async (tx) => {
+    const redondearMoneda = (monto) => Math.round((Number(monto || 0) + Number.EPSILON) * 100) / 100;
     const { causa, causaId, fechaTerminacion, componentes, totales, realizoPreaviso } =
       datosLiquidacion;
 
@@ -59,26 +60,33 @@ export async function crearLiquidacion(
     }
 
     // Obtener o crear saldo de vacaciones
-    let saldoVacacionesId = null;
-    const saldoVacaciones = await SaldoVacaciones.findOne({
+    const [saldoVacaciones] = await SaldoVacaciones.findOrCreate({
       where: { id_colaborador: idColaborador },
+      defaults: {
+        id_colaborador: idColaborador,
+        dias_ganados: "0.00",
+        dias_tomados: "0.00",
+      },
       transaction: tx,
     });
 
-    if (saldoVacaciones) {
-      saldoVacacionesId = saldoVacaciones.id_saldo_vac;
-      // Actualizar saldo si se usan vacaciones
-      if (componentes.vacacionesProporcionales.valor > 0) {
-        await saldoVacaciones.update(
-          {
-            dias_tomados:
-              Number(saldoVacaciones.dias_tomados) +
-              componentes.vacacionesProporcionales.diasPendientes,
-          },
-          { transaction: tx }
-        );
-      }
+    const saldoVacacionesId = saldoVacaciones.id_saldo_vac;
+
+    // Actualizar saldo si se usan vacaciones
+    if (Number(componentes?.vacacionesProporcionales?.valor || 0) > 0) {
+      await saldoVacaciones.update(
+        {
+          dias_tomados:
+            Number(saldoVacaciones.dias_tomados) +
+            Number(componentes.vacacionesProporcionales.diasPendientes || 0),
+        },
+        { transaction: tx }
+      );
     }
+
+    const montoVacaciones = redondearMoneda(componentes?.vacacionesProporcionales?.valor);
+    const montoSalarioPendiente = redondearMoneda(componentes?.salarioPendiente?.valor);
+    const otrosMontos = redondearMoneda(montoVacaciones + montoSalarioPendiente);
 
     // Crear registro de liquidación
     const liquidacion = await Liquidacion.create(
@@ -91,7 +99,8 @@ export async function crearLiquidacion(
         aguinaldo_proporcional: componentes.aguinaldoProporcional.valor,
         monto_cesantia: componentes.cesantia.valor,
         monto_preaviso: componentes.preaviso.valor,
-        otros_montos: 0, // Puede ampliarse en el futuro
+        // Incluye montos no modelados por columna: vacaciones + salario pendiente.
+        otros_montos: otrosMontos,
         id_aprobador: idAprobador,
         fecha_aprobacion: new Date().toISOString().split("T")[0],
         saldo_vacaciones: saldoVacacionesId,

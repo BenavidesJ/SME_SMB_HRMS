@@ -22,6 +22,8 @@ const {
   calcularCesantia,
   calcularPreaviso,
   calcularSalarioPendiente,
+  contarDiasLaboralesSemana,
+  resolverPeriodoAguinaldo,
   validarDatosLiquidacion,
   obtenerSalariosPorMes,
   calcularAguinaldoProporcional,
@@ -76,6 +78,20 @@ describe("liquidacionCalculator", () => {
       const resultado = obtenerDiasLaborados("2025-01-01", "2025-01-08");
       expect(resultado.diasFinesDesemana).toBe(2);
       expect(resultado.diasLaborados).toBe(6);
+    });
+  });
+
+  describe("contarDiasLaboralesSemana", () => {
+    it("retorna 5 para LKMJV", () => {
+      expect(contarDiasLaboralesSemana("LKMJV")).toBe(5);
+    });
+
+    it("retorna 6 para LKMJVS", () => {
+      expect(contarDiasLaboralesSemana("LKMJVS")).toBe(6);
+    });
+
+    it("retorna 0 si entrada inválida", () => {
+      expect(contarDiasLaboralesSemana(null)).toBe(0);
     });
   });
 
@@ -153,34 +169,72 @@ describe("liquidacionCalculator", () => {
   });
 
   describe("calcularPreaviso", () => {
-    it("retorna 0 si se realizó preaviso", () => {
+    it("retorna 30 días para despido con responsabilidad si se realizó preaviso", () => {
       const resultado = calcularPreaviso(365, 20000, true, "Despido con responsabilidad");
-      expect(resultado.diasPreaviso).toBe(0);
-      expect(resultado.montoPreaviso).toBe(0);
+      expect(resultado.diasPreaviso).toBe(30);
+      expect(resultado.montoPreaviso).toBe(600000);
     });
 
-    it("retorna 0 para renuncia", () => {
+    it("retorna 0 para renuncia cuando NO realizó preaviso", () => {
       const resultado = calcularPreaviso(365, 20000, false, "Renuncia");
       expect(resultado.diasPreaviso).toBe(0);
       expect(resultado.montoPreaviso).toBe(0);
     });
 
-    it("retorna 7 días para < 6 meses sin preaviso", () => {
-      const resultado = calcularPreaviso(120, 20000, false, "Despido con responsabilidad");
+    it("retorna 0 para antigüedad < 3 meses en renuncia aunque realizó preaviso", () => {
+      const resultado = calcularPreaviso(60, 20000, true, "Renuncia", {
+        diasLaboralesSemana: 5,
+      });
+      expect(resultado.diasPreaviso).toBe(0);
+      expect(resultado.montoPreaviso).toBe(0);
+    });
+
+    it("retorna semana laboral para 3-6 meses en renuncia cuando sí realizó preaviso", () => {
+      const resultado = calcularPreaviso(120, 20000, true, "Renuncia", {
+        diasLaboralesSemana: 5,
+      });
+      expect(resultado.diasPreaviso).toBe(5);
+      expect(resultado.montoPreaviso).toBe(100000);
+    });
+
+    it("retorna 7 días para < 6 meses con preaviso en despido con responsabilidad", () => {
+      const resultado = calcularPreaviso(120, 20000, true, "Despido con responsabilidad");
       expect(resultado.diasPreaviso).toBe(7);
       expect(resultado.montoPreaviso).toBe(140000);
     });
 
-    it("retorna 15 días para 6 meses - 1 año sin preaviso", () => {
-      const resultado = calcularPreaviso(250, 20000, false, "Despido con responsabilidad");
+    it("retorna 15 días para 6 meses - 1 año con preaviso en despido con responsabilidad", () => {
+      const resultado = calcularPreaviso(250, 20000, true, "Despido con responsabilidad");
       expect(resultado.diasPreaviso).toBe(15);
       expect(resultado.montoPreaviso).toBe(300000);
     });
 
-    it("retorna 30 días para 1+ año sin preaviso", () => {
+    it("retorna 0 para despido con responsabilidad si no se realizó preaviso", () => {
       const resultado = calcularPreaviso(400, 20000, false, "Despido con responsabilidad");
-      expect(resultado.diasPreaviso).toBe(30);
-      expect(resultado.montoPreaviso).toBe(600000);
+      expect(resultado.diasPreaviso).toBe(0);
+      expect(resultado.montoPreaviso).toBe(0);
+    });
+
+    it("retorna 0 para despido sin responsabilidad aunque indique preaviso", () => {
+      const resultado = calcularPreaviso(400, 20000, true, "Despido sin responsabilidad", {
+        diasLaboralesSemana: 6,
+      });
+      expect(resultado.diasPreaviso).toBe(0);
+      expect(resultado.montoPreaviso).toBe(0);
+    });
+  });
+
+  describe("resolverPeriodoAguinaldo", () => {
+    it("usa 1-dic del año previo cuando terminación es antes de diciembre", () => {
+      const periodo = resolverPeriodoAguinaldo("2025-11-30");
+      expect(periodo.desde).toBe("2024-12-01");
+      expect(periodo.hasta).toBe("2025-11-30");
+    });
+
+    it("usa 1-dic del mismo año cuando terminación es en diciembre", () => {
+      const periodo = resolverPeriodoAguinaldo("2025-12-31");
+      expect(periodo.desde).toBe("2025-12-01");
+      expect(periodo.hasta).toBe("2025-12-31");
     });
   });
 
@@ -297,15 +351,20 @@ describe("liquidacionCalculator", () => {
   });
 
   describe("calcularAguinaldoProporcional", () => {
-    it("retorna 0 para despido sin responsabilidad", async () => {
+    it("calcula aguinaldo para despido sin responsabilidad", async () => {
+      mockPlanillaFindAll.mockResolvedValue([
+        { mes: 12, anio: 2024, total: "600000.00" },
+        { mes: 1, anio: 2025, total: "600000.00" },
+      ]);
+
       const resultado = await calcularAguinaldoProporcional(
         1,
         "2025-01-31",
         "Despido sin responsabilidad"
       );
 
-      expect(resultado.montoAguinaldo).toBe(0);
-      expect(resultado.detalles.razon).toContain("No aplica");
+      expect(resultado.montoAguinaldo).toBe(100000);
+      expect(resultado.periodo.desde).toBe("2024-12-01");
     });
 
     it("calcula aguinaldo para renuncia", async () => {
