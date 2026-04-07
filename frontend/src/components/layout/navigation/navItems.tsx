@@ -120,7 +120,7 @@ export const NAV_MAIN: NavItem[] = [
     path: "/incapacidades",
     roles: rolesForPath("/incapacidades"),
     children: [
-      { label: "Registro de Incapacidades", path: "/incapacidades/registro", roles: rolesForPath("/incapacidades/registro") },
+      { label: "Registro de Incapacidades", path: "/incapacidades/solicitud", roles: rolesForPath("/incapacidades/registro") },
       { label: "Gestión de Incapacidades", path: "/incapacidades/gestion", roles: rolesForPath("/incapacidades/gestion") },
     ],
     childrenRoles: rolesForPath("/incapacidades/gestion"),

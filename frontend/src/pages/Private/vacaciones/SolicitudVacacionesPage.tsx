@@ -434,7 +434,7 @@ export const SolicitudVacacionesPage = () => {
       sticky: true,
       textAlign: "left",
       cell: (item) => (
-        <Button type="button" variant="ghost" size="xs" onClick={() => setDetailItem(item)}>
+        <Button type="button" variant="subtle" colorPalette="blue" size="sm" onClick={() => setDetailItem(item)}>
           <FiEye />
           Ver detalle
         </Button>

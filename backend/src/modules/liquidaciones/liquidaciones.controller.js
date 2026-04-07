@@ -147,7 +147,17 @@ export async function obtenerDetalleController(req, res, next) {
         {
           model: Colaborador,
           as: "colaborador",
-          attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
+          attributes: [
+            "id_colaborador",
+            "nombre",
+            "primer_apellido",
+            "segundo_apellido",
+            "identificacion",
+          ],
+        },
+        {
+          association: "causaRef",
+          attributes: ["id_causa_liquidacion", "causa_liquidacion"],
         },
       ],
     });

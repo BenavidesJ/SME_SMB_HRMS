@@ -1262,7 +1262,7 @@ export const DetalleAguinaldo = () => {
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
+                          variant="subtle"
                           colorPalette="blue"
                           onClick={(event) => {
                             event.stopPropagation();
@@ -1301,7 +1301,8 @@ export const DetalleAguinaldo = () => {
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="subtle"
+                        colorPalette="blue"
                         onClick={(event) => {
                           event.stopPropagation();
                           markSimulationReviewed(simulationItem);

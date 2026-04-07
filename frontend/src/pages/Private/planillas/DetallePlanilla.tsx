@@ -1269,8 +1269,9 @@ export const DetallePlanilla = () => {
                       return (
                         <Flex justify="flex-end" gap="2" wrap="wrap">
                           <Button
-                            size="xs"
-                            variant="outline"
+                            size="sm"
+                            variant="subtle"
+                            colorPalette="blue"
                             onClick={(event) => {
                               event.stopPropagation();
                               markSimulationReviewed(item);

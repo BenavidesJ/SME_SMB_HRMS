@@ -4,29 +4,175 @@ import {
   Box,
   Button,
   Card,
-  EmptyState,
   Heading,
+  HStack,
   SimpleGrid,
   Spinner,
   Stack,
   Table,
   Text,
 } from "@chakra-ui/react";
+import { Document, Font, Image, Page, StyleSheet, Text as PdfText, View, pdf } from "@react-pdf/renderer";
+import notoSans400 from "@fontsource/noto-sans/files/noto-sans-latin-ext-400-normal.woff";
+import notoSans700 from "@fontsource/noto-sans/files/noto-sans-latin-ext-700-normal.woff";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { FiFilePlus, FiScissors } from "react-icons/fi";
-import { Layout } from "../../../components/layout";
+import { FiDownload, FiEye, FiFilePlus } from "react-icons/fi";
+import logoPdf from "../../../assets/logo.jpg";
 import { Form } from "../../../components/forms/Form/Form";
 import {
   InputField,
   type SelectOption,
 } from "../../../components/forms/InputField/InputField";
 import { Modal } from "../../../components/general";
-import { useApiQuery } from "../../../hooks/useApiQuery";
+import { DataTable } from "../../../components/general/table/DataTable";
+import { SortHeader, type SortDir } from "../../../components/general/table/SortHeader";
+import type {
+  DataTableActionColumn,
+  DataTableColumn,
+} from "../../../components/general/table/types";
+import { Layout } from "../../../components/layout";
 import { useApiMutation } from "../../../hooks/useApiMutations";
-import { toTitleCase, formatCRC, formatDateUiCompact } from "../../../utils";
+import { useApiQuery } from "../../../hooks/useApiQuery";
+import { apiRequest } from "../../../services/api";
 import { showToast } from "../../../services/toast/toastService";
 import type { EmployeeRow } from "../../../types";
+import { formatCRC, formatDateUiCompact, formatSpanishLongDate, toTitleCase } from "../../../utils";
+
+const COMPANY_NAME = "BioAlquimia";
+const PDF_COLON_SYMBOL = "\u20A1";
+
+Font.register({
+  family: "NotoSansPdf",
+  fonts: [
+    { src: notoSans400, fontWeight: 400 },
+    { src: notoSans700, fontWeight: 700 },
+  ],
+});
+
+const pdfStyles = StyleSheet.create({
+  page: {
+    padding: 26,
+    fontSize: 10,
+    fontFamily: "NotoSansPdf",
+    color: "#1A202C",
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    fontSize: 9,
+  },
+  companyName: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#123B7A",
+  },
+  logo: {
+    width: 150,
+    height: 54,
+    marginBottom: 10,
+    objectFit: "contain",
+    alignSelf: "center",
+  },
+  title: {
+    fontSize: 14,
+    textAlign: "center",
+    fontWeight: 700,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    backgroundColor: "#123B7A",
+    color: "#FFFFFF",
+    padding: 5,
+    fontSize: 9,
+    fontWeight: 700,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  infoGrid: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 8,
+  },
+  infoCard: {
+    flexGrow: 1,
+    flexBasis: 0,
+    borderWidth: 1,
+    borderColor: "#D7E0F1",
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 8.5,
+    color: "#4A5568",
+  },
+  value: {
+    fontSize: 9.5,
+    fontWeight: 700,
+  },
+  table: {
+    display: "flex",
+    width: "auto",
+    borderStyle: "solid",
+    borderColor: "#123B7A",
+    borderWidth: 1,
+  },
+  tableRow: {
+    flexDirection: "row",
+  },
+  headerCell: {
+    backgroundColor: "#123B7A",
+    color: "#FFFFFF",
+    borderStyle: "solid",
+    borderColor: "#123B7A",
+    borderWidth: 1,
+    padding: 5,
+    fontSize: 8.5,
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+  bodyCell: {
+    borderStyle: "solid",
+    borderColor: "#D7E0F1",
+    borderWidth: 1,
+    padding: 5,
+    fontSize: 8.5,
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+  totalsBox: {
+    marginTop: 12,
+    marginLeft: "auto",
+    width: 240,
+    borderWidth: 1,
+    borderColor: "#123B7A",
+    padding: 8,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  netHighlight: {
+    marginTop: 6,
+    backgroundColor: "#E6F4EA",
+    borderWidth: 1,
+    borderColor: "#68D391",
+    padding: 8,
+  },
+  footer: {
+    marginTop: 14,
+    textAlign: "center",
+    fontSize: 8,
+    color: "#4A5568",
+  },
+});
 
 // ── Types ──
 
@@ -56,8 +202,11 @@ type SimulacionData = {
 
 type LiquidacionRegistro = {
   id_caso_termina: number;
+  id_colaborador?: number;
   colaborador: string;
+  identificacion?: string | number | null;
   causa: string;
+  fechaIngresoContrato?: string | null;
   fechaTerminacion: string;
   montoTotal: number;
   aprobador: number;
@@ -67,6 +216,57 @@ type LiquidacionRegistro = {
 type CausaLiquidacion = {
   id: number;
   causa_liquidacion: string;
+};
+
+type LiquidacionDetalleApi = {
+  id_caso_termina: number;
+  id_colaborador: number;
+  causa: number;
+  realizo_preaviso: boolean;
+  fecha_terminacion: string;
+  promedio_base: number | string;
+  aguinaldo_proporcional: number | string;
+  monto_cesantia: number | string;
+  monto_preaviso: number | string;
+  otros_montos: number | string;
+  id_aprobador: number;
+  fecha_aprobacion: string;
+  saldo_vacaciones: number;
+  colaborador?: {
+    id_colaborador: number;
+    nombre: string;
+    primer_apellido: string;
+    segundo_apellido: string;
+    identificacion?: number | string | null;
+  };
+  causaRef?: {
+    id_causa_liquidacion: number;
+    causa_liquidacion: string;
+  };
+};
+
+type LiquidacionSortField =
+  | "colaborador"
+  | "causa"
+  | "fechaIngreso"
+  | "fechaTerminacion"
+  | "montoTotal";
+
+type LiquidacionDetalleView = {
+  idCasoTermina: number;
+  colaboradorNombre: string;
+  identificacion: string;
+  causa: string;
+  fechaIngresoContrato: string | null;
+  fechaTerminacion: string;
+  fechaAprobacion: string;
+  realizoPreaviso: boolean;
+  salarioDiario: number;
+  aguinaldo: number;
+  cesantia: number;
+  preaviso: number;
+  otrosMontos: number;
+  totalBruto: number;
 };
 
 function getCausaBadgeColor(causa: string | null | undefined) {
@@ -82,6 +282,34 @@ function normalizarTexto(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toUpperCase();
+}
+
+function toNumber(value: number | string | null | undefined) {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function toDateSortValue(dateValue: string | null | undefined) {
+  if (!dateValue) return 0;
+  const numeric = new Date(dateValue).getTime();
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatPdfCRC(value: number | string) {
+  const numericValue = typeof value === "string" ? Number(value.replace(/,/g, "")) : value;
+  if (!Number.isFinite(numericValue)) return `${PDF_COLON_SYMBOL}0,00`;
+
+  const formatted = new Intl.NumberFormat("es-CR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+
+  return `${PDF_COLON_SYMBOL}${formatted}`;
+}
+
+function buildLiquidacionPdfFileName(detalle: LiquidacionDetalleView) {
+  const fecha = String(detalle.fechaAprobacion || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  return `liquidacion-${detalle.idCasoTermina}-${fecha}.pdf`;
 }
 
 function esDespidoSinResponsabilidad(
@@ -106,6 +334,101 @@ function esDespidoConResponsabilidad(
   return (
     causaNormalizada.includes("CON RESPONSABILIDAD")
     && !causaNormalizada.includes("SIN RESPONSABILIDAD")
+  );
+}
+
+function LiquidacionPdfDocument({ detalle }: { detalle: LiquidacionDetalleView }) {
+  return (
+    <Document>
+      <Page size="A4" style={pdfStyles.page}>
+        <View style={pdfStyles.topBar}>
+          <PdfText style={pdfStyles.companyName}>{COMPANY_NAME}</PdfText>
+          <PdfText>{formatSpanishLongDate(new Date().toISOString())}</PdfText>
+        </View>
+
+        <Image src={logoPdf} style={pdfStyles.logo} />
+        <PdfText style={pdfStyles.title}>Detalle de liquidacion laboral</PdfText>
+
+        <View style={pdfStyles.infoGrid}>
+          <View style={pdfStyles.infoCard}>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Colaborador</PdfText>
+              <PdfText style={pdfStyles.value}>{detalle.colaboradorNombre}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Identificacion</PdfText>
+              <PdfText style={pdfStyles.value}>{detalle.identificacion}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Causa</PdfText>
+              <PdfText style={pdfStyles.value}>{detalle.causa}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Fecha ingreso contrato</PdfText>
+              <PdfText style={pdfStyles.value}>{formatSpanishLongDate(detalle.fechaIngresoContrato)}</PdfText>
+            </View>
+          </View>
+
+          <View style={pdfStyles.infoCard}>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Caso</PdfText>
+              <PdfText style={pdfStyles.value}>#{detalle.idCasoTermina}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Fecha terminacion</PdfText>
+              <PdfText style={pdfStyles.value}>{formatSpanishLongDate(detalle.fechaTerminacion)}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Fecha aprobacion</PdfText>
+              <PdfText style={pdfStyles.value}>{formatSpanishLongDate(detalle.fechaAprobacion)}</PdfText>
+            </View>
+            <View style={pdfStyles.infoRow}>
+              <PdfText style={pdfStyles.label}>Realizo preaviso</PdfText>
+              <PdfText style={pdfStyles.value}>{detalle.realizoPreaviso ? "Si" : "No"}</PdfText>
+            </View>
+          </View>
+        </View>
+
+        <PdfText style={pdfStyles.sectionTitle}>Componentes de liquidacion</PdfText>
+        <View style={pdfStyles.table}>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.headerCell}>Componente</PdfText>
+            <PdfText style={pdfStyles.headerCell}>Monto</PdfText>
+          </View>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.bodyCell}>Salario diario base</PdfText>
+            <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(detalle.salarioDiario)}</PdfText>
+          </View>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.bodyCell}>Aguinaldo proporcional</PdfText>
+            <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(detalle.aguinaldo)}</PdfText>
+          </View>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.bodyCell}>Cesantia</PdfText>
+            <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(detalle.cesantia)}</PdfText>
+          </View>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.bodyCell}>Preaviso</PdfText>
+            <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(detalle.preaviso)}</PdfText>
+          </View>
+          <View style={pdfStyles.tableRow}>
+            <PdfText style={pdfStyles.bodyCell}>Otros montos</PdfText>
+            <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(detalle.otrosMontos)}</PdfText>
+          </View>
+        </View>
+
+        <View style={pdfStyles.totalsBox}>
+          <View style={pdfStyles.netHighlight}>
+            <View style={pdfStyles.totalRow}>
+              <PdfText style={pdfStyles.value}>Total liquidacion</PdfText>
+              <PdfText style={pdfStyles.value}>{formatPdfCRC(detalle.totalBruto)}</PdfText>
+            </View>
+          </View>
+        </View>
+
+        <PdfText style={pdfStyles.footer}>Generado por BioAlquimia para respaldo administrativo.</PdfText>
+      </Page>
+    </Document>
   );
 }
 
@@ -164,9 +487,27 @@ export const Liquidaciones = () => {
     data: existingRecords = [],
     isLoading: loadingRecords,
     refetch: refetchRecords,
-  } = useApiQuery<LiquidacionRegistro[]>({ url: "liquidaciones" });
+  } = useApiQuery<LiquidacionRegistro[]>({ url: "liquidaciones?limit=5000" });
 
   const [showForm, setShowForm] = useState(false);
+  const [tableQuery, setTableQuery] = useState<{
+    page: number;
+    limit: number;
+    sortBy: LiquidacionSortField;
+    sortDir: SortDir;
+  }>({
+    page: 1,
+    limit: 10,
+    sortBy: "fechaTerminacion",
+    sortDir: "desc",
+  });
+
+  const [selectedLiquidacionRecord, setSelectedLiquidacionRecord] =
+    useState<LiquidacionRegistro | null>(null);
+  const [liquidacionDetalle, setLiquidacionDetalle] =
+    useState<LiquidacionDetalleApi | null>(null);
+  const [isDetalleLoading, setIsDetalleLoading] = useState(false);
+  const [isPdfDownloading, setIsPdfDownloading] = useState(false);
 
   const CamposTerminacionYPreaviso = () => {
     const { control, setValue } = useFormContext<SimularFormValues>();
@@ -200,7 +541,7 @@ export const Liquidaciones = () => {
             <InputField
               fieldType="select"
               name="realizo_preaviso"
-              label="¿Realizó preaviso? (En renuncia, si marcás Sí se paga)"
+              label="¿Realizó preaviso?"
               disableSelectPortal
               required
               options={[
@@ -210,14 +551,6 @@ export const Liquidaciones = () => {
             />
           )}
         </SimpleGrid>
-
-        {ocultarPreaviso && (
-          <Text textStyle="xs" color="fg.muted">
-            {causaSinResponsabilidad
-              ? 'Para despido sin responsabilidad el preaviso no aplica y se fija en "No".'
-              : 'Para despido con responsabilidad el preaviso se paga por defecto y se fija en "Sí".'}
-          </Text>
-        )}
       </Stack>
     );
   };
@@ -285,6 +618,251 @@ export const Liquidaciones = () => {
     });
   };
 
+  const sortedRecords = useMemo(() => {
+    const direction = tableQuery.sortDir === "asc" ? 1 : -1;
+
+    return [...existingRecords].sort((left, right) => {
+      if (tableQuery.sortBy === "colaborador") {
+        const value = String(left.colaborador ?? "").localeCompare(String(right.colaborador ?? ""), "es", {
+          sensitivity: "base",
+        }) * direction;
+        return value === 0 ? right.id_caso_termina - left.id_caso_termina : value;
+      }
+
+      if (tableQuery.sortBy === "causa") {
+        const value = String(left.causa ?? "").localeCompare(String(right.causa ?? ""), "es", {
+          sensitivity: "base",
+        }) * direction;
+        return value === 0 ? right.id_caso_termina - left.id_caso_termina : value;
+      }
+
+      if (tableQuery.sortBy === "fechaIngreso") {
+        const value = (toDateSortValue(left.fechaIngresoContrato) - toDateSortValue(right.fechaIngresoContrato)) * direction;
+        return value === 0 ? right.id_caso_termina - left.id_caso_termina : value;
+      }
+
+      if (tableQuery.sortBy === "fechaTerminacion") {
+        const value = (toDateSortValue(left.fechaTerminacion) - toDateSortValue(right.fechaTerminacion)) * direction;
+        return value === 0 ? right.id_caso_termina - left.id_caso_termina : value;
+      }
+
+      const value = (toNumber(left.montoTotal) - toNumber(right.montoTotal)) * direction;
+      return value === 0 ? right.id_caso_termina - left.id_caso_termina : value;
+    });
+  }, [existingRecords, tableQuery.sortBy, tableQuery.sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / tableQuery.limit));
+
+  useEffect(() => {
+    if (tableQuery.page <= totalPages) return;
+    setTableQuery((prev) => ({ ...prev, page: totalPages }));
+  }, [tableQuery.page, totalPages]);
+
+  const paginatedRecords = useMemo(() => {
+    const start = (tableQuery.page - 1) * tableQuery.limit;
+    return sortedRecords.slice(start, start + tableQuery.limit);
+  }, [sortedRecords, tableQuery.page, tableQuery.limit]);
+
+  const handleSortChange = (field: LiquidacionSortField) => {
+    setTableQuery((prev) => ({
+      ...prev,
+      page: 1,
+      sortBy: field,
+      sortDir: prev.sortBy === field && prev.sortDir === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const tableColumns = useMemo<Array<DataTableColumn<LiquidacionRegistro>>>(
+    () => [
+      {
+        id: "colaborador",
+        header: (
+          <SortHeader
+            label="Colaborador"
+            field="colaborador"
+            currentSortBy={tableQuery.sortBy}
+            currentSortDir={tableQuery.sortDir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "280px",
+        cell: (row) => (
+          <Stack gap="0">
+            <Text fontWeight="semibold">{toTitleCase(row.colaborador)}</Text>
+            <Text color="fg.muted" fontSize="sm">
+              ID: {row.identificacion ?? "N/D"}
+            </Text>
+          </Stack>
+        ),
+      },
+      {
+        id: "causa",
+        header: (
+          <SortHeader
+            label="Causa de liquidación"
+            field="causa"
+            currentSortBy={tableQuery.sortBy}
+            currentSortDir={tableQuery.sortDir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "220px",
+        cell: (row) => (
+          <Badge colorPalette={getCausaBadgeColor(row.causa)} variant="subtle">
+            {row.causa}
+          </Badge>
+        ),
+      },
+      {
+        id: "fechaIngreso",
+        header: (
+          <SortHeader
+            label="Ingreso compañía"
+            field="fechaIngreso"
+            currentSortBy={tableQuery.sortBy}
+            currentSortDir={tableQuery.sortDir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "170px",
+        cell: (row) => formatDateUiCompact(row.fechaIngresoContrato),
+      },
+      {
+        id: "fechaTerminacion",
+        header: (
+          <SortHeader
+            label="Fecha terminación"
+            field="fechaTerminacion"
+            currentSortBy={tableQuery.sortBy}
+            currentSortDir={tableQuery.sortDir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "170px",
+        cell: (row) => formatDateUiCompact(row.fechaTerminacion),
+      },
+      {
+        id: "montoTotal",
+        header: (
+          <SortHeader
+            label="Monto total"
+            field="montoTotal"
+            currentSortBy={tableQuery.sortBy}
+            currentSortDir={tableQuery.sortDir}
+            onChange={handleSortChange}
+          />
+        ),
+        minW: "170px",
+        textAlign: "right",
+        cell: (row) => (
+          <Text fontWeight="bold" color="green.600">
+            {formatCRC(row.montoTotal)}
+          </Text>
+        ),
+      },
+    ],
+    [tableQuery.sortBy, tableQuery.sortDir],
+  );
+
+  const handleVerDetalle = async (record: LiquidacionRegistro) => {
+    setSelectedLiquidacionRecord(record);
+    setLiquidacionDetalle(null);
+    setIsDetalleLoading(true);
+
+    try {
+      const detalle = await apiRequest<LiquidacionDetalleApi>({
+        url: `liquidaciones/${record.id_caso_termina}`,
+        method: "GET",
+      });
+      setLiquidacionDetalle(detalle);
+    } catch {
+      setLiquidacionDetalle(null);
+    } finally {
+      setIsDetalleLoading(false);
+    }
+  };
+
+  const detalleActual = useMemo<LiquidacionDetalleView | null>(() => {
+    if (!selectedLiquidacionRecord || !liquidacionDetalle) return null;
+
+    const colaboradorNombre = [
+      liquidacionDetalle.colaborador?.nombre,
+      liquidacionDetalle.colaborador?.primer_apellido,
+      liquidacionDetalle.colaborador?.segundo_apellido,
+    ]
+      .filter(Boolean)
+      .join(" ") || selectedLiquidacionRecord.colaborador;
+
+    const aguinaldo = toNumber(liquidacionDetalle.aguinaldo_proporcional);
+    const cesantia = toNumber(liquidacionDetalle.monto_cesantia);
+    const preaviso = toNumber(liquidacionDetalle.monto_preaviso);
+    const otrosMontos = toNumber(liquidacionDetalle.otros_montos);
+
+    return {
+      idCasoTermina: liquidacionDetalle.id_caso_termina,
+      colaboradorNombre,
+      identificacion: String(
+        liquidacionDetalle.colaborador?.identificacion
+        ?? selectedLiquidacionRecord.identificacion
+        ?? "N/D",
+      ),
+      causa: liquidacionDetalle.causaRef?.causa_liquidacion ?? selectedLiquidacionRecord.causa,
+      fechaIngresoContrato: selectedLiquidacionRecord.fechaIngresoContrato ?? null,
+      fechaTerminacion: liquidacionDetalle.fecha_terminacion,
+      fechaAprobacion: liquidacionDetalle.fecha_aprobacion,
+      realizoPreaviso: Boolean(liquidacionDetalle.realizo_preaviso),
+      salarioDiario: toNumber(liquidacionDetalle.promedio_base),
+      aguinaldo,
+      cesantia,
+      preaviso,
+      otrosMontos,
+      totalBruto: aguinaldo + cesantia + preaviso + otrosMontos,
+    };
+  }, [liquidacionDetalle, selectedLiquidacionRecord]);
+
+  const handleDownloadDetallePdf = async () => {
+    if (!detalleActual) return;
+
+    setIsPdfDownloading(true);
+    try {
+      const blob = await pdf(<LiquidacionPdfDocument detalle={detalleActual} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = buildLiquidacionPdfFileName(detalleActual);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsPdfDownloading(false);
+    }
+  };
+
+  const actionColumn = useMemo<DataTableActionColumn<LiquidacionRegistro>>(
+    () => ({
+      header: "Acciones",
+      w: "200px",
+      sticky: true,
+      textAlign: "left",
+      cell: (row) => (
+        <Button
+          size="sm"
+          variant="subtle"
+          colorPalette="blue"
+          onClick={(event) => {
+            event.stopPropagation();
+            void handleVerDetalle(row);
+          }}
+        >
+          <FiEye />
+          Ver detalles
+        </Button>
+      ),
+    }),
+    [],
+  );
+
   return (
     <Layout pageTitle="Liquidaciones">
       <Stack gap="6">
@@ -300,7 +878,7 @@ export const Liquidaciones = () => {
         <Modal
           title="Nueva liquidación"
           isOpen={showForm}
-          size="full"
+          size="xl"
           onOpenChange={(e) => {
             setShowForm(e.open);
             if (!e.open) {
@@ -571,84 +1149,194 @@ export const Liquidaciones = () => {
           }
         />
 
-        {loadingRecords ? (
-          <Spinner alignSelf="center" size="lg" />
-        ) : existingRecords.length === 0 ? (
-          <EmptyState.Root
-            colorPalette="blue"
-            h="400px"
-            border="0.15rem dashed"
-            borderColor="blue.600"
-            alignContent="center"
-            mt="1rem"
-          >
-            <EmptyState.Content>
-              <EmptyState.Indicator>
-                <FiScissors />
-              </EmptyState.Indicator>
-              <Stack textAlign="center" gap="2">
-                <EmptyState.Title>
-                  Aún no existen liquidaciones registradas.
-                </EmptyState.Title>
-                <EmptyState.Description>
-                  Empieza creando una liquidación con pre cálculo previo.
-                </EmptyState.Description>
-              </Stack>
-            </EmptyState.Content>
-          </EmptyState.Root>
-        ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, xl: 2, "2xl": 3 }} gap="6">
-            {existingRecords.map((record) => (
-              <Card.Root
-                key={record.id_caso_termina}
-                minW="0"
-                minH="100%"
-                transition="transform 150ms ease"
-                _hover={{ transform: "scale(1.01)" }}
-              >
-                <Card.Header>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap="3">
-                    <Card.Title>{record.colaborador}</Card.Title>
-                    <Badge colorPalette={getCausaBadgeColor(record.causa)} flexShrink={0}>
-                      {record.causa}
-                    </Badge>
-                  </Stack>
-                </Card.Header>
-                <Card.Body>
-                  <Stack gap="3">
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Fecha de terminación
-                      </Text>
-                      <Text fontWeight="medium">{formatDateUiCompact(record.fechaTerminacion)}</Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Fecha de aprobación
-                      </Text>
-                      <Text fontWeight="medium">{formatDateUiCompact(record.fechaAprobacion)}</Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Monto total
-                      </Text>
-                      <Text fontWeight="medium" color="green.600">
-                        {formatCRC(record.montoTotal)}
-                      </Text>
-                    </Stack>
-                    <Stack gap="0">
-                      <Text textStyle="sm" color="fg.muted">
-                        Aprobador
-                      </Text>
-                      <Text fontWeight="medium">#{record.aprobador}</Text>
-                    </Stack>
-                  </Stack>
-                </Card.Body>
-              </Card.Root>
-            ))}
-          </SimpleGrid>
-        )}
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Liquidaciones creadas</Card.Title>
+            <Card.Description>
+              Visualiza, ordena y consulta el detalle de cada liquidación registrada.
+            </Card.Description>
+          </Card.Header>
+          <Card.Body>
+            <DataTable<LiquidacionRegistro>
+              columns={tableColumns}
+              data={paginatedRecords}
+              actionColumn={actionColumn}
+              isDataLoading={loadingRecords}
+              size="md"
+              pagination={{
+                enabled: true,
+                page: tableQuery.page,
+                pageSize: tableQuery.limit,
+                totalCount: sortedRecords.length,
+                onPageChange: (nextPage) => {
+                  setTableQuery((prev) => ({ ...prev, page: nextPage }));
+                },
+              }}
+            />
+          </Card.Body>
+        </Card.Root>
       </Stack>
+
+      <Modal
+        title={
+          selectedLiquidacionRecord
+            ? `Detalle de liquidación #${selectedLiquidacionRecord.id_caso_termina}`
+            : "Detalle de liquidación"
+        }
+        size="xl"
+        isOpen={Boolean(selectedLiquidacionRecord)}
+        onOpenChange={({ open }) => {
+          if (!open) {
+            setSelectedLiquidacionRecord(null);
+            setLiquidacionDetalle(null);
+          }
+        }}
+        footerContent={(
+          <HStack w="full" justifyContent="flex-end">
+            <Button
+              colorPalette="blue"
+              variant="outline"
+              disabled={!detalleActual || isDetalleLoading}
+              loading={isPdfDownloading}
+              onClick={() => {
+                void handleDownloadDetallePdf();
+              }}
+            >
+              <FiDownload />
+              Descargar PDF
+            </Button>
+          </HStack>
+        )}
+        content={
+          isDetalleLoading ? (
+            <Stack align="center" py="10" gap="3">
+              <Spinner size="lg" />
+              <Text color="fg.muted">Cargando detalle de liquidación…</Text>
+            </Stack>
+          ) : detalleActual ? (
+            <LiquidacionDetalleCard detalle={detalleActual} />
+          ) : (
+            <Text color="fg.muted">No se logró cargar el detalle de la liquidación.</Text>
+          )
+        }
+      />
     </Layout>
   );
 };
+
+function DetailInfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack gap="0.5">
+      <Text fontSize="xs" color="fg.muted" textTransform="uppercase">{label}</Text>
+      <Text fontWeight="semibold">{value}</Text>
+    </Stack>
+  );
+}
+
+function LiquidacionDetalleCard({ detalle }: { detalle: LiquidacionDetalleView }) {
+  return (
+    <Stack gap="6" maxW="1100px" mx="auto" w="full">
+      <Card.Root>
+        <Card.Body>
+          <Stack align="center" gap="2" textAlign="center">
+            <Text fontSize="2xl" fontWeight="bold" color="brand.blue.700">
+              {COMPANY_NAME}
+            </Text>
+            <Text color="fg.muted">Detalle de liquidación laboral</Text>
+            <Text fontSize="sm" color="fg.muted">Caso #{detalle.idCasoTermina}</Text>
+          </Stack>
+        </Card.Body>
+      </Card.Root>
+
+      <SimpleGrid columns={{ base: 1, xl: 2 }} gap="4">
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Información del colaborador</Card.Title>
+          </Card.Header>
+          <Card.Body>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+              <DetailInfoItem label="Nombre" value={detalle.colaboradorNombre} />
+              <DetailInfoItem label="Identificación" value={detalle.identificacion} />
+              <DetailInfoItem label="Causa" value={detalle.causa} />
+              <DetailInfoItem
+                label="Ingreso compañía"
+                value={formatDateUiCompact(detalle.fechaIngresoContrato)}
+              />
+            </SimpleGrid>
+          </Card.Body>
+        </Card.Root>
+
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Información de liquidación</Card.Title>
+          </Card.Header>
+          <Card.Body>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+              <DetailInfoItem label="Fecha terminación" value={formatDateUiCompact(detalle.fechaTerminacion)} />
+              <DetailInfoItem label="Fecha aprobación" value={formatDateUiCompact(detalle.fechaAprobacion)} />
+              <DetailInfoItem label="Preaviso" value={detalle.realizoPreaviso ? "Sí" : "No"} />
+            </SimpleGrid>
+          </Card.Body>
+        </Card.Root>
+      </SimpleGrid>
+
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>Desglose de componentes</Card.Title>
+        </Card.Header>
+        <Card.Body p="0">
+          <Table.Root size="sm" variant="outline">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Componente</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Monto</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              <Table.Row>
+                <Table.Cell>Salario diario</Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="semibold">{formatCRC(detalle.salarioDiario)}</Text>
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Aguinaldo proporcional</Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold" color="green.600">{formatCRC(detalle.aguinaldo)}</Text>
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Cesantía</Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold" color="green.600">{formatCRC(detalle.cesantia)}</Text>
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Preaviso</Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold" color="green.600">{formatCRC(detalle.preaviso)}</Text>
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Otros montos</Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Text fontWeight="bold" color="green.600">{formatCRC(detalle.otrosMontos)}</Text>
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row bg="gray.50">
+                <Table.Cell>
+                  <Text fontWeight="bold">TOTAL</Text>
+                </Table.Cell>
+                <Table.Cell textAlign="right">
+                  <Heading size="md" color="green.600">
+                    {formatCRC(detalle.totalBruto)}
+                  </Heading>
+                </Table.Cell>
+              </Table.Row>
+            </Table.Body>
+          </Table.Root>
+        </Card.Body>
+      </Card.Root>
+    </Stack>
+  );
+}

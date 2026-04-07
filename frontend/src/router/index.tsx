@@ -44,8 +44,9 @@ import { TiposJornada } from "../pages/Private/mantenimientos/tiposJornada/Tipos
 import { GeneracionEvaluaciones } from "../pages/Private/evaluacion/GeneracionEvaluaciones";
 import { AguinaldosPeriodos } from "../pages/Private/aguinaldos/AguinaldosPeriodos";
 import { DetalleAguinaldo } from "../pages/Private/aguinaldos/DetalleAguinaldo";
-import { Liquidaciones } from "../pages/Private/liquidaciones/Liquidaciones";
+
 import { Reportes } from "../pages/Private/reportes/Reportes";
+import { Liquidaciones } from "../pages/Private/liquidaciones/Liquidaciones";
 
 // helpers (opcionales)
 const shortId = (v?: string) => (v ? v.slice(0, 8) : "");
@@ -171,7 +172,7 @@ export const router = createBrowserRouter([
         path: "/incapacidades",
         handle: { crumb: { label: "Incapacidades" } },
         children: [
-          { index: true, element: <Navigate to="/incapacidades/registro" replace /> },
+          { index: true, element: <Navigate to="/incapacidades/solicitud" replace /> },
 
           {
             path: "solicitud",
@@ -188,7 +189,7 @@ export const router = createBrowserRouter([
             element: <DetalleIncapacidad />,
             handle: {
               crumb: ({ params }: { params: Record<string, string> }) => [
-                { label: "Incapacidades", to: "/incapacidades/registro" },
+                { label: "Incapacidades", to: "/incapacidades/solicitud" },
                 `Detalle (${params.numero_boleta ?? shortId(params.numero_boleta)})`,
               ],
             },

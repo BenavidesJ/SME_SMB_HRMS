@@ -314,8 +314,9 @@ export const RegistroIncapacidades = () => {
       cell: (item) => (
         <Button
           type="button"
-          variant="ghost"
-          size="xs"
+          variant="subtle"
+          colorPalette="blue"
+          size="sm"
           disabled={!item.numero_boleta}
           onClick={() => {
             if (!item.numero_boleta) return;

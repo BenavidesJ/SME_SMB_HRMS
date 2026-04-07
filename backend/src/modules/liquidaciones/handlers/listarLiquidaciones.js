@@ -1,5 +1,5 @@
 import { Liquidacion, Colaborador, CausaLiquidacion } from "../../../models/index.js";
-import { Op } from "sequelize";
+import { Op, literal } from "sequelize";
 
 /**
  * Lista liquidaciones con filtros opcionales
@@ -28,7 +28,13 @@ export async function listarLiquidaciones(filtros = {}, transaction) {
     {
       model: Colaborador,
       as: "colaborador",
-      attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
+      attributes: [
+        "id_colaborador",
+        "nombre",
+        "primer_apellido",
+        "segundo_apellido",
+        "identificacion",
+      ],
     },
     {
       model: CausaLiquidacion,
@@ -42,6 +48,16 @@ export async function listarLiquidaciones(filtros = {}, transaction) {
   }
 
   const { rows, count } = await Liquidacion.findAndCountAll({
+    attributes: {
+      include: [
+        [
+          literal(
+            "(SELECT c.fecha_inicio FROM contrato c WHERE c.id_colaborador = liquidacion.id_colaborador ORDER BY c.fecha_inicio DESC LIMIT 1)"
+          ),
+          "fecha_ingreso_contrato",
+        ],
+      ],
+    },
     where,
     include,
     limit,
@@ -53,8 +69,17 @@ export async function listarLiquidaciones(filtros = {}, transaction) {
   return {
     rows: rows.map((r) => ({
       id_caso_termina: r.id_caso_termina,
-      colaborador: r.colaborador.nombre + " " + r.colaborador.primer_apellido,
+      id_colaborador: r.id_colaborador,
+      colaborador: [
+        r.colaborador?.nombre,
+        r.colaborador?.primer_apellido,
+        r.colaborador?.segundo_apellido,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      identificacion: r.colaborador?.identificacion ?? null,
       causa: r.causaRef?.causa_liquidacion || "N/A",
+      fechaIngresoContrato: r.get("fecha_ingreso_contrato") || null,
       fechaTerminacion: r.fecha_terminacion,
       montoTotal:
         Number(r.aguinaldo_proporcional || 0) +

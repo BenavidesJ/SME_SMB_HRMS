@@ -694,31 +694,35 @@ export const Planillas = () => {
       {
         id: "periodo",
         header: "Periodo",
+        w: "170px",
         textAlign: "left",
         cell: (period) => getPeriodoDisplayLabel(period),
       },
       {
         id: "fecha_inicio",
         header: buildSortHeader("Fecha inicio", "fecha_inicio"),
+        w: "120px",
         textAlign: "left",
         cell: (period) => renderDate(period.fecha_inicio),
       },
       {
         id: "fecha_fin",
         header: buildSortHeader("Fecha fin", "fecha_fin"),
+        w: "120px",
         textAlign: "left",
         cell: (period) => renderDate(period.fecha_fin),
       },
       {
         id: "fecha_pago",
         header: buildSortHeader("Fecha pago", "fecha_pago"),
+        w: "120px",
         textAlign: "left",
         cell: (period) => renderDate(period.fecha_pago),
       },
       {
         id: "estado",
         header: "Estado",
-        w: "100px",
+        w: "90px",
         textAlign: "left",
         cell: (period) => (
           <Badge colorPalette={getEstadoBadgeColor(period.estado)}>
@@ -733,28 +737,30 @@ export const Planillas = () => {
   const actionColumn = useMemo<DataTableActionColumn<PeriodoPlanilla>>(
     () => ({
       header: "Acciones",
-      w: "300px",
       textAlign: "center",
+      w: "80px",
       sticky: true,
       cell: (period) => (
-        <Stack direction="row" justifyContent="flex-start" gap="2" flexWrap="wrap">
+        <Stack >
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            colorPalette="blue"
+            size="sm"
             onClick={() => navigate(`/planillas/periodo_planilla/${period.id}`)}
           >
             <FiEye /> Ver
           </Button>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            colorPalette="yellow"
+            size="sm"
             onClick={() => handleEditPeriod(period)}
           >
             <FiEdit2 /> Editar
           </Button>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            size="sm"
             colorPalette="red"
             onClick={() => setPeriodToDelete(period)}
           >

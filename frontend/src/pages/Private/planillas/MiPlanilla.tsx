@@ -806,7 +806,7 @@ export const MiPlanilla = () => {
                 w: "190px",
                 cell: (row) => (
                   <HStack justify="flex-end" gap="2">
-                    <Button size="sm" variant="outline" colorPalette="blue" onClick={() => void handleOpenDetail(row)}>
+                    <Button size="sm" variant="subtle" colorPalette="blue" onClick={() => void handleOpenDetail(row)}>
                       <FiEye /> Ver
                     </Button>
                     <Button

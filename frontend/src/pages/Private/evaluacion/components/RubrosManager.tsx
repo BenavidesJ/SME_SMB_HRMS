@@ -344,8 +344,9 @@ export const RubrosManager = () => {
                 sticky: false,
                 cell: (row) => (
                   <Button
-                    size="xs"
-                    variant="outline"
+                    size="sm"
+                    variant="subtle"
+                    colorPalette="blue"
                     onClick={() => openTemplateBuilder(row)}
                   >
                     <FiEye />

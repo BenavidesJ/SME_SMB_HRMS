@@ -299,8 +299,9 @@ export const GeneracionEvaluaciones = () => {
             {row.finalizada ? (
               <Button
                 aria-label="Ver detalle"
-                size="xs"
-                variant="ghost"
+                size="sm"
+                variant="subtle"
+                colorPalette="blue"
                 onClick={() => handleVerEvaluacion(row)}
               >
                 <FiEye />

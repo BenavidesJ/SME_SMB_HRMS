@@ -398,7 +398,7 @@ export const AguinaldosPeriodos = () => {
       {
         id: "periodo",
         header: "Periodo",
-        minW: "240px",
+        w: "80px",
         textAlign: "left",
         cell: (period) => `${formatDateUiCompact(period.periodo_desde)} - ${formatDateUiCompact(period.periodo_hasta)}`,
       },
@@ -406,20 +406,20 @@ export const AguinaldosPeriodos = () => {
         id: "anio",
         header: buildSortHeader("Año", "anio"),
         textAlign: "left",
-        w: "110px",
+        w: "80px",
         cell: (period) => period.anio,
       },
       {
         id: "fecha_pago",
         header: buildSortHeader("Fecha pago", "fecha_pago"),
         textAlign: "left",
-        minW: "150px",
+        minW: "100px",
         cell: (period) => formatDateUiCompact(period.fecha_pago),
       },
       {
         id: "registrado_por",
         header: "Registrado por",
-        minW: "220px",
+        minW: "100px",
         textAlign: "left",
         cell: (period) => period.registrado_por_nombre,
       },
@@ -430,28 +430,30 @@ export const AguinaldosPeriodos = () => {
   const actionColumn = useMemo<DataTableActionColumn<AguinaldoPeriodo>>(
     () => ({
       header: "Acciones",
-      w: "320px",
+      w: "420px",
       textAlign: "left",
       sticky: true,
       cell: (period) => (
-        <Stack direction="row" justifyContent="flex-start" gap="2" flexWrap="wrap">
+        <Stack direction="row" justifyContent="flex-start" gap="2" flexWrap="nowrap" align="center">
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            colorPalette="blue"
+            size="sm"
             onClick={() => navigate(`/aguinaldos/${encodeURIComponent(period.periodo_key)}`)}
           >
             <FiEye /> Ver
           </Button>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            colorPalette="yellow"
+            size="sm"
             onClick={() => handleEditPeriod(period)}
           >
             <FiEdit2 /> Editar
           </Button>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="subtle"
+            size="sm"
             colorPalette="red"
             onClick={() => setPeriodToDelete(period)}
           >
