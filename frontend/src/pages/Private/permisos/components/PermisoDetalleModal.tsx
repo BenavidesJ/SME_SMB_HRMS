@@ -1,5 +1,7 @@
+/* eslint-disable no-unused-vars */
 import { Badge, HStack, Separator, Stack, Text } from "@chakra-ui/react";
 import { Modal } from "../../../../components/general";
+import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import { formatDateUiCompact, toTitleCase } from "../../../../utils";
 import { normalizeRequestStatus } from "../../../../utils/requestStatus";
 import type { PermisoDuracionTipo, PermisoListItem, PermisoTipo } from "../types";
@@ -13,6 +15,10 @@ interface PermisoDetalleModalProps {
   item: PermisoListItem | null;
   isOpen: boolean;
   onClose: () => void;
+  canManageActions?: boolean;
+  onApprove?: (id: number) => Promise<void> | void;
+  onDecline?: (id: number) => Promise<void> | void;
+  isSubmitting?: boolean;
 }
 
 const estadoBadgeProps = (estado?: string) => {
@@ -76,9 +82,31 @@ const resolvePermisoMode = (item: PermisoListItem): PermisoDuracionTipo => {
   return isSameDay && totalDias !== null && totalDias < 1 ? "HORAS" : "DIAS";
 };
 
-export function PermisoDetalleModal({ item, isOpen, onClose }: PermisoDetalleModalProps) {
+export function PermisoDetalleModal({
+  item,
+  isOpen,
+  onClose,
+  canManageActions = false,
+  onApprove,
+  onDecline,
+  isSubmitting = false,
+}: PermisoDetalleModalProps) {
   const status = normalizeRequestStatus(item?.estadoSolicitudPermisos?.estado ?? item?.estado_solicitud);
   const mode = item ? resolvePermisoMode(item) : "DIAS";
+  const esPendiente = status === "PENDIENTE";
+  const puedeGestionar = canManageActions && esPendiente && Boolean(onApprove) && Boolean(onDecline);
+
+  const handleConfirmApprove = async () => {
+    if (!item || !onApprove) return;
+    await onApprove(item.id_solicitud);
+    onClose();
+  };
+
+  const handleConfirmDecline = async () => {
+    if (!item || !onDecline) return;
+    await onDecline(item.id_solicitud);
+    onClose();
+  };
 
   return (
     <Modal
@@ -165,6 +193,23 @@ export function PermisoDetalleModal({ item, isOpen, onClose }: PermisoDetalleMod
                 <Text>{item.observaciones?.trim() || "Sin observaciones"}</Text>
               </Stack>
             </Stack>
+
+            {puedeGestionar && (
+              <>
+                <Separator />
+                <Stack gap="3">
+                  <Text fontWeight="semibold" color="fg.muted" fontSize="xs" textTransform="uppercase" letterSpacing="wide">
+                    Acciones del aprobador
+                  </Text>
+                  <RequestActionButtons
+                    onApprove={handleConfirmApprove}
+                    onDecline={handleConfirmDecline}
+                    isSubmitting={isSubmitting}
+                    confirmSubject="esta solicitud"
+                  />
+                </Stack>
+              </>
+            )}
           </Stack>
         ) : null
       }

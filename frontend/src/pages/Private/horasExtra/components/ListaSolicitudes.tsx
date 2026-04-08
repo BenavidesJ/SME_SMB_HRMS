@@ -155,9 +155,6 @@ export function ListaSolicitudes({ estado, idColaborador }: ListaSolicitudesProp
               <SolicitudCard
                 key={item.id_solicitud_hx}
                 item={item}
-                canManageActions={canManageItem(item)}
-                onApprove={canManageItem(item) ? handleApprove : undefined}
-                onDecline={canManageItem(item) ? handleDecline : undefined}
                 onViewDetail={canManageItem(item) ? handleOpenDetail : undefined}
                 isSubmitting={submittingId === item.id_solicitud_hx}
               />

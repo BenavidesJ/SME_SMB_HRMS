@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
-import { Badge, Card, Grid, GridItem, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Card, Grid, GridItem, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import { toTitleCase, formatDateUiCompact } from "../../../../utils";
 import { LuEye } from "react-icons/lu";
 import type { VacacionListItem } from "../types";
@@ -47,20 +46,14 @@ const buildCollaboratorName = (item: VacacionListItem) => {
 interface VacacionSolicitudCardProps {
   item: VacacionListItem;
   showCollaborator?: boolean;
-  canManageActions?: boolean;
   isSubmitting?: boolean;
-  onApprove?: (...args: [number]) => void;
-  onDecline?: (...args: [number]) => void;
   onViewDetail?: (item: VacacionListItem) => void;
 }
 
 export function VacacionSolicitudCard({
   item,
   showCollaborator = false,
-  canManageActions = false,
   isSubmitting = false,
-  onApprove,
-  onDecline,
   onViewDetail,
 }: VacacionSolicitudCardProps) {
   const estado = item.estadoSolicitudVacaciones?.estado ?? "DESCONOCIDO";
@@ -69,65 +62,12 @@ export function VacacionSolicitudCard({
   if (isSubmitting) {
     return (
       <Card.Root py={3} px={4} h="full">
-        <Card.Body pb={2} pt={0} px={0}>
-          <Grid templateColumns={{ base: "1fr" }} gap={{ base: 4, md: 3 }} alignItems="start">
-            <GridItem>
-              <Stack gap={2}>
-                <HStack justify="space-between" align="start" gap="3" wrap="wrap">
-                  <Stack gap="1" minW="0">
-                    <Skeleton height="4" width="7rem" />
-                    <Skeleton height="5" width="12rem" maxW="100%" />
-                    <Skeleton height="4" width="12rem" maxW="100%" />
-                  </Stack>
-                  <Stack align="flex-end" gap="1">
-                    <Skeleton height="4" width="7rem" />
-                    <Skeleton height="6" width="4rem" />
-                  </Stack>
-                </HStack>
-
-                <Grid templateColumns={{ base: "1fr", sm: "repeat(3, minmax(0, 1fr))" }} gap="3">
-                  <GridItem>
-                    <Stack gap="1">
-                      <Skeleton height="4" width="2.5rem" />
-                      <Skeleton height="5" width="5rem" />
-                    </Stack>
-                  </GridItem>
-                  <GridItem>
-                    <Stack gap="1">
-                      <Skeleton height="4" width="5rem" />
-                      <Skeleton height="5" width="6rem" />
-                    </Stack>
-                  </GridItem>
-                  <GridItem>
-                    <Stack gap="1">
-                      <Skeleton height="4" width="4rem" />
-                      <Skeleton height="5" width="6rem" />
-                    </Stack>
-                  </GridItem>
-                </Grid>
-              </Stack>
-            </GridItem>
-          </Grid>
+        <Card.Body py="10" px={0}>
+          <Stack align="center" gap="3">
+            <Spinner size="lg" color="blue.500" />
+            <Text color="fg.muted" textStyle="sm">Procesando solicitud...</Text>
+          </Stack>
         </Card.Body>
-
-        {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
-          <Card.Footer pt={3} px={0}>
-            <Stack w="full" gap="2">
-              {onViewDetail && (
-                <HStack w="full" justify="end">
-                  <Skeleton height="9" width={{ base: "full", sm: "8rem" }} />
-                </HStack>
-              )}
-
-              {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-                <HStack w="full" justify="end" gap="2">
-                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-                </HStack>
-              )}
-            </Stack>
-          </Card.Footer>
-        )}
       </Card.Root>
     );
   }
@@ -197,7 +137,7 @@ export function VacacionSolicitudCard({
         </Stack>
       </Card.Body>
 
-      {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
+      {onViewDetail && (
         <Card.Footer pt={3} px={0}>
           <Stack w="full" gap="2">
             {onViewDetail && (
@@ -207,15 +147,6 @@ export function VacacionSolicitudCard({
                   Ver detalle
                 </Button>
               </HStack>
-            )}
-
-            {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-              <RequestActionButtons
-                onApprove={() => onApprove?.(item.id_solicitud_vacaciones)}
-                onDecline={() => onDecline?.(item.id_solicitud_vacaciones)}
-                isSubmitting={isSubmitting}
-                confirmSubject="esta solicitud"
-              />
             )}
           </Stack>
         </Card.Footer>

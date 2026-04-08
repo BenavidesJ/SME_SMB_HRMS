@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
-import { Badge, Card, Grid, GridItem, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Card, Grid, GridItem, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { Button } from "../../../../components/general/button/Button";
-import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import { toTitleCase, formatDateUiCompact } from "../../../../utils";
 import type { PermisoDuracionTipo, PermisoListItem, PermisoTipo } from "../types";
 import { LuEye } from "react-icons/lu";
@@ -53,20 +52,14 @@ const resolvePermisoMode = (item: PermisoListItem): PermisoDuracionTipo => {
 interface PermisoSolicitudCardProps {
   item: PermisoListItem;
   showCollaborator?: boolean;
-  canManageActions?: boolean;
   isSubmitting?: boolean;
-  onApprove?: (id: number) => void;
-  onDecline?: (id: number) => void;
   onViewDetail?: (item: PermisoListItem) => void;
 }
 
 export function PermisoSolicitudCard({
   item,
   showCollaborator = false,
-  canManageActions = false,
   isSubmitting = false,
-  onApprove,
-  onDecline,
   onViewDetail,
 }: PermisoSolicitudCardProps) {
   const estado = item.estadoSolicitudPermisos?.estado ?? item.estado_solicitud ?? "DESCONOCIDO";
@@ -87,57 +80,12 @@ export function PermisoSolicitudCard({
   if (isSubmitting) {
     return (
       <Card.Root py={3} px={4} h="full">
-        <Card.Body pb={2} pt={0} px={0}>
-          <Grid templateColumns={{ base: "1fr" }} gap={{ base: 4, md: 3 }} alignItems="start">
-            <GridItem>
-              <Stack gap={2} fontSize="sm">
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="6rem" />
-                  <Skeleton height="5" width="10rem" />
-                  <Skeleton height="5" width="5.5rem" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="4rem" />
-                  <Skeleton height="5" width="14rem" maxW="100%" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="7rem" />
-                  <Skeleton height="5" width="12rem" maxW="100%" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="8rem" />
-                  <Skeleton height="5" width="3rem" />
-                </HStack>
-              </Stack>
-            </GridItem>
-
-            <GridItem>
-              <Stack gap={1} align="flex-start">
-                <Skeleton height="4" width="7rem" />
-                <Skeleton height="4" width="9rem" />
-              </Stack>
-            </GridItem>
-          </Grid>
+        <Card.Body py="10" px={0}>
+          <Stack align="center" gap="3">
+            <Spinner size="lg" color="blue.500" />
+            <Text color="fg.muted" textStyle="sm">Procesando solicitud...</Text>
+          </Stack>
         </Card.Body>
-
-        {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
-          <Card.Footer pt={3} px={0}>
-            <Stack w="full" gap="2">
-              {onViewDetail && (
-                <HStack w="full" justify="end">
-                  <Skeleton height="9" width={{ base: "full", sm: "8rem" }} />
-                </HStack>
-              )}
-
-              {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-                <HStack w="full" justify="end" gap="2">
-                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-                  <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-                </HStack>
-              )}
-            </Stack>
-          </Card.Footer>
-        )}
       </Card.Root>
     );
   }
@@ -205,7 +153,7 @@ export function PermisoSolicitudCard({
         </Stack>
       </Card.Body>
 
-      {(onViewDetail || (canManageActions && estado.toUpperCase() === "PENDIENTE")) && (
+      {onViewDetail && (
         <Card.Footer pt={3} px={0}>
           <Stack w="full" gap="2">
             {onViewDetail && (
@@ -215,15 +163,6 @@ export function PermisoSolicitudCard({
                   Ver detalle
                 </Button>
               </HStack>
-            )}
-
-            {canManageActions && estado.toUpperCase() === "PENDIENTE" && (
-              <RequestActionButtons
-                onApprove={() => onApprove?.(item.id_solicitud)}
-                onDecline={() => onDecline?.(item.id_solicitud)}
-                isSubmitting={isSubmitting}
-                confirmSubject="esta solicitud"
-              />
             )}
           </Stack>
         </Card.Footer>

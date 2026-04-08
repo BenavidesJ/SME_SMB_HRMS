@@ -113,6 +113,10 @@ export const GestionVacaciones = () => {
   }, [currentPage, totalPages]);
 
   const currentCollaboratorId = Number(user?.id ?? 0);
+  const canManageItem = useCallback(
+    (item: VacacionListItem) => currentCollaboratorId > 0 && item.id_aprobador === currentCollaboratorId,
+    [currentCollaboratorId],
+  );
 
   const handleEstado = useCallback(
     async (solicitudId: number, nuevoEstado: "APROBADO" | "RECHAZADO") => {
@@ -156,11 +160,8 @@ export const GestionVacaciones = () => {
                   key={item.id_solicitud_vacaciones}
                   item={item}
                   showCollaborator
-                  canManageActions={item.id_aprobador === currentCollaboratorId}
                   isSubmitting={submittingId === item.id_solicitud_vacaciones}
-                  onApprove={(id) => handleEstado(id, "APROBADO")}
-                  onDecline={(id) => handleEstado(id, "RECHAZADO")}
-                  onViewDetail={setSelectedItem}
+                  onViewDetail={canManageItem(item) ? setSelectedItem : undefined}
                 />
               ))}
             </SimpleGrid>
@@ -205,6 +206,10 @@ export const GestionVacaciones = () => {
           item={selectedItem}
           isOpen={Boolean(selectedItem)}
           onClose={() => setSelectedItem(null)}
+          canManageActions={selectedItem ? canManageItem(selectedItem) : false}
+          onApprove={(id) => handleEstado(id, "APROBADO")}
+          onDecline={(id) => handleEstado(id, "RECHAZADO")}
+          isSubmitting={selectedItem ? submittingId === selectedItem.id_solicitud_vacaciones : false}
         />
       </Stack>
     </Layout>

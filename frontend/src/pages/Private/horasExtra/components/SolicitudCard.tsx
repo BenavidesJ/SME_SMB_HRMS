@@ -5,7 +5,7 @@ import {
   Grid,
   GridItem,
   HStack,
-  Skeleton,
+  Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -17,11 +17,8 @@ import { formatDateTimeUi, formatDateUiDefault } from "../../../../utils";
 
 interface SolicitudCardProps {
   item: SolicitudHoraExtra;
-  onApprove?: (id: number) => void;
-  onDecline?: (id: number) => void;
   onViewDetail?: (item: SolicitudHoraExtra) => void;
   isSubmitting?: boolean;
-  canManageActions?: boolean;
   view?: "personal" | "management";
 }
 
@@ -47,66 +44,24 @@ const formatFecha = (iso: string) => {
 
 export const SolicitudCard = ({
   item,
-  onApprove: _onApprove,
-  onDecline: _onDecline,
   onViewDetail,
   isSubmitting = false,
-  canManageActions = false,
   view = "management",
 }: SolicitudCardProps) => {
-  const estado = item.estado.estado;
-
   if (isSubmitting) {
     return (
       <Card.Root py={3} px={4} h="full">
-        <Card.Body pb={2} pt={0} px={0}>
-          <Grid
-            templateColumns={{ base: "1fr" }}
-            gap={{ base: 4, md: 3 }}
-            alignItems="start"
-          >
-            <GridItem>
-              <Stack gap={2} fontSize="sm">
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="6rem" />
-                  <Skeleton height="5" width="10rem" />
-                  <Skeleton height="5" width="5.5rem" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="4rem" />
-                  <Skeleton height="5" width="14rem" maxW="100%" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="7rem" />
-                  <Skeleton height="5" width="12rem" maxW="100%" />
-                </HStack>
-                <HStack gap={2} wrap="wrap">
-                  <Skeleton height="5" width="8rem" />
-                  <Skeleton height="5" width="3rem" />
-                </HStack>
-              </Stack>
-            </GridItem>
-
-            <GridItem>
-              <Stack gap={1} align="flex-start">
-                <Skeleton height="4" width="7rem" />
-                <Skeleton height="4" width="9rem" />
-              </Stack>
-            </GridItem>
-          </Grid>
+        <Card.Body py="10" px={0}>
+          <Stack align="center" gap="3">
+            <Spinner size="lg" color="blue.500" />
+            <Text color="fg.muted" textStyle="sm">Procesando solicitud...</Text>
+          </Stack>
         </Card.Body>
-
-        {estado === "PENDIENTE" && canManageActions && (
-          <Card.Footer pt={3} px={0}>
-            <HStack w="full" justify="end" gap="2">
-              <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-              <Skeleton height="9" width={{ base: "full", sm: "6.5rem" }} />
-            </HStack>
-          </Card.Footer>
-        )}
       </Card.Root>
     );
   }
+
+  const estado = item.estado.estado;
 
   if (view === "personal") {
     return (

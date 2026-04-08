@@ -1,7 +1,6 @@
-import { HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { LuCheck, LuX } from "react-icons/lu";
-import { Button } from "../button/Button";
 
 interface RequestActionButtonsProps {
   onApprove: () => Promise<void> | void;
@@ -35,9 +34,8 @@ export function RequestActionButtons({
       <HStack gap="2" justify="flex-end" wrap="wrap">
         <Button
           size="sm"
-          appearance="primary"
-          bg="semantic.danger"
-          _hover={{ bg: "semantic.danger" }}
+          variant="subtle"
+          colorPalette="red"
           onClick={() => setConfirmAction("rechazar")}
           disabled={isSubmitting}
         >
@@ -46,9 +44,8 @@ export function RequestActionButtons({
         </Button>
         <Button
           size="sm"
-          appearance="primary"
-          bg="blue.600"
-          _hover={{ bg: "blue.700" }}
+          variant="subtle"
+          colorPalette="blue"
           onClick={() => setConfirmAction("aprobar")}
           disabled={isSubmitting}
         >
@@ -69,7 +66,8 @@ export function RequestActionButtons({
       <HStack gap="2" justify="flex-end" wrap="wrap">
         <Button
           size="sm"
-          variant="outline"
+          variant="subtle"
+          colorPalette="red"
           onClick={() => setConfirmAction(null)}
           disabled={isSubmitting}
         >
@@ -77,9 +75,8 @@ export function RequestActionButtons({
         </Button>
         <Button
           size="sm"
-          appearance="primary"
-          bg={confirmAction === "rechazar" ? "semantic.danger" : "blue.600"}
-          _hover={{ bg: confirmAction === "rechazar" ? "semantic.danger" : "blue.700" }}
+          variant="subtle"
+          colorPalette={confirmAction === "rechazar" ? "red" : "green"}
           onClick={confirmAction === "rechazar" ? handleConfirmDecline : handleConfirmApprove}
           disabled={isSubmitting}
           loading={isSubmitting}

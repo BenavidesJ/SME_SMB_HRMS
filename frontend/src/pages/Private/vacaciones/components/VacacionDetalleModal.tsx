@@ -1,5 +1,7 @@
+/* eslint-disable no-unused-vars */
 import { Badge, HStack, Separator, Stack, Text } from "@chakra-ui/react";
 import { Modal } from "../../../../components/general";
+import { RequestActionButtons } from "../../../../components/general/requests/RequestActionButtons";
 import { formatDateUiCompact, parseUiDateSafe, toTitleCase } from "../../../../utils";
 import { normalizeRequestStatus } from "../../../../utils/requestStatus";
 import type { VacacionListItem } from "../types";
@@ -8,6 +10,10 @@ interface VacacionDetalleModalProps {
   item: VacacionListItem | null;
   isOpen: boolean;
   onClose: () => void;
+  canManageActions?: boolean;
+  onApprove?: (...args: [number]) => Promise<void> | void;
+  onDecline?: (...args: [number]) => Promise<void> | void;
+  isSubmitting?: boolean;
 }
 
 const estadoBadgeProps = (estado?: string) => {
@@ -67,8 +73,30 @@ const getSkippedDatesDescription = (item: VacacionListItem) => {
     .join(", ");
 };
 
-export function VacacionDetalleModal({ item, isOpen, onClose }: VacacionDetalleModalProps) {
+export function VacacionDetalleModal({
+  item,
+  isOpen,
+  onClose,
+  canManageActions = false,
+  onApprove,
+  onDecline,
+  isSubmitting = false,
+}: VacacionDetalleModalProps) {
   const status = normalizeRequestStatus(item?.estadoSolicitudVacaciones?.estado);
+  const esPendiente = status === "PENDIENTE";
+  const puedeGestionar = canManageActions && esPendiente && Boolean(onApprove) && Boolean(onDecline);
+
+  const handleConfirmApprove = async () => {
+    if (!item || !onApprove) return;
+    await onApprove(item.id_solicitud_vacaciones);
+    onClose();
+  };
+
+  const handleConfirmDecline = async () => {
+    if (!item || !onDecline) return;
+    await onDecline(item.id_solicitud_vacaciones);
+    onClose();
+  };
 
   return (
     <Modal
@@ -149,6 +177,23 @@ export function VacacionDetalleModal({ item, isOpen, onClose }: VacacionDetalleM
                 <Text>{item.observaciones?.trim() || "Sin observaciones"}</Text>
               </Stack>
             </Stack>
+
+            {puedeGestionar && (
+              <>
+                <Separator />
+                <Stack gap="3">
+                  <Text fontWeight="semibold" color="fg.muted" fontSize="xs" textTransform="uppercase" letterSpacing="wide">
+                    Acciones del aprobador
+                  </Text>
+                  <RequestActionButtons
+                    onApprove={handleConfirmApprove}
+                    onDecline={handleConfirmDecline}
+                    isSubmitting={isSubmitting}
+                    confirmSubject="esta solicitud"
+                  />
+                </Stack>
+              </>
+            )}
           </Stack>
         ) : null
       }
