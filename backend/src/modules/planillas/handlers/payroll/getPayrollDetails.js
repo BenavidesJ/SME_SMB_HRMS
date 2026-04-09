@@ -7,6 +7,7 @@ import { roundCurrency, toNumber } from "../../shared/formatters.js";
 import {
   calculateHourlyRate,
   calculateDailyRate,
+  calcularRecargoFeriadoObligatorio,
   calcularRentaProyectada,
 } from "../../shared/calculations.js";
 
@@ -15,7 +16,7 @@ const { Planilla } = models;
 /**
  * Construye el desglose enriquecido de una planilla a partir de datos persistidos.
  */
-export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) {
+export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle, colaborador = null) {
   const salarioMensual = toNumber(contrato?.salario_base);
   const horasSemanales = toNumber(contrato?.horas_semanales);
   const salarioQuincenal = roundCurrency(salarioMensual / 2);
@@ -37,10 +38,16 @@ export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) 
   // Montos de extras/nocturnos/feriados
   const montoExtra = roundCurrency(horasExtra * tarifaHora * 1.5);
   const montoNocturno = roundCurrency(horasNocturnas * tarifaHora * 0.25);
-  const montoFeriado = roundCurrency(horasFeriado * tarifaHora);
+  const montoFeriado = calcularRecargoFeriadoObligatorio({
+    horasTrabajadasFeriado: horasFeriado,
+    tarifaHora,
+  });
 
   // Renta proyectada (recalcular desde bruto)
-  const renta = calcularRentaProyectada(bruto);
+  const renta = calcularRentaProyectada(bruto, {
+    cantidad_hijos: colaborador?.cantidad_hijos,
+    estado_civil: colaborador?.estadoCivilRef?.estado_civil,
+  });
 
   // Deducciones detalladas (cargas sociales, sin renta)
   const deducciones = deduccionesDetalle.map((dp) => {
@@ -57,6 +64,9 @@ export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) 
 
   const totalCargasSociales = roundCurrency(
     deducciones.reduce((acc, d) => acc + d.monto, 0)
+  );
+  const totalDeduccionesSinCreditos = roundCurrency(
+    totalCargasSociales + roundCurrency(Number(renta.impuesto_quincenal_sin_creditos ?? 0))
   );
 
   return {
@@ -88,6 +98,7 @@ export function buildDetalleEnriquecido(planilla, contrato, deduccionesDetalle) 
     renta,
 
     // Totales
+    total_deducciones_sin_creditos: totalDeduccionesSinCreditos,
     total_deducciones: totalDeducciones,
     salario_neto: neto,
   };
@@ -106,6 +117,18 @@ export const obtenerDetallePlanilla = async ({ id_periodo, colaboradores }) => {
       id_colaborador: { [Op.in]: ids },
     },
     include: [
+      {
+        association: "colaborador",
+        attributes: ["id_colaborador", "cantidad_hijos", "estado_civil"],
+        required: false,
+        include: [
+          {
+            association: "estadoCivilRef",
+            attributes: ["estado_civil"],
+            required: false,
+          },
+        ],
+      },
       {
         association: "contrato",
         attributes: ["id_contrato", "salario_base", "horas_semanales"],
@@ -126,7 +149,12 @@ export const obtenerDetallePlanilla = async ({ id_periodo, colaboradores }) => {
   });
 
   const detalles = registros.map((registro) =>
-    buildDetalleEnriquecido(registro, registro.contrato, registro.deduccionesDetalle ?? [])
+    buildDetalleEnriquecido(
+      registro,
+      registro.contrato,
+      registro.deduccionesDetalle ?? [],
+      registro.colaborador ?? null
+    )
   );
 
   const total = roundCurrency(detalles.reduce((acc, item) => acc + item.salario_neto, 0));

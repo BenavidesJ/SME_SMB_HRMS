@@ -50,6 +50,20 @@ type DeduccionDetalle = {
 type RentaInfo = {
   monto_quincenal: number;
   proyectado_mensual: number;
+  impuesto_mensual?: number;
+  impuesto_quincenal_sin_creditos?: number;
+  impuesto_mensual_con_creditos?: number;
+  hay_impuesto_renta?: boolean;
+  creditos_fiscales?: {
+    por_conyuge_mensual: number;
+    por_hijos_mensual: number;
+    total_mensual: number;
+    por_conyuge_quincenal: number;
+    por_hijos_quincenal: number;
+    total_quincenal: number;
+    cantidad_hijos_aplicada: number;
+    aplica_conyuge: boolean;
+  };
 };
 
 type SimulacionResultado = {
@@ -71,6 +85,7 @@ type SimulacionResultado = {
   salario_devengado: number;
   deducciones_detalle: DeduccionDetalle[];
   renta: RentaInfo;
+  total_deducciones_sin_creditos?: number;
   total_deducciones: number;
   salario_neto: number;
   error: string | null;
@@ -126,6 +141,7 @@ type PayrollDetail = {
   }[];
   total_cargas_sociales: number;
   renta: RentaInfo;
+  total_deducciones_sin_creditos?: number;
   total_deducciones: number;
   salario_neto: number;
 };
@@ -1375,6 +1391,29 @@ const SimulacionColaboradorCard = ({
     ? item.deducciones_detalle
     : [];
   const renta = item.renta ?? { monto_quincenal: 0, proyectado_mensual: 0 };
+  const impuestoQuincenalSinCreditos = typeof renta.impuesto_quincenal_sin_creditos === "number"
+    ? renta.impuesto_quincenal_sin_creditos
+    : (typeof renta.impuesto_mensual === "number" ? renta.impuesto_mensual / 2 : renta.monto_quincenal);
+  const creditoConyugeQuincenal = renta.creditos_fiscales?.por_conyuge_quincenal ?? 0;
+  const creditoHijosQuincenal = renta.creditos_fiscales?.por_hijos_quincenal ?? 0;
+  const hayImpuestoRenta = Boolean(renta.hay_impuesto_renta ?? impuestoQuincenalSinCreditos > 0);
+  const muestraDesgloseRenta = hayImpuestoRenta;
+  const totalCargasSimulacion = deduccionesList.reduce(
+    (acc, ded) => acc + Number(ded.monto ?? 0),
+    0,
+  );
+  const totalDeduccionesSinCreditos = typeof item.total_deducciones_sin_creditos === "number"
+    ? item.total_deducciones_sin_creditos
+    : totalCargasSimulacion + impuestoQuincenalSinCreditos;
+  const netoSinCreditos = Math.max(0, item.salario_devengado - totalDeduccionesSinCreditos);
+  const hayCreditosAplicados = (renta.creditos_fiscales?.total_quincenal ?? 0) > 0;
+  const muestraComparativoCreditos = hayCreditosAplicados;
+  const etiquetaImpuestoFinal = hayCreditosAplicados
+    ? "Impuesto sobre la renta con créditos fiscales aplicados"
+    : "Impuesto sobre la renta final";
+  const etiquetaNetoFinal = hayCreditosAplicados
+    ? "Salario neto a pagar (créditos fiscales aplicados)"
+    : "Salario neto a pagar";
 
   return (
     <Card.Root
@@ -1529,44 +1568,113 @@ const SimulacionColaboradorCard = ({
                   </Table.Cell>
                 </Table.Row>
               ))}
-              {renta.monto_quincenal > 0 && (
-                <Table.Row>
-                  <Table.Cell>Impuesto sobre la renta</Table.Cell>
-                  <Table.Cell textAlign="right">
-                    <Text textStyle="xs" color="fg.muted">
-                      Proy: {formatCRC(renta.proyectado_mensual)}/mes
-                    </Text>
+              {muestraDesgloseRenta && (
+                <>
+                  <Table.Row>
+                    <Table.Cell>Impuesto sobre la renta</Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <Text textStyle="xs" color="fg.muted">
+                        Proy: {formatCRC(renta.proyectado_mensual)}/mes
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell textAlign="right" color="red.600">
+                      -{formatCRC(impuestoQuincenalSinCreditos)}
+                    </Table.Cell>
+                  </Table.Row>
+                  {creditoConyugeQuincenal > 0 && (
+                    <Table.Row>
+                      <Table.Cell>Crédito fiscal por cónyuge</Table.Cell>
+                      <Table.Cell textAlign="right">—</Table.Cell>
+                      <Table.Cell textAlign="right" color="green.600">
+                        {formatCRC(creditoConyugeQuincenal)}
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                  {creditoHijosQuincenal > 0 && (
+                    <Table.Row>
+                      <Table.Cell>
+                        Crédito fiscal por hijos ({renta.creditos_fiscales?.cantidad_hijos_aplicada ?? 0})
+                      </Table.Cell>
+                      <Table.Cell textAlign="right">—</Table.Cell>
+                      <Table.Cell textAlign="right" color="green.600">
+                        {formatCRC(creditoHijosQuincenal)}
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                  <Table.Row>
+                    <Table.Cell>{etiquetaImpuestoFinal}</Table.Cell>
+                    <Table.Cell textAlign="right">—</Table.Cell>
+                    <Table.Cell textAlign="right" color="red.600">
+                      -{formatCRC(renta.monto_quincenal)}
+                    </Table.Cell>
+                  </Table.Row>
+                </>
+              )}
+              {muestraComparativoCreditos ? (
+                <>
+                  <Table.Row bg="orange.50">
+                    <Table.Cell colSpan={2}>
+                      <Text>Total deducciones (sin créditos fiscales)</Text>
+                    </Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <Text color="orange.700">
+                        -{formatCRC(totalDeduccionesSinCreditos)}
+                      </Text>
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row bg="red.50">
+                    <Table.Cell colSpan={2}>
+                      <Text fontWeight="bold">Total deducciones</Text>
+                    </Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <Text fontWeight="bold" color="red.600">
+                        -{formatCRC(item.total_deducciones)}
+                      </Text>
+                    </Table.Cell>
+                  </Table.Row>
+                </>
+              ) : (
+                <Table.Row bg="red.50">
+                  <Table.Cell colSpan={2}>
+                    <Text fontWeight="bold">Total deducciones</Text>
                   </Table.Cell>
-                  <Table.Cell textAlign="right" color="red.600">
-                    -{formatCRC(renta.monto_quincenal)}
+                  <Table.Cell textAlign="right">
+                    <Text fontWeight="bold" color="red.600">
+                      -{formatCRC(item.total_deducciones)}
+                    </Text>
                   </Table.Cell>
                 </Table.Row>
               )}
-              <Table.Row bg="red.50">
-                <Table.Cell colSpan={2}>
-                  <Text fontWeight="bold">Total deducciones</Text>
-                </Table.Cell>
-                <Table.Cell textAlign="right">
-                  <Text fontWeight="bold" color="red.600">
-                    -{formatCRC(item.total_deducciones)}
-                  </Text>
-                </Table.Cell>
-              </Table.Row>
             </Table.Body>
           </Table.Root>
 
           {/* Neto */}
           <Flex
-            justify="space-between"
-            align="center"
+            direction="column"
+            align="stretch"
             bg="green.50"
             p="4"
             borderRadius="lg"
+            gap="3"
           >
-            <Heading size="md">Salario neto a pagar</Heading>
-            <Heading size="md" color="green.700">
-              {formatCRC(item.salario_neto)}
-            </Heading>
+            {muestraComparativoCreditos ? (
+              <>
+                <HStack justify="space-between" wrap="wrap">
+                  <Heading size="md">Salario neto a pagar con renta sin créditos</Heading>
+                  <Heading size="lg" color="green.700">{formatCRC(netoSinCreditos)}</Heading>
+                </HStack>
+                <Separator />
+                <HStack justify="space-between" wrap="wrap">
+                  <Text fontSize="sm" color="fg.muted">{etiquetaNetoFinal}</Text>
+                  <Text fontSize="xl" fontWeight="bold" color="green.700">{formatCRC(item.salario_neto)}</Text>
+                </HStack>
+              </>
+            ) : (
+              <HStack justify="space-between" wrap="wrap">
+                <Heading size="md">Salario neto a pagar</Heading>
+                <Heading size="lg" color="green.700">{formatCRC(item.salario_neto)}</Heading>
+              </HStack>
+            )}
           </Flex>
         </Stack>
       </Card.Body>
@@ -1587,15 +1695,28 @@ const GeneratedPayrollDetailCard = ({
   periodoLabel: string;
   fechaPago: string | null;
 }) => {
-  const deducciones = [
-    ...detail.deducciones,
-    {
-      id_deduccion: -1,
-      nombre: "Impuesto sobre la renta",
-      porcentaje: 0,
-      monto: detail.renta.monto_quincenal,
-    },
-  ].filter((item) => item.monto > 0);
+  const deducciones = detail.deducciones.filter((item) => item.monto > 0);
+  const impuestoQuincenalSinCreditos = typeof detail.renta.impuesto_quincenal_sin_creditos === "number"
+    ? detail.renta.impuesto_quincenal_sin_creditos
+    : (typeof detail.renta.impuesto_mensual === "number"
+      ? detail.renta.impuesto_mensual / 2
+      : detail.renta.monto_quincenal);
+  const creditoConyugeQuincenal = detail.renta.creditos_fiscales?.por_conyuge_quincenal ?? 0;
+  const creditoHijosQuincenal = detail.renta.creditos_fiscales?.por_hijos_quincenal ?? 0;
+  const hayImpuestoRenta = Boolean(detail.renta.hay_impuesto_renta ?? impuestoQuincenalSinCreditos > 0);
+  const muestraDesgloseRenta = hayImpuestoRenta;
+  const totalDeduccionesSinCreditos = typeof detail.total_deducciones_sin_creditos === "number"
+    ? detail.total_deducciones_sin_creditos
+    : detail.total_cargas_sociales + impuestoQuincenalSinCreditos;
+  const netoSinCreditos = Math.max(0, detail.salario_devengado - totalDeduccionesSinCreditos);
+  const hayCreditosAplicados = (detail.renta.creditos_fiscales?.total_quincenal ?? 0) > 0;
+  const muestraComparativoCreditos = hayCreditosAplicados;
+  const etiquetaImpuestoFinal = hayCreditosAplicados
+    ? "Impuesto sobre la renta con créditos fiscales aplicados"
+    : "Impuesto sobre la renta final";
+  const etiquetaNetoFinal = hayCreditosAplicados
+    ? "Salario neto a pagar (créditos fiscales aplicados)"
+    : "Salario neto a pagar";
 
   return (
     <Stack gap="6" maxW="1100px" mx="auto" w="full">
@@ -1678,8 +1799,55 @@ const GeneratedPayrollDetailCard = ({
               )) : (
                 <Text color="fg.muted">No hay deducciones aplicadas.</Text>
               )}
+              {muestraDesgloseRenta && (
+                <>
+                  <Separator />
+                  <HStack justify="space-between" align="start">
+                    <Stack gap="0">
+                      <Text>Impuesto sobre la renta</Text>
+                      <Text fontSize="xs" color="fg.muted">
+                        Proy: {formatCRC(detail.renta.proyectado_mensual)}/mes
+                      </Text>
+                    </Stack>
+                    <Text fontWeight="semibold" color="red.600">
+                      -{formatCRC(impuestoQuincenalSinCreditos)}
+                    </Text>
+                  </HStack>
+                  {creditoConyugeQuincenal > 0 && (
+                    <HStack justify="space-between" align="start">
+                      <Text>Crédito fiscal por cónyuge</Text>
+                      <Text fontWeight="semibold" color="green.600">
+                        {formatCRC(creditoConyugeQuincenal)}
+                      </Text>
+                    </HStack>
+                  )}
+                  {creditoHijosQuincenal > 0 && (
+                    <HStack justify="space-between" align="start">
+                      <Text>
+                        Crédito fiscal por hijos ({detail.renta.creditos_fiscales?.cantidad_hijos_aplicada ?? 0})
+                      </Text>
+                      <Text fontWeight="semibold" color="green.600">
+                        {formatCRC(creditoHijosQuincenal)}
+                      </Text>
+                    </HStack>
+                  )}
+                  <HStack justify="space-between" align="start">
+                    <Text>{etiquetaImpuestoFinal}</Text>
+                    <Text fontWeight="semibold" color="red.600">
+                      -{formatCRC(detail.renta.monto_quincenal)}
+                    </Text>
+                  </HStack>
+                </>
+              )}
               <Separator />
-              <HStack justify="space-between"><Text fontWeight="bold">Total deducciones</Text><Text fontWeight="bold" color="red.600">{formatCRC(detail.total_deducciones)}</Text></HStack>
+              {muestraComparativoCreditos ? (
+                <>
+                  <HStack justify="space-between"><Text>Total deducciones</Text><Text fontWeight="bold" color="red.600">{formatCRC(totalDeduccionesSinCreditos)}</Text></HStack>
+                  <HStack justify="space-between"><Text fontWeight="bold">Total deducciones (con créditos fiscales aplicados)</Text><Text fontWeight="bold" color="red.600">{formatCRC(detail.total_deducciones)}</Text></HStack>
+                </>
+              ) : (
+                <HStack justify="space-between"><Text fontWeight="bold">Total deducciones</Text><Text fontWeight="bold" color="red.600">{formatCRC(detail.total_deducciones)}</Text></HStack>
+              )}
             </Stack>
           </Card.Body>
         </Card.Root>
@@ -1687,16 +1855,29 @@ const GeneratedPayrollDetailCard = ({
 
       <Card.Root borderColor="green.300" bg="green.50">
         <Card.Body>
-          <HStack justify="space-between" wrap="wrap">
-            <Stack gap="0">
-              <Text fontSize="sm" color="fg.muted">Monto neto a recibir</Text>
-              <Text fontSize="3xl" fontWeight="bold" color="green.700">{formatCRC(detail.salario_neto)}</Text>
-            </Stack>
-            <Stack gap="0" textAlign={{ base: "left", md: "right" }}>
-              <Text fontSize="sm" color="fg.muted">Renta quincenal</Text>
+          <Stack gap="3">
+            {muestraComparativoCreditos ? (
+              <>
+                <HStack justify="space-between" wrap="wrap">
+                  <Heading size="md">Salario neto a pagar con renta sin créditos</Heading>
+                  <Heading size="lg" color="green.700">{formatCRC(netoSinCreditos)}</Heading>
+                </HStack>
+                <HStack justify="space-between" wrap="wrap">
+                  <Text fontSize="sm" color="fg.muted">{etiquetaNetoFinal}</Text>
+                  <Text fontSize="xl" fontWeight="bold" color="green.700">{formatCRC(detail.salario_neto)}</Text>
+                </HStack>
+              </>
+            ) : (
+              <HStack justify="space-between" wrap="wrap">
+                <Heading size="md">Salario neto a pagar</Heading>
+                <Heading size="lg" color="green.700">{formatCRC(detail.salario_neto)}</Heading>
+              </HStack>
+            )}
+            <HStack justify="space-between" wrap="wrap">
+              <Text fontSize="sm" color="fg.muted">Renta quincenal aplicada</Text>
               <Text fontWeight="semibold">{formatCRC(detail.renta.monto_quincenal)}</Text>
-            </Stack>
-          </HStack>
+            </HStack>
+          </Stack>
         </Card.Body>
       </Card.Root>
     </Stack>

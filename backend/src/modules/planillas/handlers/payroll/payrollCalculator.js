@@ -8,8 +8,11 @@ import {
   calculateDailyRate,
   calcularDíasLaboralesEsperados,
   calcularDuracionTurno,
+  calcularHorasOrdinariasPagadasFeriadoObligatorio,
+  calcularRecargoFeriadoObligatorio,
   calcularRentaProyectada,
   calcularDeduccionesDetallado,
+  normalizarFechaFinMesComercial,
 } from "../../shared/calculations.js";
 import { ensureEstado } from "../../shared/resolvers.js";
 import { roundCurrency, roundDecimal } from "../../shared/formatters.js";
@@ -18,6 +21,7 @@ dayjs.extend(isSameOrBefore);
 
 const {
   PeriodoPlanilla,
+  Colaborador,
   Contrato,
   JornadaDiaria,
   Deduccion,
@@ -325,7 +329,11 @@ function procesarDiasPeriodo({
       horasProgramadasDia
     );
 
-    totalHorasOrdinariasProgramadas += horasProgramadasDia;
+    const esFeriado = feriadosFechas.has(fechaStr);
+
+    if (!esFeriado) {
+      totalHorasOrdinariasProgramadas += horasProgramadasDia;
+    }
 
     const tieneVacaciones = vacacionesFechas.has(fechaStr) || Boolean(jornada?.id_vacaciones);
     const permisoConGoceDiaCompleto = permisosConGoceFechas.has(fechaStr);
@@ -334,12 +342,12 @@ function procesarDiasPeriodo({
     const horasPermisoSinGoceDia = Number(horasPermisoSinGoceByDate.get(fechaStr) ?? 0);
     const tieneIncapacidad = Boolean(jornada?.id_incapacidad && jornada?.incapacidad_data);
 
-    if (feriadosFechas.has(fechaStr)) {
-      totalHorasOrdinariasPagadas += horasProgramadasDia;
+    if (esFeriado) {
+      totalHorasOrdinariasPagadas +=
+        calcularHorasOrdinariasPagadasFeriadoObligatorio(horasProgramadasDia);
 
       if (horasTrabajadasDia > 0) {
         diasTrabajados++;
-        totalHorasOrdinariasTrabajadas += horasTrabajadasDia;
         totalHorasFeriado += horasTrabajadasDia;
       } else {
         diasFeriado++;
@@ -492,6 +500,7 @@ function construirDetallesSalario({
   salarioMensual,
   salarioDiario,
   salarioQuincenal,
+  salarioOrdinarioQuincenal,
   tarifaHora,
   duracionTurno,
   diasLaboralesEsperados,
@@ -514,6 +523,26 @@ function construirDetallesSalario({
     total: salarioQuincenal,
   });
   lineas.push({
+    item: "Salario quincenal base aplicado",
+    cantidad: 1,
+    unitario: salarioQuincenal,
+    total: salarioQuincenal,
+  });
+  if (resumenDias.totalDescuentosDias > 0) {
+    lineas.push({
+      item: "Descuentos por ausencias/incapacidad no cubierta/permisos sin goce (-)",
+      cantidad: 1,
+      unitario: 0,
+      total: -resumenDias.totalDescuentosDias,
+    });
+  }
+  lineas.push({
+    item: "Salario ordinario quincenal ajustado",
+    cantidad: 1,
+    unitario: 0,
+    total: salarioOrdinarioQuincenal,
+  });
+  lineas.push({
     item: "Salario diario (mensual / 30) [referencia]",
     cantidad: 1,
     unitario: roundCurrency(salarioDiario),
@@ -534,10 +563,10 @@ function construirDetallesSalario({
   });
 
   lineas.push({
-    item: "Horas ordinarias programadas en período",
+    item: "Horas ordinarias programadas en período [referencia]",
     cantidad: resumenDias.totalHorasOrdinariasProgramadas,
     unitario: roundCurrency(tarifaHora),
-    total: resumenDias.salarioOrdinarioProgramado,
+    total: 0,
   });
   lineas.push({
     item: "Horas ordinarias pagadas/efectivas",
@@ -566,7 +595,7 @@ function construirDetallesSalario({
 
   if (resumenDias.diasFeriado > 0) {
     lineas.push({
-      item: "Feriados obligatorios no laborados (pagados)",
+      item: "Feriados obligatorios no laborados (pagados en ordinarias)",
       cantidad: resumenDias.diasFeriado,
       unitario: 0,
       total: 0,
@@ -575,7 +604,7 @@ function construirDetallesSalario({
 
   if (resumenDias.totalHorasFeriadoPagadoNoTrabajado > 0) {
     lineas.push({
-      item: "Feriado obligatorio no laborado (hrs pagadas)",
+      item: "Feriado obligatorio no laborado (hrs incluidas en ordinarias)",
       cantidad: resumenDias.totalHorasFeriadoPagadoNoTrabajado,
       unitario: 0,
       total: 0,
@@ -674,7 +703,7 @@ function construirDetallesSalario({
 
   if (resumenDias.totalHorasFeriado > 0) {
     lineas.push({
-      item: "Horas feriado trabajado (doble paga)",
+      item: "Recargo por feriado obligatorio trabajado (+1.0x)",
       cantidad: resumenDias.totalHorasFeriado,
       unitario: roundCurrency(tarifaHora),
       total: pagoFeriado,
@@ -692,12 +721,56 @@ function construirDetallesSalario({
     });
   }
 
-  if (renta.monto_quincenal > 0) {
+  const impuestoQuincenalSinCreditos = roundCurrency(
+    Number(
+      renta.impuesto_quincenal_sin_creditos
+      ?? (Number(renta.impuesto_mensual ?? 0) / 2)
+      ?? 0
+    )
+  );
+  const creditoConyugeQuincenal = roundCurrency(
+    Number(renta.creditos_fiscales?.por_conyuge_quincenal ?? 0)
+  );
+  const creditoHijosQuincenal = roundCurrency(
+    Number(renta.creditos_fiscales?.por_hijos_quincenal ?? 0)
+  );
+  const hayCreditosAplicados = creditoConyugeQuincenal > 0 || creditoHijosQuincenal > 0;
+
+  if (impuestoQuincenalSinCreditos > 0) {
     lineas.push({
       item: `Impuesto sobre la renta (-) [proyectado mensual: ₡${renta.proyectado_mensual.toLocaleString("es-CR")}]`,
       cantidad: 1,
       unitario: 0,
-      total: -renta.monto_quincenal,
+      total: -impuestoQuincenalSinCreditos,
+    });
+  }
+
+  if (creditoConyugeQuincenal > 0) {
+    lineas.push({
+      item: "Crédito fiscal por cónyuge (+)",
+      cantidad: 1,
+      unitario: 0,
+      total: creditoConyugeQuincenal,
+    });
+  }
+
+  if (creditoHijosQuincenal > 0) {
+    lineas.push({
+      item: "Crédito fiscal por hijos (+)",
+      cantidad: 1,
+      unitario: 0,
+      total: creditoHijosQuincenal,
+    });
+  }
+
+  if (impuestoQuincenalSinCreditos > 0 || creditoConyugeQuincenal > 0 || creditoHijosQuincenal > 0) {
+    lineas.push({
+      item: hayCreditosAplicados
+        ? "Impuesto sobre la renta con créditos fiscales aplicados (-)"
+        : "Impuesto sobre la renta final (-)",
+      cantidad: 1,
+      unitario: 0,
+      total: -roundCurrency(renta.monto_quincenal),
     });
   }
 
@@ -748,6 +821,22 @@ export async function calcularPlanillaColaborador({
   });
 
   if (!contrato) throw new Error("El colaborador no tiene un contrato activo");
+
+  const colaborador = await Colaborador.findByPk(colaboradorId, {
+    attributes: ["id_colaborador", "cantidad_hijos", "estado_civil"],
+    include: [
+      {
+        association: "estadoCivilRef",
+        attributes: ["estado_civil"],
+        required: false,
+      },
+    ],
+    transaction,
+  });
+
+  if (!colaborador) {
+    throw new Error("No se encontró el colaborador para calcular la planilla");
+  }
 
   const salarioMensual = Number(contrato.salario_base);
   if (!Number.isFinite(salarioMensual) || salarioMensual <= 0) {
@@ -818,10 +907,17 @@ export async function calcularPlanillaColaborador({
   // 8. Calcular montos
   const pagoExtra = roundCurrency(resumenDias.totalHorasExtra * tarifaHora * 1.5);
   const pagoNocturno = roundCurrency(resumenDias.totalHorasNocturnas * tarifaHora * 0.25);
-  const pagoFeriado = roundCurrency(resumenDias.totalHorasFeriado * tarifaHora);
+  const pagoFeriado = calcularRecargoFeriadoObligatorio({
+    horasTrabajadasFeriado: resumenDias.totalHorasFeriado,
+    tarifaHora,
+  });
+
+  const salarioOrdinarioQuincenal = roundCurrency(
+    Math.max(0, salarioQuincenal - resumenDias.totalDescuentosDias)
+  );
 
   const bruto = roundCurrency(
-    resumenDias.salarioOrdinario
+    salarioOrdinarioQuincenal
     + pagoExtra
     + pagoNocturno
     + pagoFeriado
@@ -832,9 +928,15 @@ export async function calcularPlanillaColaborador({
     calcularDeduccionesDetallado(bruto, deduccionesObligatorias);
 
   // 10. Renta
-  const renta = calcularRentaProyectada(bruto);
+  const renta = calcularRentaProyectada(bruto, {
+    cantidad_hijos: colaborador.cantidad_hijos,
+    estado_civil: colaborador.estadoCivilRef?.estado_civil,
+  });
 
   // 11. Salario neto
+  const totalDescuentosSinCreditos = roundCurrency(
+    totalDeducciones + roundCurrency(Number(renta.impuesto_quincenal_sin_creditos ?? 0))
+  );
   const totalDescuentos = roundCurrency(totalDeducciones + renta.monto_quincenal);
   const neto = Math.max(0, roundCurrency(bruto - totalDescuentos));
 
@@ -843,6 +945,7 @@ export async function calcularPlanillaColaborador({
     salarioMensual,
     salarioDiario,
     salarioQuincenal,
+    salarioOrdinarioQuincenal,
     tarifaHora,
     duracionTurno,
     diasLaboralesEsperados,
@@ -866,7 +969,7 @@ export async function calcularPlanillaColaborador({
     duracionTurno,
     diasLaboralesEsperados,
     salarioOrdinarioProgramado: resumenDias.salarioOrdinarioProgramado,
-    salarioOrdinario: resumenDias.salarioOrdinario,
+    salarioOrdinario: salarioOrdinarioQuincenal,
     resumenDias,
     pagoExtra,
     pagoNocturno,
@@ -874,6 +977,7 @@ export async function calcularPlanillaColaborador({
     bruto,
     totalDeducciones,
     deduccionesDetalle,
+    totalDescuentosSinCreditos,
     totalDescuentos,
     renta,
     neto,
@@ -903,7 +1007,8 @@ export async function cargarDatosGlobalesPeriodo({ periodoId, transaction }) {
   if (!periodo) throw new Error(`No existe un periodo de planilla con id ${periodoId}`);
 
   const fechaInicio = dayjs(periodo.fecha_inicio).format("YYYY-MM-DD");
-  const fechaFin = dayjs(periodo.fecha_fin).format("YYYY-MM-DD");
+  const fechaFinPeriodo = dayjs(periodo.fecha_fin).format("YYYY-MM-DD");
+  const fechaFin = normalizarFechaFinMesComercial(fechaFinPeriodo);
 
   const estadoActivo = await ensureEstado("ACTIVO", transaction);
 

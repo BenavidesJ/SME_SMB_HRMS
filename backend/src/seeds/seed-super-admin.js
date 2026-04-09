@@ -206,11 +206,11 @@ export async function seedSuperAdmin() {
     const contratoPayload = {
       id_colaborador: colab.id_colaborador,
       id_puesto: puesto.id_puesto,
-      fecha_inicio: "2026-01-04",
+      fecha_inicio: "2025-01-16",
       id_tipo_contrato: tipoContrato.id_tipo_contrato,
       id_tipo_jornada: tipoJornada.id_tipo_jornada,
       horas_semanales: "48.00",
-      salario_base: "3000000.00",
+      salario_base: "2748000.00",
       id_jefe_directo: colab.id_colaborador,
       estado: estadoActivo.id_estado,
     };
@@ -224,10 +224,10 @@ export async function seedSuperAdmin() {
     const fechaActualizacion = new Date().toISOString().slice(0, 10);
     const horarioPayload = {
       id_contrato: contrato.id_contrato,
-      hora_inicio: "08:00:00",
+      hora_inicio: "09:00:00",
       hora_fin: "17:00:00",
-      dias_laborales: "LKMJV",
-      dias_libres: "SD",
+      dias_laborales: "LKMJVS",
+      dias_libres: "D",
       estado: estadoActivo.id_estado,
       fecha_actualizacion: fechaActualizacion,
       id_tipo_jornada: tipoJornada.id_tipo_jornada,

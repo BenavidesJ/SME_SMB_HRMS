@@ -101,6 +101,24 @@ describe("aguinaldoCalculator", () => {
         { mes: 5, anio: 2025, total: 500000 },
       ]);
     });
+
+    it("acepta fechas con timestamp ISO y conserva el rango mensual esperado", async () => {
+      mockPlanillaFindAll.mockResolvedValue([
+        { mes: 12, anio: 2024, total: "500000.00" },
+        { mes: 1, anio: 2025, total: "550000.00" },
+      ]);
+
+      const result = await obtenerSalariosPorMes(
+        1,
+        "2024-12-01T00:00:00.000Z",
+        "2025-11-30T00:00:00.000Z",
+      );
+
+      expect(result).toHaveLength(12);
+      expect(result[0]).toEqual({ mes: 12, anio: 2024, total: 500000 });
+      expect(result[1]).toEqual({ mes: 1, anio: 2025, total: 550000 });
+      expect(result[11]).toEqual({ mes: 11, anio: 2025, total: 0 });
+    });
   });
 
   describe("calcularMontoPorColaborador", () => {

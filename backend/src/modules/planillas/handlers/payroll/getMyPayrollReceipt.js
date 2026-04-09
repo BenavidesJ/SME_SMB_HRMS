@@ -35,6 +35,15 @@ export async function obtenerMiComprobantePlanilla({ tokenId, id_detalle }) {
           "segundo_apellido",
           "identificacion",
           "correo_electronico",
+          "cantidad_hijos",
+          "estado_civil",
+        ],
+        include: [
+          {
+            association: "estadoCivilRef",
+            attributes: ["estado_civil"],
+            required: false,
+          },
         ],
       },
       {
@@ -74,7 +83,12 @@ export async function obtenerMiComprobantePlanilla({ tokenId, id_detalle }) {
   }
 
   return {
-    comprobante: buildDetalleEnriquecido(planilla, planilla.contrato, planilla.deduccionesDetalle ?? []),
+    comprobante: buildDetalleEnriquecido(
+      planilla,
+      planilla.contrato,
+      planilla.deduccionesDetalle ?? [],
+      planilla.colaborador ?? null
+    ),
     periodo: {
       id_periodo: Number(planilla.periodo?.id_periodo ?? planilla.id_periodo),
       fecha_inicio: planilla.periodo?.fecha_inicio ?? null,

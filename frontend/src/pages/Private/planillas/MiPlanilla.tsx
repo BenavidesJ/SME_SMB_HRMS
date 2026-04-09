@@ -6,6 +6,7 @@ import {
   Card,
   Grid,
   GridItem,
+  Heading,
   HStack,
   Separator,
   SimpleGrid,
@@ -210,13 +211,58 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
     { label: "Horas feriado", cantidad: comprobante.horas_feriado.cantidad, monto: comprobante.horas_feriado.monto },
   ];
 
+  const impuestoQuincenalSinCreditos = typeof comprobante.renta.impuesto_quincenal_sin_creditos === "number"
+    ? comprobante.renta.impuesto_quincenal_sin_creditos
+    : (typeof comprobante.renta.impuesto_mensual === "number"
+      ? comprobante.renta.impuesto_mensual / 2
+      : comprobante.renta.monto_quincenal);
+  const creditoConyugeQuincenal = comprobante.renta.creditos_fiscales?.por_conyuge_quincenal ?? 0;
+  const creditoHijosQuincenal = comprobante.renta.creditos_fiscales?.por_hijos_quincenal ?? 0;
+  const hayImpuestoRenta = Boolean(comprobante.renta.hay_impuesto_renta ?? impuestoQuincenalSinCreditos > 0);
+  const muestraDesgloseRenta = hayImpuestoRenta;
+  const totalDeduccionesSinCreditos = typeof comprobante.total_deducciones_sin_creditos === "number"
+    ? comprobante.total_deducciones_sin_creditos
+    : comprobante.total_cargas_sociales + impuestoQuincenalSinCreditos;
+  const netoSinCreditos = Math.max(0, comprobante.salario_devengado - totalDeduccionesSinCreditos);
+  const hayCreditosAplicados = (comprobante.renta.creditos_fiscales?.total_quincenal ?? 0) > 0;
+  const muestraComparativoCreditos = hayCreditosAplicados;
+  const etiquetaImpuestoFinal = hayCreditosAplicados
+    ? "Impuesto sobre la renta con créditos fiscales aplicados"
+    : "Impuesto sobre la renta final";
+  const etiquetaNetoFinal = hayCreditosAplicados
+    ? "Salario neto a pagar (créditos fiscales aplicados)"
+    : "Salario neto a pagar";
+
   const deducciones = [
-    ...comprobante.deducciones.map((item) => ({ label: item.nombre, porcentaje: item.porcentaje, monto: item.monto })),
-    {
-      label: "Impuesto sobre la renta",
-      porcentaje: null,
-      monto: comprobante.renta.monto_quincenal,
-    },
+    ...comprobante.deducciones.map((item) => ({
+      label: item.nombre,
+      porcentaje: item.porcentaje,
+      montoTexto: formatPdfCRC(item.monto),
+    })),
+    ...(muestraDesgloseRenta
+      ? [
+        {
+          label: "Impuesto sobre la renta",
+          porcentaje: null,
+          montoTexto: `-${formatPdfCRC(impuestoQuincenalSinCreditos)}`,
+        },
+        ...(creditoConyugeQuincenal > 0
+          ? [{ label: "Crédito fiscal por cónyuge", porcentaje: null, montoTexto: formatPdfCRC(creditoConyugeQuincenal) }]
+          : []),
+        ...(creditoHijosQuincenal > 0
+          ? [{
+            label: `Crédito fiscal por hijos (${comprobante.renta.creditos_fiscales?.cantidad_hijos_aplicada ?? 0})`,
+            porcentaje: null,
+            montoTexto: formatPdfCRC(creditoHijosQuincenal),
+          }]
+          : []),
+        {
+          label: etiquetaImpuestoFinal,
+          porcentaje: null,
+          montoTexto: `-${formatPdfCRC(comprobante.renta.monto_quincenal)}`,
+        },
+      ]
+      : []),
   ];
 
   return (
@@ -286,10 +332,10 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
             <PdfText style={pdfStyles.headerCell}>Monto</PdfText>
           </View>
           {deducciones.map((item) => (
-            <View key={`${item.label}-${item.monto}`} style={pdfStyles.tableRow}>
+            <View key={`${item.label}-${item.montoTexto}`} style={pdfStyles.tableRow}>
               <PdfText style={pdfStyles.bodyCell}>{item.label}</PdfText>
               <PdfText style={pdfStyles.bodyCell}>{item.porcentaje == null ? "—" : `${item.porcentaje}%`}</PdfText>
-              <PdfText style={pdfStyles.bodyCell}>{formatPdfCRC(item.monto)}</PdfText>
+              <PdfText style={pdfStyles.bodyCell}>{item.montoTexto}</PdfText>
             </View>
           ))}
         </View>
@@ -299,17 +345,43 @@ function PayrollReceiptPdfDocument({ receipt }: { receipt: PayrollReceiptRespons
             <PdfText style={pdfStyles.label}>Salario devengado</PdfText>
             <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_devengado)}</PdfText>
           </View>
-          <View style={pdfStyles.totalRow}>
-            <PdfText style={pdfStyles.label}>Total deducciones</PdfText>
-            <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.total_deducciones)}</PdfText>
-          </View>
+          {muestraComparativoCreditos ? (
+            <>
+              <View style={pdfStyles.totalRow}>
+                <PdfText style={pdfStyles.label}>Total deducciones (renta sin créditos)</PdfText>
+                <PdfText style={pdfStyles.value}>{formatPdfCRC(totalDeduccionesSinCreditos)}</PdfText>
+              </View>
+              <View style={pdfStyles.totalRow}>
+                <PdfText style={pdfStyles.label}>Total deducciones (aplicadas)</PdfText>
+                <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.total_deducciones)}</PdfText>
+              </View>
 
-          <View style={pdfStyles.netHighlight}>
-            <View style={pdfStyles.totalRow}>
-              <PdfText style={pdfStyles.value}>Neto a recibir</PdfText>
-              <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_neto)}</PdfText>
-            </View>
-          </View>
+              <View style={pdfStyles.netHighlight}>
+                <View style={pdfStyles.totalRow}>
+                  <PdfText style={pdfStyles.value}>Salario neto a pagar con renta sin créditos</PdfText>
+                  <PdfText style={pdfStyles.value}>{formatPdfCRC(netoSinCreditos)}</PdfText>
+                </View>
+              </View>
+
+              <View style={pdfStyles.totalRow}>
+                <PdfText style={pdfStyles.label}>{etiquetaNetoFinal}</PdfText>
+                <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_neto)}</PdfText>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={pdfStyles.totalRow}>
+                <PdfText style={pdfStyles.label}>Total deducciones</PdfText>
+                <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.total_deducciones)}</PdfText>
+              </View>
+              <View style={pdfStyles.netHighlight}>
+                <View style={pdfStyles.totalRow}>
+                  <PdfText style={pdfStyles.value}>Salario neto a pagar</PdfText>
+                  <PdfText style={pdfStyles.value}>{formatPdfCRC(comprobante.salario_neto)}</PdfText>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         <PdfText style={pdfStyles.footer}>Generado por BioAlquimia para consulta y reclamos del período.</PdfText>
@@ -557,14 +629,72 @@ export const MiPlanilla = () => {
     }
 
     const { comprobante, colaborador, periodo, empresa } = selectedReceipt;
+    const impuestoQuincenalSinCreditos = typeof comprobante.renta.impuesto_quincenal_sin_creditos === "number"
+      ? comprobante.renta.impuesto_quincenal_sin_creditos
+      : (typeof comprobante.renta.impuesto_mensual === "number"
+        ? comprobante.renta.impuesto_mensual / 2
+        : comprobante.renta.monto_quincenal);
+    const creditoConyugeQuincenal = comprobante.renta.creditos_fiscales?.por_conyuge_quincenal ?? 0;
+    const creditoHijosQuincenal = comprobante.renta.creditos_fiscales?.por_hijos_quincenal ?? 0;
+    const hayImpuestoRenta = Boolean(comprobante.renta.hay_impuesto_renta ?? impuestoQuincenalSinCreditos > 0);
+    const muestraDesgloseRenta = hayImpuestoRenta;
+    const totalDeduccionesSinCreditos = typeof comprobante.total_deducciones_sin_creditos === "number"
+      ? comprobante.total_deducciones_sin_creditos
+      : comprobante.total_cargas_sociales + impuestoQuincenalSinCreditos;
+    const netoSinCreditos = Math.max(0, comprobante.salario_devengado - totalDeduccionesSinCreditos);
+    const hayCreditosAplicados = (comprobante.renta.creditos_fiscales?.total_quincenal ?? 0) > 0;
+    const muestraComparativoCreditos = hayCreditosAplicados;
+    const etiquetaImpuestoFinal = hayCreditosAplicados
+      ? "Impuesto sobre la renta con créditos fiscales aplicados"
+      : "Impuesto sobre la renta final";
+    const etiquetaNetoFinal = hayCreditosAplicados
+      ? "Salario neto a pagar (créditos fiscales aplicados)"
+      : "Salario neto a pagar";
+
     const deducciones = [
-      ...comprobante.deducciones,
-      {
-        id_deduccion: -1,
-        nombre: "Impuesto sobre la renta",
-        porcentaje: 0,
-        monto: comprobante.renta.monto_quincenal,
-      },
+      ...comprobante.deducciones.map((item) => ({
+        id_deduccion: item.id_deduccion,
+        nombre: item.nombre,
+        porcentaje: item.porcentaje,
+        monto: item.monto,
+        tipo: "deduccion",
+      })),
+      ...(muestraDesgloseRenta
+        ? [
+          {
+            id_deduccion: -101,
+            nombre: "Impuesto sobre la renta",
+            porcentaje: 0,
+            monto: impuestoQuincenalSinCreditos,
+            tipo: "impuesto_base",
+          },
+          ...(creditoConyugeQuincenal > 0
+            ? [{
+              id_deduccion: -102,
+              nombre: "Crédito fiscal por cónyuge",
+              porcentaje: 0,
+              monto: creditoConyugeQuincenal,
+              tipo: "credito",
+            }]
+            : []),
+          ...(creditoHijosQuincenal > 0
+            ? [{
+              id_deduccion: -103,
+              nombre: `Crédito fiscal por hijos (${comprobante.renta.creditos_fiscales?.cantidad_hijos_aplicada ?? 0})`,
+              porcentaje: 0,
+              monto: creditoHijosQuincenal,
+              tipo: "credito",
+            }]
+            : []),
+          {
+            id_deduccion: -104,
+            nombre: etiquetaImpuestoFinal,
+            porcentaje: 0,
+            monto: comprobante.renta.monto_quincenal,
+            tipo: "impuesto_final",
+          },
+        ]
+        : []),
     ];
 
     return (
@@ -662,12 +792,29 @@ export const MiPlanilla = () => {
                         {item.porcentaje > 0 && (
                           <Text fontSize="xs" color="fg.muted">{item.porcentaje}%</Text>
                         )}
+                        {item.tipo === "impuesto_base" && (
+                          <Text fontSize="xs" color="fg.muted">
+                            Proy: {formatCRC(comprobante.renta.proyectado_mensual)}/mes
+                          </Text>
+                        )}
                       </Stack>
-                      <Text fontWeight="semibold">{formatCRC(item.monto)}</Text>
+                      <Text
+                        fontWeight="semibold"
+                        color={item.tipo === "credito" ? "green.600" : "red.600"}
+                      >
+                        {item.tipo === "credito" ? formatCRC(item.monto) : `-${formatCRC(item.monto)}`}
+                      </Text>
                     </HStack>
                   ))}
                   <Separator />
-                  <HStack justify="space-between"><Text fontWeight="bold">Total deducciones</Text><Text fontWeight="bold" color="red.600">{formatCRC(comprobante.total_deducciones)}</Text></HStack>
+                  {muestraComparativoCreditos ? (
+                    <>
+                      <HStack justify="space-between"><Text fontWeight="bold">Total deducciones (renta sin créditos)</Text><Text fontWeight="bold" color="orange.700">{formatCRC(totalDeduccionesSinCreditos)}</Text></HStack>
+                      <HStack justify="space-between"><Text fontWeight="bold">Total deducciones (aplicadas)</Text><Text fontWeight="bold" color="red.600">{formatCRC(comprobante.total_deducciones)}</Text></HStack>
+                    </>
+                  ) : (
+                    <HStack justify="space-between"><Text fontWeight="bold">Total deducciones</Text><Text fontWeight="bold" color="red.600">{formatCRC(comprobante.total_deducciones)}</Text></HStack>
+                  )}
                 </Stack>
               </Card.Body>
             </Card.Root>
@@ -677,9 +824,24 @@ export const MiPlanilla = () => {
         <Card.Root borderColor="green.300" bg="green.50">
           <Card.Body>
             <HStack justify="space-between" wrap="wrap">
-              <Stack gap="0">
-                <Text fontSize="sm" color="fg.muted">Monto neto a recibir</Text>
-                <Text fontSize="3xl" fontWeight="bold" color="green.700">{formatCRC(comprobante.salario_neto)}</Text>
+              <Stack gap="1">
+                {muestraComparativoCreditos ? (
+                  <>
+                    <HStack justify="space-between" wrap="wrap">
+                      <Heading size="md">Salario neto a pagar con renta sin créditos</Heading>
+                      <Heading size="lg" color="green.700">{formatCRC(netoSinCreditos)}</Heading>
+                    </HStack>
+                    <HStack justify="space-between" wrap="wrap">
+                      <Text fontSize="sm" color="fg.muted">{etiquetaNetoFinal}</Text>
+                      <Text fontSize="xl" fontWeight="bold" color="green.700">{formatCRC(comprobante.salario_neto)}</Text>
+                    </HStack>
+                  </>
+                ) : (
+                  <HStack justify="space-between" wrap="wrap">
+                    <Heading size="md">Salario neto a pagar</Heading>
+                    <Heading size="lg" color="green.700">{formatCRC(comprobante.salario_neto)}</Heading>
+                  </HStack>
+                )}
               </Stack>
               <Stack gap="0" textAlign={{ base: "left", md: "right" }}>
                 <Text fontSize="sm" color="fg.muted">Tarifa por hora</Text>

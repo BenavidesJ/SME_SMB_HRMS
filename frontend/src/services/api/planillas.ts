@@ -68,7 +68,21 @@ export type PayrollReceipt = {
     monto_quincenal: number;
     proyectado_mensual: number;
     impuesto_mensual?: number;
+    impuesto_quincenal_sin_creditos?: number;
+    impuesto_mensual_con_creditos?: number;
+    hay_impuesto_renta?: boolean;
+    creditos_fiscales?: {
+      por_conyuge_mensual: number;
+      por_hijos_mensual: number;
+      total_mensual: number;
+      por_conyuge_quincenal: number;
+      por_hijos_quincenal: number;
+      total_quincenal: number;
+      cantidad_hijos_aplicada: number;
+      aplica_conyuge: boolean;
+    };
   };
+  total_deducciones_sin_creditos?: number;
   total_deducciones: number;
   salario_neto: number;
 };

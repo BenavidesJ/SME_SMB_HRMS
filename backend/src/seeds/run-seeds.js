@@ -1,4 +1,5 @@
 import { db_connection } from "../config/db.js";
+import { seedFeriados } from "./seed-feriados.js";
 // import { seed1AñoDatos } from "./seed-1a-datos-hist.js";
 // import { seedCatalogosBase } from "./seed-catalogos-base.js";
 // import { seedUbicaciones } from "./seed-ubicaciones.js";
@@ -9,6 +10,7 @@ async function main() {
   // await seedUbicaciones();
   // await seedCatalogosBase();
   await seedSuperAdmin();
+  await seedFeriados();
   // await seed1AñoDatos();
   process.exit(0);
 }

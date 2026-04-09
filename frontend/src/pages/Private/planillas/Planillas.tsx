@@ -406,7 +406,7 @@ export const Planillas = () => {
   const [yearFilter, setYearFilter] = useState("");
   const [quincenaFilter, setQuincenaFilter] = useState<QuincenaFilter>("");
   const navigate = useNavigate();
-  const pageSize = 10;
+  const pageSize = 8;
 
   const renderDate = useCallback((value: string) => formatDateUiCompact(value), []);
 
@@ -774,7 +774,7 @@ export const Planillas = () => {
 
   return (
     <Layout pageTitle="Generación y gestión de planillas">
-      <Stack gap="6">
+      <Stack gap="6" marginBottom="100px">
         <Button
           colorPalette="blue"
           alignSelf="flex-start"

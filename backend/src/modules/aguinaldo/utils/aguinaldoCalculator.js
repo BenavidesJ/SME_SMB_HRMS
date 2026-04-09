@@ -5,9 +5,25 @@ import {
   Aguinaldo,
 } from "../../../models/index.js";
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function toDateOnly(value, fieldName) {
+  const raw = String(value ?? "").trim();
+  const candidate = raw.length >= 10 ? raw.slice(0, 10) : raw;
+
+  if (!DATE_ONLY_REGEX.test(candidate)) {
+    throw new Error(`El campo ${fieldName} debe tener formato YYYY-MM-DD`);
+  }
+
+  return candidate;
+}
+
 function buildMonthRange(periodoDesde, periodoHasta) {
-  const [fromYearRaw, fromMonthRaw] = String(periodoDesde).split("-");
-  const [toYearRaw, toMonthRaw] = String(periodoHasta).split("-");
+  const desde = toDateOnly(periodoDesde, "periodo_desde");
+  const hasta = toDateOnly(periodoHasta, "periodo_hasta");
+
+  const [fromYearRaw, fromMonthRaw] = desde.split("-");
+  const [toYearRaw, toMonthRaw] = hasta.split("-");
 
   const fromYear = Number(fromYearRaw);
   const fromMonth = Number(fromMonthRaw);
@@ -49,9 +65,9 @@ function buildMonthRange(periodoDesde, periodoHasta) {
  * Obtiene la suma de salarios brutos agrupados por mes para un colaborador
  * dentro de un rango de fechas.
  *
- * Cada periodo de planilla (quincena) se asigna al mes de su fecha_fin.
+ * Cada periodo de planilla (quincena) se asigna al mes de su fecha_inicio.
  * Se suman todos los registros de `bruto` de la tabla planilla cuyo
- * periodo_planilla.fecha_fin caiga dentro del rango solicitado.
+ * periodo_planilla.fecha_inicio caiga dentro del rango solicitado.
  *
  * @param {number} idColaborador
  * @param {string} periodoDesde  – YYYY-MM-DD
@@ -65,10 +81,13 @@ export async function obtenerSalariosPorMes(
   periodoHasta,
   transaction,
 ) {
+  const desde = toDateOnly(periodoDesde, "periodo_desde");
+  const hasta = toDateOnly(periodoHasta, "periodo_hasta");
+
   const rows = await Planilla.findAll({
     attributes: [
-      [fn("YEAR", col("periodo.fecha_fin")), "anio"],
-      [fn("MONTH", col("periodo.fecha_fin")), "mes"],
+      [fn("YEAR", col("periodo.fecha_inicio")), "anio"],
+      [fn("MONTH", col("periodo.fecha_inicio")), "mes"],
       [fn("SUM", col("planilla.bruto")), "total"],
     ],
     include: [
@@ -77,17 +96,17 @@ export async function obtenerSalariosPorMes(
         as: "periodo",
         attributes: [],
         where: {
-          fecha_fin: {
-            [Op.gte]: periodoDesde,
-            [Op.lte]: periodoHasta,
+          fecha_inicio: {
+            [Op.gte]: desde,
+            [Op.lte]: hasta,
           },
         },
       },
     ],
     where: { id_colaborador: idColaborador },
     group: [
-      literal("YEAR(`periodo`.`fecha_fin`)"),
-      literal("MONTH(`periodo`.`fecha_fin`)"),
+      literal("YEAR(`periodo`.`fecha_inicio`)"),
+      literal("MONTH(`periodo`.`fecha_inicio`)"),
     ],
     order: [
       [literal("anio"), "ASC"],
@@ -107,7 +126,7 @@ export async function obtenerSalariosPorMes(
     groupedRows.map((row) => [`${row.anio}-${row.mes}`, row.total]),
   );
 
-  return buildMonthRange(periodoDesde, periodoHasta).map(({ anio, mes }) => ({
+  return buildMonthRange(desde, hasta).map(({ anio, mes }) => ({
     mes,
     anio,
     total: monthlyTotals.get(`${anio}-${mes}`) ?? 0,

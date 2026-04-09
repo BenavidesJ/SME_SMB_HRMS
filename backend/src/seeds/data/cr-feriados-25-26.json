@@ -1,5 +1,50 @@
 [
   {
+    "fecha": "2024-01-01",
+    "nombre": "Año Nuevo",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-03-28",
+    "nombre": "Jueves Santo",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-03-29",
+    "nombre": "Viernes Santo",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-04-15",
+    "nombre": "Día de Juan Santamaría (trasladado)",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-05-01",
+    "nombre": "Día del Trabajador",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-07-29",
+    "nombre": "Anexión del Partido de Nicoya (trasladado)",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-08-15",
+    "nombre": "Día de la Madre",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-09-15",
+    "nombre": "Día de la Independencia",
+    "es_obligatorio": true
+  },
+  {
+    "fecha": "2024-12-25",
+    "nombre": "Navidad",
+    "es_obligatorio": true
+  },
+  {
     "fecha": "2025-01-01",
     "nombre": "Año Nuevo",
     "es_obligatorio": true

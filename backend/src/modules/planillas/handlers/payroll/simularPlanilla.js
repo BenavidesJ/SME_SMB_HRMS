@@ -93,6 +93,7 @@ export async function simularPlanillaQuincenal(payload = {}) {
         salario_devengado: calculo.bruto,
         deducciones_detalle: calculo.deduccionesDetalle,
         renta: calculo.renta,
+        total_deducciones_sin_creditos: calculo.totalDescuentosSinCreditos,
         total_deducciones: calculo.totalDescuentos,
         salario_neto: calculo.neto,
         detalles_calculo: calculo.detalles_calculo,

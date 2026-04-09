@@ -55,7 +55,10 @@ import { buildAguinaldoPeriodoKey } from "../../../services/api/aguinaldos";
 import { showToast } from "../../../services/toast/toastService";
 import { formatCRC, formatDateUiCompact, parseUiDateSafe, toTitleCase } from "../../../utils";
 
-const MONTH_NAME_FORMATTER = new Intl.DateTimeFormat("es-CR", { month: "long" });
+const MONTH_NAME_FORMATTER = new Intl.DateTimeFormat("es-CR", {
+  month: "long",
+  timeZone: "UTC",
+});
 const PDF_COLON_SYMBOL = "\u20A1";
 const COMPANY_NAME = "BioAlquimia";
 

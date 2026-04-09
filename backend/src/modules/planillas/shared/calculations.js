@@ -6,11 +6,28 @@ dayjs.extend(isSameOrBefore);
 
 const MONTHLY_RENTA_BRACKETS = [
   { limit: 918000, baseTax: 0, baseAmount: 0, rate: 0 },
-  { limit: 1374000, baseTax: 0, baseAmount: 918000, rate: 0.1 },
-  { limit: 2364000, baseTax: 45600, baseAmount: 1374000, rate: 0.15 },
-  { limit: 4727000, baseTax: 194100, baseAmount: 2364000, rate: 0.2 },
-  { limit: Infinity, baseTax: 666700, baseAmount: 4727000, rate: 0.25 },
+  { limit: 1347000, baseTax: 0, baseAmount: 918000, rate: 0.1 },
+  { limit: 2364000, baseTax: 42900, baseAmount: 1347000, rate: 0.15 },
+  { limit: 4727000, baseTax: 195450, baseAmount: 2364000, rate: 0.2 },
+  { limit: Infinity, baseTax: 668050, baseAmount: 4727000, rate: 0.25 },
 ];
+
+const CREDITO_FISCAL_MENSUAL_POR_HIJO = 1710;
+const CREDITO_FISCAL_MENSUAL_CONYUGE = 2590;
+
+function normalizeEstadoCivil(value) {
+  return String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function resolveCantidadHijos(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.floor(numeric));
+}
 
 // ── Tarifas ──────────────────────────────────────────────────────────
 
@@ -81,6 +98,19 @@ export function calcularDíasLaboralesEsperados({ fechaInicio, fechaFin, diasLab
   return count;
 }
 
+/**
+ * Normaliza la fecha fin para cálculo con mes comercial (30 días).
+ * Si el período cierra en día 31, se ajusta al día 30 del mismo mes.
+ * @param {string} fechaFin - YYYY-MM-DD
+ * @returns {string}
+ */
+export function normalizarFechaFinMesComercial(fechaFin) {
+  const fecha = dayjs(fechaFin);
+  if (!fecha.isValid()) return fechaFin;
+  if (fecha.date() !== 31) return fecha.format("YYYY-MM-DD");
+  return fecha.date(30).format("YYYY-MM-DD");
+}
+
 // ── Horas ────────────────────────────────────────────────────────────
 
 /**
@@ -95,6 +125,29 @@ export function calcularDuracionTurno(horaInicio, horaFin) {
   const [hfH, hfM] = String(horaFin).split(":").map(Number);
   const minutos = (hfH * 60 + hfM) - (hiH * 60 + hiM);
   return Math.max(minutos / 60, 0);
+}
+
+/**
+ * En feriado obligatorio, la jornada ordinaria se paga completa aunque no se labore.
+ * @param {number} horasProgramadasDia
+ * @returns {number}
+ */
+export function calcularHorasOrdinariasPagadasFeriadoObligatorio(horasProgramadasDia) {
+  const horas = Number(horasProgramadasDia);
+  if (!Number.isFinite(horas) || horas <= 0) return 0;
+  return horas;
+}
+
+/**
+ * En salario quincenal base fijo, trabajar feriado obligatorio genera recargo adicional +1x.
+ * @param {{ horasTrabajadasFeriado: number, tarifaHora: number }} params
+ * @returns {number}
+ */
+export function calcularRecargoFeriadoObligatorio({ horasTrabajadasFeriado, tarifaHora }) {
+  const horas = Math.max(Number(horasTrabajadasFeriado ?? 0), 0);
+  const tarifa = Math.max(Number(tarifaHora ?? 0), 0);
+  if (!Number.isFinite(horas) || !Number.isFinite(tarifa) || horas <= 0 || tarifa <= 0) return 0;
+  return roundCurrency(horas * tarifa);
 }
 
 /**
@@ -121,12 +174,29 @@ export function sumarHorasJornadas(jornadas, campo) {
 /**
  * Calcula la renta proyectando el salario devengado a 30 días.
  *
- * @param {number} salarioDevengado
- * @returns {{ monto_quincenal: number, proyectado_mensual: number }}
+ * @param {number} brutoQuincenal
+ * @param {{ cantidad_hijos?: number, estado_civil?: string }} perfilFiscal
+ * @returns {{
+ *  monto_quincenal: number,
+ *  proyectado_mensual: number,
+ *  impuesto_mensual: number,
+ *  impuesto_quincenal_sin_creditos: number,
+ *  impuesto_mensual_con_creditos: number,
+ *  creditos_fiscales: {
+ *    por_conyuge_mensual: number,
+ *    por_hijos_mensual: number,
+ *    total_mensual: number,
+ *    por_conyuge_quincenal: number,
+ *    por_hijos_quincenal: number,
+ *    total_quincenal: number,
+ *    cantidad_hijos_aplicada: number,
+ *    aplica_conyuge: boolean
+ *  }
+ * }}
  */
-export function calcularRentaProyectada(brutoQuincenal) {
-
-  const proyectadoMensual = brutoQuincenal * 2;
+export function calcularRentaProyectada(brutoQuincenal, perfilFiscal = {}) {
+  const bruto = Number(brutoQuincenal);
+  const proyectadoMensual = Number.isFinite(bruto) && bruto > 0 ? bruto * 2 : 0;
 
   let impuestoMensual = 0;
 
@@ -139,12 +209,41 @@ export function calcularRentaProyectada(brutoQuincenal) {
     }
   }
 
-  const montoQuincenal = roundCurrency(impuestoMensual / 2);
+  const estadoCivil = normalizeEstadoCivil(perfilFiscal.estado_civil);
+  const cantidadHijos = resolveCantidadHijos(perfilFiscal.cantidad_hijos);
+
+  const hayImpuestoRenta = impuestoMensual > 0;
+  const aplicaCreditoConyuge = hayImpuestoRenta && estadoCivil === "CASADO";
+  const creditoConyugeMensual = aplicaCreditoConyuge
+    ? CREDITO_FISCAL_MENSUAL_CONYUGE
+    : 0;
+  const creditoHijosMensual = aplicaCreditoConyuge
+    ? cantidadHijos * CREDITO_FISCAL_MENSUAL_POR_HIJO
+    : 0;
+  const creditoTotalMensual = creditoConyugeMensual + creditoHijosMensual;
+  const cantidadHijosAplicada = aplicaCreditoConyuge ? cantidadHijos : 0;
+
+  const impuestoMensualConCreditos = Math.max(0, impuestoMensual - creditoTotalMensual);
+  const impuestoQuincenalSinCreditos = roundCurrency(impuestoMensual / 2);
+  const montoQuincenal = roundCurrency(impuestoMensualConCreditos / 2);
 
   return {
     monto_quincenal: montoQuincenal,
     proyectado_mensual: proyectadoMensual,
     impuesto_mensual: roundCurrency(impuestoMensual),
+    impuesto_quincenal_sin_creditos: impuestoQuincenalSinCreditos,
+    impuesto_mensual_con_creditos: roundCurrency(impuestoMensualConCreditos),
+    hay_impuesto_renta: hayImpuestoRenta,
+    creditos_fiscales: {
+      por_conyuge_mensual: roundCurrency(creditoConyugeMensual),
+      por_hijos_mensual: roundCurrency(creditoHijosMensual),
+      total_mensual: roundCurrency(creditoTotalMensual),
+      por_conyuge_quincenal: roundCurrency(creditoConyugeMensual / 2),
+      por_hijos_quincenal: roundCurrency(creditoHijosMensual / 2),
+      total_quincenal: roundCurrency(creditoTotalMensual / 2),
+      cantidad_hijos_aplicada: cantidadHijosAplicada,
+      aplica_conyuge: creditoConyugeMensual > 0,
+    },
   };
 }
 
