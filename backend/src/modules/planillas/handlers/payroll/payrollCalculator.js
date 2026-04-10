@@ -814,7 +814,7 @@ export async function calcularPlanillaColaborador({
     where: {
       id_colaborador: colaboradorId,
       estado: estadoActivo.id_estado,
-      fecha_inicio: { [Op.lte]: fechaFin },
+      fecha_inicio: { [Op.lt]: fechaInicio },
     },
     order: [["fecha_inicio", "DESC"]],
     transaction,

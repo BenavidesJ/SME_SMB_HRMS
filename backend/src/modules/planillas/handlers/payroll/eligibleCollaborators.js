@@ -38,7 +38,7 @@ export async function listarColaboradoresElegiblesPeriodo(
     attributes: ["id_contrato", "id_colaborador", "fecha_inicio"],
     where: {
       estado: estadoActivo.id_estado,
-      fecha_inicio: { [Op.lte]: periodo.fecha_fin },
+      fecha_inicio: { [Op.lt]: periodo.fecha_inicio },
     },
     include: [
       {
