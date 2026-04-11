@@ -7,8 +7,8 @@ import type { SelectOption } from "../../../../../components/forms/InputField";
 import type { Provincia } from "../../../../../types/Address";
 import { getMaxBirthDateForLegalAge } from "../../../../../utils";
 
-const IDENTIFICATION_MAX_DIGITS = 12;
-const PHONE_MAX_DIGITS = 15;
+const IDENTIFICATION_MAX_DIGITS = 9;
+const PHONE_MAX_DIGITS = 8;
 
 type Mode = "create" | "edit";
 
@@ -141,7 +141,7 @@ export function Formularios({
             required: "El campo es obligatorio",
             pattern: { value: /^\d+$/, message: "Solo se permiten números" },
             minLength: { value: 8, message: "Debe tener al menos 8 dígitos" },
-            maxLength: { value: PHONE_MAX_DIGITS, message: "No puede exceder 15 dígitos" },
+            maxLength: { value: PHONE_MAX_DIGITS, message: "No puede exceder 8 dígitos" },
             setValueAs: (v) => String(v ?? "").trim(),
           }}
         />

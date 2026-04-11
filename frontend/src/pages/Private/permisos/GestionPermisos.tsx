@@ -8,7 +8,6 @@ import { usePendientesAprobacion } from "../../../context/PendientesAprobacionCo
 import { useApiMutation } from "../../../hooks/useApiMutations";
 import { useApiQuery } from "../../../hooks/useApiQuery";
 import { showToast } from "../../../services/toast/toastService";
-import type { EmployeeRow, EmployeeUserInfo } from "../../../types";
 import { sortRequestsByAdminPriority } from "../../../utils/requestStatus";
 import { toTitleCase } from "../../../utils";
 import { PermisoDetalleModal } from "./components/PermisoDetalleModal";
@@ -27,37 +26,48 @@ export const GestionPermisos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<PermisoListItem | null>(null);
 
-  const { data: employees = [] } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const optionsQueryUrl = useMemo(() => {
+    const params = new URLSearchParams();
 
-  const isUsuarioActivo = useCallback((usuario?: EmployeeUserInfo | null) => {
-    if (!usuario) return false;
-    if (typeof usuario.estado === "string") return usuario.estado.toUpperCase() === "ACTIVO";
-    if (typeof usuario.estado === "number") return usuario.estado === 1;
-    return Boolean(usuario.estado);
-  }, []);
+    if (estado) {
+      params.set("estado", estado);
+    }
 
-  const colaboradoresActivos = useMemo(
-    () =>
-      (employees ?? []).filter((colaboradorItem) => {
-        const estadoNombre = (colaboradorItem.estado?.nombre ?? "").toUpperCase();
-        return isUsuarioActivo(colaboradorItem.usuario) ? estadoNombre === "ACTIVO" : true;
-      }),
-    [employees, isUsuarioActivo],
-  );
+    const qs = params.toString();
+    return `/permisos/solicitudes${qs ? `?${qs}` : ""}`;
+  }, [estado]);
+
+  const { data: permisoOptionsItems = [] } = useApiQuery<PermisoListItem[]>({
+    url: optionsQueryUrl,
+  });
 
   const collaboratorOptions = useMemo(
-    () =>
-      colaboradoresActivos.map((employee) => {
-        const baseName = [employee.nombre, employee.primer_apellido, employee.segundo_apellido]
+    () => {
+      const uniqueOptions = new Map<string, string>();
+
+      for (const item of permisoOptionsItems) {
+        const collaboratorId = Number(item.id_colaborador);
+        if (!Number.isInteger(collaboratorId) || collaboratorId <= 0) continue;
+
+        if (uniqueOptions.has(String(collaboratorId))) continue;
+
+        const colab = item.colaborador;
+        const baseName = [colab?.nombre, colab?.primer_apellido, colab?.segundo_apellido]
           .filter(Boolean)
           .join(" ")
           .trim();
-        return {
-          label: baseName ? toTitleCase(baseName) : `Colaborador ${employee.id}`,
-          value: String(employee.id),
-        };
-      }),
-    [colaboradoresActivos],
+
+        uniqueOptions.set(
+          String(collaboratorId),
+          baseName ? toTitleCase(baseName) : `Colaborador ${collaboratorId}`,
+        );
+      }
+
+      return Array.from(uniqueOptions.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    },
+    [permisoOptionsItems],
   );
 
   const queryUrl = useMemo(() => {
@@ -105,6 +115,13 @@ export const GestionPermisos = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [estado, colaborador]);
+
+  useEffect(() => {
+    if (!colaborador) return;
+    if (!collaboratorOptions.some((option) => option.value === colaborador)) {
+      setColaborador(undefined);
+    }
+  }, [colaborador, collaboratorOptions]);
 
   useEffect(() => {
     if (currentPage > totalPages) {

@@ -145,10 +145,7 @@ export const obtenerSolicitudesHorasExtra = async (req, res, next) => {
       agrupamiento,
       estado,
       id_colaborador: targetColaboradorId,
-      id_aprobador:
-        targetColaboradorId !== null && targetColaboradorId !== actor.id_colaborador
-          ? actor.id_colaborador
-          : undefined,
+      id_aprobador: actor.id_colaborador,
     });
 
     return res.status(HTTP_CODES.SUCCESS.OK).json({

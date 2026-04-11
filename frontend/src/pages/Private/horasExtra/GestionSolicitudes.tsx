@@ -1,48 +1,68 @@
 
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layout } from "../../../components/layout";
 import { ListaSolicitudes } from './components';
 import { Stack } from '@chakra-ui/react';
 import { SolicitudesAdminFilters } from '../../../components/general/requests/SolicitudesAdminFilters';
 import { useApiQuery } from '../../../hooks/useApiQuery';
-import type { EmployeeRow, EmployeeUserInfo } from '../../../types';
+import type { DataConsultaSolicitudes } from '../../../types/Overtime';
 import { toTitleCase } from '../../../utils';
 
 export const GestionSolicitudes = () => {
   const [estado, setEstado] = useState<string | undefined>(undefined);
   const [colaborador, setColaborador] = useState<string | undefined>(undefined);
-  const { data: employees = [] } = useApiQuery<EmployeeRow[]>({ url: "/empleados" });
+  const optionsQueryUrl = useMemo(() => {
+    const params = new URLSearchParams();
 
-  const isUsuarioActivo = useCallback((usuario?: EmployeeUserInfo | null) => {
-    if (!usuario) return false;
-    if (typeof usuario.estado === "string") return usuario.estado.toUpperCase() === "ACTIVO";
-    if (typeof usuario.estado === "number") return usuario.estado === 1;
-    return Boolean(usuario.estado);
-  }, []);
+    if (estado) {
+      params.set("estado", estado);
+    }
 
-  const colaboradoresActivos = useMemo(
-    () =>
-      (employees ?? []).filter((employee) => {
-        const estadoNombre = (employee.estado?.nombre ?? "").toUpperCase();
-        return estadoNombre === "ACTIVO" && isUsuarioActivo(employee.usuario);
-      }),
-    [employees, isUsuarioActivo],
-  );
+    const qs = params.toString();
+    return `/horas-extra/solicitudes${qs ? `?${qs}` : ""}`;
+  }, [estado]);
+
+  const { data: optionsResponse } = useApiQuery<DataConsultaSolicitudes>({
+    url: optionsQueryUrl,
+  });
+
+  const optionItems = useMemo(() => {
+    if (!optionsResponse) return [];
+    return "grupos" in optionsResponse
+      ? optionsResponse.grupos.flatMap((group) => group.items)
+      : optionsResponse.items ?? [];
+  }, [optionsResponse]);
 
   const collaboratorOptions = useMemo(
-    () =>
-      colaboradoresActivos.map((employee) => {
-        const baseName = [employee.nombre, employee.primer_apellido, employee.segundo_apellido]
-          .filter(Boolean)
-          .join(" ")
-          .trim();
-        return {
-          label: baseName ? toTitleCase(baseName) : `Colaborador ${employee.id}`,
-          value: String(employee.id),
-        };
-      }),
-    [colaboradoresActivos],
+    () => {
+      const uniqueOptions = new Map<string, string>();
+
+      for (const item of optionItems) {
+        const collaboratorId = Number(item.colaborador?.id ?? 0);
+        if (!Number.isInteger(collaboratorId) || collaboratorId <= 0) continue;
+
+        if (uniqueOptions.has(String(collaboratorId))) continue;
+
+        const fullName = String(item.colaborador?.nombre_completo ?? "").trim();
+        uniqueOptions.set(
+          String(collaboratorId),
+          fullName ? toTitleCase(fullName) : `Colaborador ${collaboratorId}`,
+        );
+      }
+
+      return Array.from(uniqueOptions.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    },
+    [optionItems],
   );
+
+  useEffect(() => {
+    if (!colaborador) return;
+    if (!collaboratorOptions.some((option) => option.value === colaborador)) {
+      setColaborador(undefined);
+    }
+  }, [colaborador, collaboratorOptions]);
 
   return (
     <Layout pageTitle="Gestión de Solicitudes">

@@ -10,14 +10,18 @@ const toTimestamp = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-export async function listarPermisos({ id_colaborador, estado } = {}) {
+export async function listarPermisos({ id_colaborador, estado, aprobador_filter } = {}) {
   let items = [];
 
   if (id_colaborador !== undefined && id_colaborador !== null && String(id_colaborador).trim() !== "") {
-    items = await listarPermisosPorColaborador({ id_colaborador });
+    items = await listarPermisosPorColaborador({
+      id_colaborador,
+      aprobador_filter,
+    });
   } else {
     const rows = await SolicitudPermisos.findAll({
       attributes: ["id_colaborador"],
+      ...(aprobador_filter ? { where: { id_aprobador: aprobador_filter } } : {}),
       group: ["id_colaborador"],
       order: [["id_colaborador", "ASC"]],
       raw: true,
@@ -27,7 +31,10 @@ export async function listarPermisos({ id_colaborador, estado } = {}) {
       const collaboratorId = Number(row.id_colaborador);
       if (!Number.isInteger(collaboratorId) || collaboratorId <= 0) continue;
 
-      const collaboratorItems = await listarPermisosPorColaborador({ id_colaborador: collaboratorId });
+      const collaboratorItems = await listarPermisosPorColaborador({
+        id_colaborador: collaboratorId,
+        aprobador_filter,
+      });
       items.push(...collaboratorItems);
     }
   }

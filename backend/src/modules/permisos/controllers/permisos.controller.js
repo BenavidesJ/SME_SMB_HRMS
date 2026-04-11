@@ -118,6 +118,7 @@ export async function listarPermisosPorColaboradorController(req, res, next) {
 export async function listarPermisosController(req, res, next) {
   try {
     const { id_colaborador, estado } = req.query ?? {};
+    const actor = await resolveActorFromToken(req.user?.id);
 
     const targetColaboradorId =
       id_colaborador !== undefined && id_colaborador !== null && String(id_colaborador).trim() !== ""
@@ -131,6 +132,7 @@ export async function listarPermisosController(req, res, next) {
     const data = await listarPermisos({
       id_colaborador: targetColaboradorId,
       estado,
+      aprobador_filter: actor.id_colaborador,
     });
 
     return res.status(OK).json({
