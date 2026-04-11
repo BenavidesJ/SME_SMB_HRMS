@@ -604,48 +604,53 @@ async function getRankingHorasExtra(query) {
   const dateWhere = getDateWhere(query.dateFrom, query.dateTo);
   if (dateWhere) wherePeriodo.fecha_fin = dateWhere;
 
+  const includes = [
+    {
+      model: Colaborador,
+      as: "colaborador",
+      attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
+    },
+    {
+      model: Contrato,
+      as: "contrato",
+      attributes: ["id_contrato"],
+      include: [
+        {
+          model: Puesto,
+          as: "puesto",
+          attributes: ["id_puesto", "nombre"],
+          include: [
+            {
+              model: Departamento,
+              as: "departamento",
+              attributes: ["id_departamento", "nombre"],
+              ...(query.idDepartamento
+                ? { where: { id_departamento: query.idDepartamento }, required: true }
+                : {}),
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  if (Object.keys(wherePeriodo).length > 0) {
+    includes.push({
+      model: PeriodoPlanilla,
+      as: "periodo",
+      attributes: [],
+      required: true,
+      where: wherePeriodo,
+    });
+  }
+
   const grouped = await Planilla.findAll({
     attributes: [
       "id_colaborador",
       [sequelize.fn("SUM", sequelize.col("horas_extra")), "horas_extra"],
     ],
     where: wherePlanilla,
-    include: [
-      {
-        model: PeriodoPlanilla,
-        as: "periodo",
-        attributes: ["id_periodo", "fecha_fin"],
-        required: Object.keys(wherePeriodo).length > 0,
-        ...(Object.keys(wherePeriodo).length > 0 ? { where: wherePeriodo } : {}),
-      },
-      {
-        model: Colaborador,
-        as: "colaborador",
-        attributes: ["id_colaborador", "nombre", "primer_apellido", "segundo_apellido"],
-      },
-      {
-        model: Contrato,
-        as: "contrato",
-        attributes: ["id_contrato"],
-        include: [
-          {
-            model: Puesto,
-            as: "puesto",
-            attributes: ["id_puesto", "nombre"],
-            include: [
-              {
-                model: Departamento,
-                as: "departamento",
-                attributes: ["id_departamento", "nombre"],
-                ...(query.idDepartamento
-                  ? { where: { id_departamento: query.idDepartamento }, required: true }
-                  : {}),
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    include: includes,
     group: [
       "id_colaborador",
       "colaborador.id_colaborador",
@@ -1022,7 +1027,7 @@ async function getTendenciaIncapacidades(query) {
           {
             model: TipoIncapacidad,
             as: "tipo",
-            attributes: ["id_tipo_incap", "tipo_incapacidad"],
+            attributes: ["id_tipo_incap", "nombre"],
           },
         ],
       },
@@ -1032,7 +1037,7 @@ async function getTendenciaIncapacidades(query) {
   const byMonth = new Map();
   jornadas.forEach((jornada) => {
     const month = String(jornada.fecha).slice(0, 7);
-    const tipoIncapacidad = jornada.incapacidadRef?.tipo?.tipo_incapacidad ?? "N/D";
+    const tipoIncapacidad = jornada.incapacidadRef?.tipo?.nombre ?? "N/D";
     const colaborador = formatName(jornada.colaborador);
 
     if (!byMonth.has(month)) {

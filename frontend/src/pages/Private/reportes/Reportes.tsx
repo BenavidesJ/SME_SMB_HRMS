@@ -50,6 +50,18 @@ type ReporteFiltroForm = {
   idDepartamento: string;
 };
 
+type ReporteRow = Record<string, string | number | null>;
+
+type PageBreakdownItem = {
+  page: number;
+  count: number;
+};
+
+type FetchRowsByPageRangeResult = {
+  rows: ReporteRow[];
+  pageBreakdown: PageBreakdownItem[];
+};
+
 const INITIAL_REPORTE_DATA: ReporteDataResponse = {
   key: "",
   label: "",
@@ -146,6 +158,11 @@ const pdfStyles = StyleSheet.create({
     fontSize: 8,
     color: "#4A5568",
   },
+  paginationDetail: {
+    marginTop: 8,
+    fontSize: 8,
+    color: "#4A5568",
+  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -210,14 +227,31 @@ function buildPdfTitle(reportLabel: string, dateFrom?: string, dateTo?: string) 
   return `${reportLabel}${periodo}`;
 }
 
+function buildPageBreakdownText(pageBreakdown: PageBreakdownItem[]) {
+  if (pageBreakdown.length === 0) {
+    return "Paginación: sin datos";
+  }
+
+  const labels = pageBreakdown.map((item) => `Página ${item.page} - ${item.count} registros`);
+  return `Paginación: ${labels.join(", ")}`;
+}
+
 function ReportPdfDocument(props: {
   companyName: string;
   title: string;
   generatedAt: string;
   columns: ReporteColumn[];
-  rows: Array<Record<string, string | number | null>>;
+  rows: ReporteRow[];
+  pageBreakdown: PageBreakdownItem[];
 }) {
-  const { companyName, title, generatedAt, columns, rows } = props;
+  const {
+    companyName,
+    title,
+    generatedAt,
+    columns,
+    rows,
+    pageBreakdown,
+  } = props;
 
   return (
     <Document>
@@ -252,6 +286,10 @@ function ReportPdfDocument(props: {
           ))}
         </View>
 
+        <PdfText style={pdfStyles.paginationDetail}>
+          {buildPageBreakdownText(pageBreakdown)}
+        </PdfText>
+
         <PdfText style={pdfStyles.footer}>Generado por BioAlquimia</PdfText>
       </Page>
     </Document>
@@ -268,10 +306,11 @@ export const Reportes = () => {
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewPage, setPreviewPage] = useState(1);
   const [pdfPageStart, setPdfPageStart] = useState(1);
   const [pdfPageEnd, setPdfPageEnd] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [previewRows, setPreviewRows] = useState<Array<Record<string, string | number | null>>>([]);
+  const [previewRows, setPreviewRows] = useState<ReporteRow[]>([]);
 
   const { data: catalogo = [], isLoading: loadingCatalogo } = useApiQuery<ReporteCatalogItem[]>({
     url: REPORTES_CATALOGO_URL,
@@ -331,7 +370,7 @@ export const Reportes = () => {
       .filter((column): column is ReporteColumn => Boolean(column));
   }, [reporteData?.columns, reporteData?.selectedColumns]);
 
-  const tableColumns = useMemo<DataTableColumn<Record<string, string | number | null>>[]>(
+  const tableColumns = useMemo<DataTableColumn<ReporteRow>[]>(
     () =>
       visibleColumns.map((column) => ({
         id: column.key,
@@ -341,6 +380,25 @@ export const Reportes = () => {
       })),
     [visibleColumns],
   );
+
+  const previewPageSize = useMemo(() => {
+    const parsed = Number(query.limit ?? reporteData?.pagination?.limit ?? 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
+  }, [query.limit, reporteData?.pagination?.limit]);
+
+  const previewTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(previewRows.length / previewPageSize)),
+    [previewRows.length, previewPageSize],
+  );
+
+  useEffect(() => {
+    setPreviewPage((prev) => Math.min(Math.max(prev, 1), previewTotalPages));
+  }, [previewTotalPages]);
+
+  const previewVisibleRows = useMemo(() => {
+    const start = (previewPage - 1) * previewPageSize;
+    return previewRows.slice(start, start + previewPageSize);
+  }, [previewRows, previewPage, previewPageSize]);
 
   const handleFiltroSubmit = async (values: ReporteFiltroForm) => {
     setSelectedReportKey(values.reportKey);
@@ -367,20 +425,26 @@ export const Reportes = () => {
     setQuery((prev) => ({ ...prev, page: nextPage }));
   };
 
-  const fetchRowsByPageRange = async (startPage: number, endPage: number) => {
+  const fetchRowsByPageRange = async (
+    startPage: number,
+    endPage: number,
+  ): Promise<FetchRowsByPageRangeResult> => {
     const pages = reporteData?.pagination?.pages ?? 1;
     const safeStart = Math.max(1, Math.min(startPage, pages));
     const safeEnd = Math.max(safeStart, Math.min(endPage, pages));
 
-    const rows: Array<Record<string, string | number | null>> = [];
+    const rows: ReporteRow[] = [];
+    const pageBreakdown: PageBreakdownItem[] = [];
 
     for (let page = safeStart; page <= safeEnd; page += 1) {
       const url = buildReporteDataUrl(selectedReportKey, { ...query, page });
       const data = await apiRequest<ReporteDataResponse>({ url, method: "GET" });
-      rows.push(...(data.rows ?? []));
+      const pageRows = data.rows ?? [];
+      rows.push(...pageRows);
+      pageBreakdown.push({ page, count: pageRows.length });
     }
 
-    return rows;
+    return { rows, pageBreakdown };
   };
 
   const handleOpenPreview = async () => {
@@ -388,8 +452,9 @@ export const Reportes = () => {
 
     setIsPreviewLoading(true);
     try {
-      const rows = await fetchRowsByPageRange(1, reporteData.pagination.pages);
+      const { rows } = await fetchRowsByPageRange(1, reporteData.pagination.pages);
       setPreviewRows(rows);
+      setPreviewPage(1);
       setPdfPageStart(1);
       setPdfPageEnd(reporteData.pagination.pages);
       setIsPreviewOpen(true);
@@ -403,7 +468,7 @@ export const Reportes = () => {
 
     setIsDownloading(true);
     try {
-      const rows = await fetchRowsByPageRange(pdfPageStart, pdfPageEnd);
+      const { rows, pageBreakdown } = await fetchRowsByPageRange(pdfPageStart, pdfPageEnd);
       const columns = visibleColumns;
       const title = buildPdfTitle(reporteData.label, query.dateFrom, query.dateTo);
 
@@ -414,6 +479,7 @@ export const Reportes = () => {
           generatedAt={reporteData.generatedAt}
           columns={columns}
           rows={rows}
+          pageBreakdown={pageBreakdown}
         />,
       ).toBlob();
 
@@ -683,8 +749,8 @@ export const Reportes = () => {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {(isPreviewLoading ? [] : previewRows).map((row, index) => (
-                    <Table.Row key={`preview-row-${index}`}>
+                  {(isPreviewLoading ? [] : previewVisibleRows).map((row, index) => (
+                    <Table.Row key={`preview-row-${previewPage}-${index}`}>
                       {visibleColumns.map((column) => (
                         <Table.Cell key={`preview-cell-${index}-${column.key}`}>
                           {formatReportValue(column.key, row[column.key])}
@@ -695,6 +761,30 @@ export const Reportes = () => {
                 </Table.Body>
               </Table.Root>
             </Table.ScrollArea>
+
+            <HStack justify="space-between" align="center" wrap="wrap" gap="3">
+              <Text fontSize="sm" color="fg.muted">
+                Página {previewPage} de {previewTotalPages} • {previewPageSize} registros por página
+              </Text>
+              <HStack>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPreviewPage((prev) => Math.max(1, prev - 1))}
+                  disabled={isPreviewLoading || previewPage <= 1}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPreviewPage((prev) => Math.min(previewTotalPages, prev + 1))}
+                  disabled={isPreviewLoading || previewPage >= previewTotalPages}
+                >
+                  Siguiente
+                </Button>
+              </HStack>
+            </HStack>
           </Stack>
         }
       />
